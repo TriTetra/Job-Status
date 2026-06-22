@@ -20,43 +20,50 @@
 
 ## Quick Start
 
-### Option 1: Just Apply (RECOMMENDED)
+### Option 1: Smart Strategy (RECOMMENDED)
 
-**5 minutes to first application:**
+**ApplyPilot + Career OS birlikte kullan:**
 
-1. Open Excel:
-   ```bash
-   cd reports/2026-06-22
-   open applypilot_advanced_*.xlsx
-   ```
+```bash
+# 1 komut, tam strateji
+python scripts/apply_strategy.py
+```
 
-2. Go to "Perfect Match (8+)" sheet
+**Çıktı (career_os_output/):**
+- `apply_today.txt` → Bugün başvur (10 iş)
+- `apply_this_week.txt` → Bu hafta (20 iş)
+- `prioritized_applications.txt` → Stratejik portföy
+- `learning_plan.txt` → 8 haftalık plan
 
-3. Click Apply Link and apply
+**Sonra:**
+```bash
+# Bugünkü listeyi aç
+cat career_os_output/apply_today_*.txt
 
-4. **DONE**
+# Her URL'yi aç ve başvur
+# JOB_APPLICATIONS.md'ye kaydet
+```
+
+**Süre:** 5 dakika analiz + 30 dakika başvuru
+
+See [APPLY_NOW.md](APPLY_NOW.md) for complete workflow.
 
 ---
 
-### Option 2: Use Career OS
+### Option 2: Just Apply (Fast)
 
-**30 minutes for strategic analysis:**
+**Direkt Excel kullan:**
 
 ```bash
-# Analyze jobs
-python test_production.py
+# Excel aç
+cd reports/2026-06-22
+open applypilot_advanced_*.xlsx
 
-# Output:
-# ✅ APPLY NOW: 12 jobs
-#    1. ML Engineer @ Startup (Score: 87, Accept: 44%)
-#    2. Backend Engineer @ Company (Score: 82, Accept: 38%)
-#
-# 📚 TOP SKILLS TO LEARN:
-#    AWS (ROI: 2.5, 20h)
-#    Kubernetes (ROI: 1.8, 28h)
+# "Perfect Match (8+)" sheet
+# Apply Link → Başvur
 ```
 
-Apply to "APPLY NOW" list + start learning top skills.
+**Süre:** 30 dakika, 10 başvuru
 
 ---
 
