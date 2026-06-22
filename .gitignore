@@ -1,0 +1,98 @@
+# ApplyPilot .gitignore
+# ======================
+
+# ============================================================================
+# SENSITIVE DATA - NEVER COMMIT!
+# ============================================================================
+
+# API Keys and credentials
+.env
+*.env
+config/.env
+**/.env
+
+# Personal information
+resume.txt
+resume.pdf
+*.pdf
+Abdullokh_*.txt
+Abdullokh_*.pdf
+
+# ApplyPilot config (contains personal info)
+config.yaml
+searches.yaml
+profile.json
+
+# Database (contains job data)
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================================================
+# GENERATED FILES
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# ============================================================================
+# RUNTIME & LOGS
+# ============================================================================
+
+# Logs
+logs/*.log
+*.log
+
+# Backups
+backups/
+*.backup
+
+# Reports (generated, don't version)
+reports/*/
+reports/*.txt
+excel_exports/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# ============================================================================
+# KEEP TEMPLATES
+# ============================================================================
+
+# Keep example configs (without sensitive data)
+!config.example.yaml
+!searches.example.yaml
+!.env.example
+
+# Keep empty directories
+!logs/.gitkeep
+!reports/.gitkeep
+!backups/.gitkeep
+
+# ============================================================================
+# PACKAGE ARTIFACTS
+# ============================================================================
+
+applypilot_package_*/
+*.zip
+
+# OLD/BACKUP files
+*_OLD.*
+*_BACKUP.*
+README_OLD.md
