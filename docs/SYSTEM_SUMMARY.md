@@ -1,396 +1,262 @@
-# 🎊 ApplyPilot System - Complete Summary
+# ApplyPilot System - Complete Summary
 
-**Profesyonel İş Bulma & Takip Sistemi**
+Profesyonel iş bulma ve takip sistemi - mimari özeti.
 
----
+> [../README.md](../README.md) iki sistemin (ApplyPilot + Career OS) nasıl
+> bağlandığını ve hızlı başlangıcı anlatır. Bu dosya ise ApplyPilot'un
+> operasyonel detaylarına (filtreler, Excel kolonları, iş akışı, özelleştirme)
+> iner — günlük kullanımda referans olarak buraya dön.
 
-## 📊 **SYSTEM OVERVIEW**
+## Sistem genel bakış
 
-### **Ne Yapıyor?**
+### Ne yapıyor?
 
-ApplyPilot tam otomatik bir iş bulma, puanlama, filtreleme ve takip sistemidir.
+ApplyPilot, otomatik iş bulma, puanlama, filtreleme ve takip sistemidir.
 
 ```
-┌─────────────┐      ┌──────────┐      ┌─────────┐      ┌────────┐
-│   Discover  │─────>│  Score   │─────>│ Filter  │─────>│ Excel  │
-│ (LinkedIn,  │      │ (AI 1-10)│      │ (8 auto)│      │(6 pages│
-│  Indeed,    │      │  GPT-4o  │      │ filters │      │18 cols)│
-│  Glassdoor) │      │   -mini  │      │         │      │        │
-└─────────────┘      └──────────┘      └─────────┘      └────────┘
-                                                                ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                     JOB APPLICATION TRACKER                      │
-│  • Markdown: JOB_APPLICATIONS.md (simple)                       │
-│  • GitHub Issues: Kanban board (advanced)                       │
-│  • Excel Notes: Track status in spreadsheet                     │
-└─────────────────────────────────────────────────────────────────┘
+Discover (LinkedIn, Indeed, Glassdoor) -> Score (LLM, 1-10) -> Filter (8 kural) -> Excel (6 sayfa, 18 kolon)
+                                                                                          |
+                                                                                          v
+                                                                  JOB APPLICATION TRACKER
+                                                                  - Markdown: docs/tracking/JOB_APPLICATIONS.md (basit)
+                                                                  - GitHub Issues: Kanban board (ileri seviye)
+                                                                  - Excel Notes: tabloda durum takibi
 ```
 
----
-
-## 🗂️ **DIRECTORY STRUCTURE**
+## Dizin yapısı
 
 ```
 applypilot-jobs/
-├── 📁 scripts/                    # Otomatik scriptler
-│   ├── run_full_scan.py           # ⭐ Ana tarama (discover→score→filter→excel)
-│   ├── filter_jobs.py             # 8 otomatik filtre
-│   ├── export_to_excel_advanced.py # 6 sayfa, 18 kolon Excel
-│   ├── track_applications.py      # Başvuru takibi (Excel→Markdown)
-│   ├── sync_to_github.py          # GitHub Issues sync
-│   ├── schedule_info.py           # Ne zaman tarama yapmalı?
-│   ├── extract_requirements.py    # İş gereksinimleri analizi
-│   └── setup_package.py           # Paylaşım paketi oluştur
+├── scripts/
+│   ├── scan/
+│   │   ├── run_full_scan.py            Ana tarama (discover -> score -> filter -> excel)
+│   │   ├── filter_jobs.py              8 otomatik filtre
+│   │   ├── export_to_excel_advanced.py 6 sayfa, 18 kolon Excel
+│   │   └── schedule_info.py            Sonraki tarama zamanı
+│   ├── strategy/
+│   │   ├── apply_strategy.py
+│   │   ├── cold_email_generator.py
+│   │   ├── skills_gap_analyzer.py
+│   │   └── extract_requirements.py     İş gereksinimleri analizi
+│   ├── tracking/
+│   │   ├── track_applications.py       Başvuru takibi (Excel -> Markdown)
+│   │   └── sync_to_github.py           GitHub Issues senkronizasyonu
+│   └── packaging/
+│       └── setup_package.py            Paylaşım paketi oluşturma
 │
-├── 📁 reports/                    # Tarihli raporlar
+├── career_os/            Strateji motoru
+├── tests/                career_os için manuel doğrulama scriptleri
+├── personal/             CV dosyaları (gitignored)
+│
+├── docs/
+│   ├── README.md                    Dokümantasyon indeksi
+│   ├── SYSTEM_SUMMARY.md            Bu dosya
+│   ├── setup/
+│   │   ├── QUICK_START.md
+│   │   ├── GITHUB_GUIDE.md
+│   │   └── WINDOWS_SCHEDULER_GUIDE.md
+│   ├── usage/
+│   │   ├── USAGE.md
+│   │   └── APPLY_NOW.md
+│   ├── tracking/
+│   │   ├── JOB_APPLICATIONS.md
+│   │   └── APPLICATION_TRACKER.md
+│   └── strategy/
+│       └── 2_MONTH_ACTION_PLAN.md
+│
+├── reports/
 │   ├── YYYY-MM-DD/
 │   │   ├── applypilot_advanced_*.xlsx
 │   │   └── summary.txt
 │   └── latest.txt
 │
-├── 📁 logs/                       # Çalışma logları
-│   ├── YYYY-MM-DD.log
-│   └── run_history.json
+├── logs/                YYYY-MM-DD.log, run_history.json
+├── backups/              DB yedekleri (son 10)
 │
-├── 📁 backups/                    # DB yedekleri (son 10)
-│
-├── 📄 run_scan.bat                # 🖱️ ÇİFT TIKLA ÇALIŞTIR
-├── 📄 JOB_APPLICATIONS.md         # 📝 İş takip sistemi
-├── 📄 CHANGELOG.md                # 📋 Tarama geçmişi
-├── 📄 README.md                   # 📖 Tam dokümantasyon
-├── 📄 QUICK_START.md              # ⚡ 5 dakika başlangıç
-├── 📄 GITHUB_GUIDE.md             # 🚀 GitHub integration
-├── 📄 WINDOWS_SCHEDULER_GUIDE.md  # 🕐 Otomatik tarama
-└── 📄 .gitignore                  # 🔒 Güvenlik (.env, CV, DB koruması)
+├── run_scan.bat
+├── CHANGELOG.md
+├── README.md
+└── .gitignore            .env, CV ve DB dosyalarını korur
 ```
 
----
+## Hızlı başlangıç (3 adım)
 
-## 🚀 **QUICK START (3 Adım)**
-
-### **1. İlk Tarama (ŞİMDİ):**
+### 1. İlk tarama
 
 ```bash
-# Yöntem 1: Tek tıkla
-run_scan.bat  # Çift tıkla, 25 dakika bekle
-
-# Yöntem 2: Manuel
-python scripts/run_full_scan.py
+run_scan.bat
+# veya
+python scripts/scan/run_full_scan.py
 ```
 
-### **2. Excel'i Aç ve İncele:**
+### 2. Excel'i aç ve incele
 
 ```
-reports/2026-06-22/applypilot_advanced_*.xlsx
-→ "Perfect Match (8+)" sayfası → 30 perfect iş
+reports/<tarih>/applypilot_advanced_*.xlsx
+-> "Perfect Match (8+)" sayfası
 ```
 
-### **3. Başvur:**
+### 3. Başvur
 
-- Apply Link'e tıkla → LinkedIn/Indeed
-- Notes kolonuna: `Applied 2026-06-23`
-- Takip et: `python scripts/track_applications.py`
+- Apply Link'e tıkla -> LinkedIn/Indeed
+- Notes kolonuna: `Applied <tarih>`
+- Takip et: `python scripts/tracking/track_applications.py`
 
----
+## Sistem özellikleri
 
-## 📊 **SYSTEM FEATURES**
+### Otomatik iş bulma
 
-### **✅ Automated Job Discovery**
+| Özellik | Detay |
+|---------|-------|
+| Siteler | LinkedIn, Indeed, Glassdoor |
+| Sorgular | `~/.applypilot/searches.yaml` içinde tanımlı (`applypilot init` ile oluşur; bu repoda kopyası yok) |
+| Kapsam | Global + Türkiye |
+| Sıklık | Önerilen: her 3 günde bir |
 
-| Feature | Details |
-|---------|---------|
-| **Sites** | LinkedIn, Indeed, Glassdoor |
-| **Queries** | 27 (18 English + 7 Turkish) |
-| **Coverage** | Global (US, Canada, EU) + Local (Turkey) |
-| **Frequency** | Every 3 days (72-hour window) |
-| **Speed** | 562 jobs in 25-30 minutes |
-| **Cost** | ~$0.73 per scan |
+### AI skorlama
 
-### **✅ AI Scoring**
+| Özellik | Detay |
+|---------|-------|
+| Model | GPT-4o-mini (varsayılan, `.env`'den değiştirilebilir) |
+| Skorlama | 1-10 ölçeği |
+| Kriterler | Skill eşleşmesi, deneyim seviyesi, iş tipi |
+| Çıktı | Skor + gerekçe |
 
-| Feature | Details |
-|---------|---------|
-| **Model** | GPT-4o-mini (fast & cheap) |
-| **Scoring** | 1-10 scale |
-| **Criteria** | Skills match, experience level, job type |
-| **Output** | Score + reasoning (why this score?) |
+### Otomatik filtreleme (8 filtre)
 
-### **✅ Automatic Filtering (8 Filters)**
+`scripts/scan/filter_jobs.py` içindeki sırayla:
 
-| # | Filter | Removes |
-|---|--------|---------|
+| # | Filtre | Kapsam |
+|---|--------|--------|
 | 1 | Seniority | Senior/Lead/Principal/Staff/Director |
-| 2 | Role Type | Standalone Frontend |
-| 3 | Employment | Freelance/Contract |
-| 4 | Level | Intern/Internship |
-| 5 | Tech Stack | Standalone JavaScript Developer |
-| 6 | Specialization | Analytics Engineer |
-| 7 | Location | Paris onsite |
-| 8 | Experience | 4+ years, Security Clearance |
+| 2 | Rol tipi | Standalone Frontend |
+| 3 | İstihdam tipi | Freelance/Contract |
+| 4 | Seviye | Intern/Internship |
+| 5 | Tech stack | Standalone JavaScript Developer |
+| 6 | Uzmanlık | Analytics Engineer |
+| 7 | Lokasyon | Paris onsite |
+| 8 | Deneyim | 4+ yıl gerektiren ilanlar |
 
-**Result:** 562 jobs → 181 quality jobs (30 perfect, 151 good)
+### Excel export (6 sayfa, 18 kolon)
 
-### **✅ Advanced Excel Export (6 Pages, 18 Columns)**
+Sayfalar: Executive Summary, Perfect Match (8+), Good Match (7), Skills
+Analysis, By Company, Full Database.
 
-#### **Pages:**
+Kolonlar (18): Posted Date, Job Title, Company, Site, Location, Remote?,
+Salary Range, Fit Score, Why This Score?, Top 10 Requirements, Your Matching
+Skills, Missing Skills, Match %, Years Experience, Sponsorship?, Description,
+Apply Link, Notes.
 
-1. **📊 Executive Summary** - Stats, charts, distributions
-2. **🎯 Perfect Match (8+)** - 30 perfect jobs - MOST DETAILED
-3. **✅ Good Match (7)** - 121 good jobs
-4. **📈 Skills Analysis** - Which skills are in demand
-5. **🏢 By Company** - Grouped by site/company
-6. **📁 Full Database** - All 181 jobs
+### Başvuru takibi
 
-#### **Columns (18):**
+**Markdown (önerilen):** `tracking/JOB_APPLICATIONS.md`, manuel ya da Excel'den
+senkronize, Git ile geçmiş takibi, offline çalışır.
 
-1. Posted Date
-2. Job Title
-3. Company
-4. Site
-5. Location
-6. Remote? (Remote/Hybrid/Onsite)
-7. Salary Range
-8. **Fit Score** (colored!)
-9. **Why This Score?** (AI explanation)
-10. **Top 10 Requirements**
-11. **✅ Your Matching Skills**
-12. **❌ Missing Skills**
-13. **Match %** (how many requirements you meet)
-14. Years Experience (requested)
-15. Sponsorship? (estimated)
-16. Description (summary)
-17. **Apply Link** (clickable!)
-18. **Notes** (for you - empty)
+**GitHub Issues (ileri seviye):** her iş bir Issue, label sistemi, GitHub
+Projects ile Kanban board. Detay: [setup/GITHUB_GUIDE.md](setup/GITHUB_GUIDE.md).
 
-### **✅ Job Tracking System**
+### Otomasyon
 
-#### **Option 1: Markdown (Simple)** ✅ Recommended
+- Son 10 taramanın yedeği
+- JSON çalışma geçmişi
+- Özet raporlar
+- Windows Task Scheduler entegrasyonu ([setup/WINDOWS_SCHEDULER_GUIDE.md](setup/WINDOWS_SCHEDULER_GUIDE.md))
 
-- `JOB_APPLICATIONS.md` file
-- Update manually or auto-sync from Excel
-- Git tracks history
-- Offline-friendly
+## İlk taramadan ölçülen sonuçlar (2026-06-22)
 
-#### **Option 2: GitHub Issues (Advanced)**
-
-- Each job = 1 GitHub Issue
-- Labels: score, type, location, status
-- Kanban board with GitHub Projects
-- Full collaboration features
-
-### **✅ Automation**
-
-- 📦 Auto backup (last 10)
-- 📝 JSON run history
-- 📊 Summary reports
-- 🕐 Windows Task Scheduler integration
-- 🔄 3-day scan cycle
-
----
-
-## 📈 **STATS & RESULTS**
-
-### **First Scan (2026-06-22):**
+Bu sayılar tek bir gerçek çalıştırmadan geliyor; her tarama farklı sonuç verir.
 
 ```
-Input:
-- 27 search queries
-- 3 job sites
-- 72-hour window
+Girdi: ~/.applypilot/searches.yaml'daki sorgular, 3 site, 72 saatlik pencere
 
-Discovery:
-- 562 jobs found
-- $0 cost (scraping)
-- ~5 minutes
+Discovery: 562 iş bulundu, ~5 dakika
+Scoring: GPT-4o-mini, $0.40, ~15 dakika
+Filtering: 8 otomatik filtre, ~102 iş elendi, <1 saniye
+Excel export: 6 sayfa, 18 kolon, ~5 saniye
 
-Scoring:
-- GPT-4o-mini
-- $0.40 cost
-- ~15 minutes
-
-Filtering:
-- 8 automatic filters
-- ~102 jobs removed
-- <1 second
-
-Excel Export:
-- 6 pages, 18 columns
-- Skill matching
-- $0 cost
-- ~5 seconds
-
-Total:
-- ⏱️  25-30 minutes
-- 💰 $0.73
-- 🎯 181 quality jobs (30 perfect!)
+Toplam: ~25-30 dakika, ~$0.73, 181 kaliteli iş (30 perfect, 151 good)
 ```
 
-### **Success Rate:**
-
-| Metric | Value |
+| Metrik | Değer |
 |--------|-------|
-| **Total Jobs** | 562 |
-| **After Filtering** | 181 (32%) |
-| **Perfect Match (8+)** | 30 (5.3%) |
-| **Good Match (7)** | 151 (26.9%) |
-| **Speed Improvement** | 9x faster than v1 |
-| **Quality Improvement** | 30x more relevant jobs |
+| Toplam iş | 562 |
+| Filtreleme sonrası | 181 (%32) |
+| Perfect Match (8+) | 30 (%5.3) |
+| Good Match (7) | 151 (%26.9) |
 
----
+Bu rakamlar tek bir taramaya ait; "her taramada bu kadar bulunur" garantisi
+değildir, çünkü `~/.applypilot/searches.yaml`'daki sorgu sayısı ve içeriği
+zamanla değişebilir.
 
-## 🔄 **WORKFLOW**
+## İş akışı
 
-### **Every 3 Days:**
+### Her 3 günde bir
 
 ```bash
-# 1. Run scan (automated)
-run_scan.bat  # or Windows Task Scheduler
+run_scan.bat   # veya Windows Task Scheduler
 
-# 2. Review Excel
-# Open: reports/YYYY-MM-DD/applypilot_advanced_*.xlsx
+# Excel'i incele: reports/YYYY-MM-DD/applypilot_advanced_*.xlsx
+# Apply Link kolonundan başvur
+# Notes kolonunu güncelle, sonra:
+python scripts/tracking/track_applications.py
 
-# 3. Apply to jobs
-# Use Apply Link column
-
-# 4. Track applications
-# Update Notes column in Excel
-# Run: python scripts/track_applications.py
-
-# 5. Git commit
-git add JOB_APPLICATIONS.md
-git commit -m "📝 Update: 5 applied"
+git add docs/tracking/JOB_APPLICATIONS.md
+git commit -m "Update: 5 applied"
 git push
 ```
 
-### **Daily:**
+### Günlük
 
 ```bash
-# Track progress
-python scripts/track_applications.py
-
-# Check next scan time
-python scripts/schedule_info.py
+python scripts/tracking/track_applications.py
+python scripts/scan/schedule_info.py
 ```
 
----
+## Özelleştirme
 
-## 🛠️ **CUSTOMIZATION**
-
-### **Change Search Queries:**
+**Arama sorgularını değiştir:**
 
 ```bash
 notepad ~/.applypilot/searches.yaml
-# Add/remove queries, change tiers
 ```
 
-### **Change Filters:**
+**Filtreleri değiştir:**
 
 ```bash
-notepad scripts/filter_jobs.py
-# Add new filters or modify existing
+notepad scripts/scan/filter_jobs.py
 ```
 
-### **Change AI Model:**
+**AI modelini değiştir:**
 
 ```bash
 notepad ~/.applypilot/.env
 
-# Options:
-LLM_MODEL=openai/gpt-4o-mini              # Current (fast, cheap)
-LLM_MODEL=anthropic/claude-3-5-haiku-20241022  # Better quality
-LLM_MODEL=anthropic/claude-sonnet-4-6     # Best (expensive)
+LLM_MODEL=openai/gpt-4o-mini              # varsayılan, hızlı ve ucuz
+LLM_MODEL=anthropic/claude-3-5-haiku-20241022
+LLM_MODEL=anthropic/claude-sonnet-4-6     # en kaliteli, en pahalı
 ```
 
----
+## Dokümantasyon
 
-## 📚 **DOCUMENTATION**
+Tüm dokümanların tam listesi ve açıklaması için [docs/README.md](README.md)'ye
+bak. Bu dosyayla en çok ilişkili olanlar:
 
-| File | Purpose |
-|------|---------|
-| `README.md` | 📖 Complete documentation |
-| `QUICK_START.md` | ⚡ 5-minute setup |
-| `GITHUB_GUIDE.md` | 🚀 GitHub integration |
-| `WINDOWS_SCHEDULER_GUIDE.md` | 🕐 Automation setup |
-| `CHANGELOG.md` | 📋 Scan history |
-| `JOB_APPLICATIONS.md` | 📝 Job tracker |
-| `SYSTEM_SUMMARY.md` | 🎯 This file! |
+| Dosya | Amaç |
+|------|------|
+| `../README.md` | Genel proje dokümantasyonu |
+| `setup/QUICK_START.md` | İlk tarama kurulumu |
+| `setup/GITHUB_GUIDE.md` | GitHub entegrasyonu |
+| `setup/WINDOWS_SCHEDULER_GUIDE.md` | Otomasyon kurulumu |
+| `../CHANGELOG.md` | Tarama geçmişi |
+| `tracking/JOB_APPLICATIONS.md` | İş takip tablosu |
+| `SYSTEM_SUMMARY.md` | Bu dosya |
 
----
+## Sonraki adımlar
 
-## 🎯 **SUCCESS METRICS**
+**Hemen:** Excel'i aç, Perfect Match (8+) işlere başvur, takip sistemini güncelle.
 
-### **Before ApplyPilot:**
+**Bu hafta:** 15-20 işe başvur, isteğe bağlı GitHub kurulumu, Windows otomasyonu
+ayarla, `CHANGELOG.md`'yi güncelle.
 
-- ❌ Manual job search
-- ❌ 1-2 hours per day
-- ❌ ~10 jobs found per week
-- ❌ No tracking system
-- ❌ Miss many opportunities
-
-### **After ApplyPilot:**
-
-- ✅ Automated discovery
-- ✅ 25 minutes every 3 days
-- ✅ ~180 jobs per scan
-- ✅ Complete tracking system
-- ✅ Never miss remote ML/AI jobs
-
-### **Time Saved:**
-
-```
-Before: 7 days × 2 hours = 14 hours/week
-After:  25 minutes every 3 days = ~1 hour/week
-
-Time saved: 13 hours/week = 676 hours/year!
-```
-
----
-
-## 🚀 **NEXT STEPS**
-
-### **Immediate:**
-
-1. ✅ Open Excel: `reports/latest.txt`
-2. ✅ Review Perfect Match (8+) jobs
-3. ✅ Apply to top 10 jobs
-4. ✅ Update tracking system
-
-### **This Week:**
-
-1. ✅ Apply to 15-20 jobs
-2. ✅ Set up GitHub (optional)
-3. ✅ Configure Windows automation
-4. ✅ Update CHANGELOG.md
-
-### **Ongoing:**
-
-1. ✅ Run scan every 3 days
-2. ✅ Track applications daily
-3. ✅ Adjust filters as needed
-4. ✅ Update skills in config
-
----
-
-## 🎉 **CONCLUSION**
-
-ApplyPilot is now a **complete professional job discovery and tracking system**:
-
-✅ **Automated discovery** (27 queries, 3 sites)  
-✅ **AI-powered scoring** (GPT-4o-mini)  
-✅ **Smart filtering** (8 automatic filters)  
-✅ **Advanced reporting** (6 pages, 18 columns)  
-✅ **Skill analysis** (match % calculation)  
-✅ **Job tracking** (Markdown + GitHub)  
-✅ **Full automation** (Windows Task Scheduler)  
-✅ **Version control** (Git + GitHub)  
-✅ **Complete documentation** (7 guide files)  
-
-**Total Time Investment:** ~2 hours setup  
-**Ongoing Time:** 25 minutes every 3 days  
-**Result:** Never miss relevant ML/AI/Backend opportunities!  
-
----
-
-**Başarılar! 🚀**
-
-> 💡 **Remember:** Consistency is key. Run scans every 3 days and track your applications!
+**Sürekli:** Her 3 günde bir tarama çalıştır, başvuruları günlük takip et,
+filtreleri ihtiyaca göre ayarla.
