@@ -1,0 +1,18 @@
+# ApplyPilot - external job discovery CLI (the core scraping/scoring engine)
+applypilot>=0.3.0
+
+# scripts/ - Excel export and reporting
+openpyxl>=3.1.0
+
+# career_os/ - strategic scoring layer
+networkx>=3.0
+numpy>=1.24
+sentence-transformers>=2.2
+scikit-learn>=1.3
+pyyaml>=6.0
+
+# scripts/tracking/sync_to_github.py - optional, only needed for GitHub Issues sync
+PyGithub>=2.0
+
+# tests/ - run with: pytest tests/
+pytest>=7.0
