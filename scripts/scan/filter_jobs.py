@@ -15,7 +15,7 @@ Filtrelenenler:
 - Security Clearance gerektiren işler
 
 Kullanım:
-    python filter_jobs.py
+    python scripts/scan/filter_jobs.py
 """
 
 import sqlite3

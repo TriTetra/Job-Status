@@ -5,7 +5,7 @@ Skills Gap Analyzer
 Excel'den "Missing Skills" toplar ve öğrenme planı oluşturur.
 
 Kullanım:
-    python scripts/skills_gap_analyzer.py
+    python scripts/strategy/skills_gap_analyzer.py
 """
 
 import openpyxl
@@ -19,8 +19,8 @@ import json
 # CONFIG
 # ============================================================================
 
-REPORTS_DIR = Path(__file__).parent.parent / "reports"
-OUTPUT_DIR = Path(__file__).parent.parent / "learning_plan"
+REPORTS_DIR = Path(__file__).parent.parent.parent / "reports"
+OUTPUT_DIR = Path(__file__).parent.parent.parent / "learning_plan"
 
 # Your current skills (from config.yaml)
 YOUR_SKILLS = {

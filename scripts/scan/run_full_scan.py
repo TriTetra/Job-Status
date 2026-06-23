@@ -12,7 +12,7 @@ Tam otomatik iş tarama sistemi.
 - Backup al
 
 Kullanım:
-    python scripts/run_full_scan.py
+    python scripts/scan/run_full_scan.py
 """
 
 import subprocess
@@ -27,7 +27,8 @@ from datetime import datetime, timedelta
 # CONFIGURATION
 # ============================================================================
 
-PROJECT_ROOT = Path(__file__).parent.parent
+SCRIPT_DIR = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 APPLYPILOT_DB = Path.home() / ".applypilot" / "applypilot.db"
 APPLYPILOT_EXE = PROJECT_ROOT / "venv" / "Scripts" / "applypilot.exe"
 
@@ -267,7 +268,7 @@ def run_full_scan():
     # ========================================================================
     log("\n🔧 STEP 4/6: Filtering jobs...")
 
-    cmd = ["python", str(PROJECT_ROOT / "filter_jobs.py")]
+    cmd = ["python", str(SCRIPT_DIR / "filter_jobs.py")]
     success, output = run_command(cmd, "Job Filtering")
 
     if not success:
@@ -281,7 +282,7 @@ def run_full_scan():
 
     report_dir = create_report_directory()
 
-    cmd = ["python", str(PROJECT_ROOT / "export_to_excel_advanced.py")]
+    cmd = ["python", str(SCRIPT_DIR / "export_to_excel_advanced.py")]
     success, output = run_command(cmd, "Excel Generation")
 
     if success:

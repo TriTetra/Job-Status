@@ -5,7 +5,7 @@ ApplyPilot Schedule Helper
 Ne zaman tarama yapman gerektiğini gösterir.
 
 Kullanım:
-    python scripts/schedule_info.py
+    python scripts/scan/schedule_info.py
 """
 
 import json
@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 def get_last_run():
     """Son tarama zamanını bul"""
-    history_file = Path(__file__).parent.parent / "logs" / "run_history.json"
+    history_file = Path(__file__).parent.parent.parent / "logs" / "run_history.json"
 
     if not history_file.exists():
         return None

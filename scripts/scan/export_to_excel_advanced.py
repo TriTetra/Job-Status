@@ -12,7 +12,7 @@ Features:
 - Clickable links
 
 Kullanım:
-    python export_to_excel_advanced.py
+    python scripts/scan/export_to_excel_advanced.py
 """
 
 import sqlite3
@@ -317,7 +317,7 @@ def create_jobs_detail_sheet(ws, jobs, title="Jobs"):
             try:
                 dt = datetime.fromisoformat(job['discovered_at'].replace('Z', '+00:00'))
                 posted_date = dt.strftime("%Y-%m-%d")
-            except:
+            except ValueError:
                 posted_date = job['discovered_at'][:10] if job['discovered_at'] else ""
 
         requirements = extract_requirements(job['full_description'])

@@ -8,7 +8,7 @@ Requires:
     pip install PyGithub
 
 Kullanım:
-    python scripts/sync_to_github.py
+    python scripts/tracking/sync_to_github.py
 """
 
 import openpyxl
@@ -18,8 +18,7 @@ import os
 try:
     from github import Github
 except ImportError:
-    print("❌ PyGithub gerekli!")
-    print("📦 Kurulum: pip install PyGithub")
+    print("PyGithub gerekli: pip install PyGithub")
     exit(1)
 
 
@@ -30,7 +29,7 @@ except ImportError:
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 REPO_NAME = "YOUR_USERNAME/applypilot-jobs"  # Değiştir!
 
-REPORTS_DIR = Path(__file__).parent.parent / "reports"
+REPORTS_DIR = Path(__file__).parent.parent.parent / "reports"
 
 
 # ============================================================================

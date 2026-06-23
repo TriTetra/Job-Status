@@ -2,7 +2,7 @@
 ApplyPilot işlerini Career OS ile analiz et ve başvuru stratejisi oluştur.
 
 Kullanım:
-    python scripts/apply_strategy.py
+    python scripts/strategy/apply_strategy.py
 
 Çıktı:
     - apply_today.txt: Bugün başvurulacak 10 iş
@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from career_os.data import ApplyPilotLoader, create_user_profile_from_config
 from career_os.intelligence import SemanticMatcher, GapAnalyzer, OpportunityScorer, CareerDecisionEngine
@@ -117,7 +117,7 @@ def main():
         f.write("1. URL'yi aç\n")
         f.write("2. LinkedIn/Indeed/Glassdoor'da apply tıkla\n")
         f.write("3. CV'ni upload et\n")
-        f.write("4. JOB_APPLICATIONS.md'ye kaydet\n\n")
+        f.write("4. docs/tracking/JOB_APPLICATIONS.md'ye kaydet\n\n")
 
     # apply_this_week.txt
     with open(output_dir / f"apply_this_week_{timestamp}.txt", "w", encoding="utf-8") as f:
@@ -248,7 +248,7 @@ def main():
     print("=" * 70)
     print("\n1. career_os_output/apply_today_*.txt dosyasını aç")
     print("2. URL'leri aç ve başvur (hedef: 10 başvuru bugün)")
-    print("3. JOB_APPLICATIONS.md'ye kaydet")
+    print("3. docs/tracking/JOB_APPLICATIONS.md'ye kaydet")
     print("4. Yarın devam et!\n")
 
 

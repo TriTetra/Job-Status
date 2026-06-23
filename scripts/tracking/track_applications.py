@@ -5,7 +5,7 @@ Job Application Tracker
 Excel ve Markdown'dan başvuru takibi yapar.
 
 Kullanım:
-    python scripts/track_applications.py
+    python scripts/tracking/track_applications.py
 """
 
 import openpyxl
@@ -18,8 +18,8 @@ from collections import defaultdict
 # CONFIG
 # ============================================================================
 
-REPORTS_DIR = Path(__file__).parent.parent / "reports"
-TRACKER_MD = Path(__file__).parent.parent / "JOB_APPLICATIONS.md"
+REPORTS_DIR = Path(__file__).parent.parent.parent / "reports"
+TRACKER_MD = Path(__file__).parent.parent.parent / "docs" / "JOB_APPLICATIONS.md"
 
 
 # ============================================================================

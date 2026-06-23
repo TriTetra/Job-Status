@@ -4,7 +4,7 @@ ApplyPilot Requirements Extractor
 Başvurulan her iş ilanından istenen gereksinimleri çıkarır ve analiz eder.
 
 Kullanım:
-    python extract_requirements.py
+    python scripts/strategy/extract_requirements.py
 """
 
 import sqlite3

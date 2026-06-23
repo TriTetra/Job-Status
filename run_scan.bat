@@ -21,7 +21,7 @@ REM Set UTF-8 encoding
 set PYTHONIOENCODING=utf-8
 
 REM Run scan
-python scripts\run_full_scan.py
+python scripts\scan\run_full_scan.py
 
 echo.
 echo ========================================

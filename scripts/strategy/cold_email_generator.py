@@ -7,7 +7,7 @@ Excel'den işleri okur ve her biri için kişiselleştirilmiş cold email oluşt
 HR-tested templates!
 
 Kullanım:
-    python scripts/cold_email_generator.py
+    python scripts/strategy/cold_email_generator.py
 """
 
 import openpyxl
@@ -21,8 +21,8 @@ import re
 # CONFIG
 # ============================================================================
 
-REPORTS_DIR = Path(__file__).parent.parent / "reports"
-OUTPUT_DIR = Path(__file__).parent.parent / "cold_emails"
+REPORTS_DIR = Path(__file__).parent.parent.parent / "reports"
+OUTPUT_DIR = Path(__file__).parent.parent.parent / "cold_emails"
 
 YOUR_INFO = {
     'name': 'Abdullokh Abdukodirov',
@@ -365,7 +365,7 @@ def generate_emails_from_excel(template_type='value_first', max_jobs=10):
     print("2. Research hiring manager on LinkedIn")
     print("3. Customize [bracketed sections] with specific details")
     print("4. Copy-paste to Gmail/email client")
-    print("5. Track responses in JOB_APPLICATIONS.md")
+    print("5. Track responses in docs/tracking/JOB_APPLICATIONS.md")
     print()
     print("💡 PRO TIPS:")
     print("-" * 70)
