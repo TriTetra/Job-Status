@@ -255,6 +255,11 @@ class SkillGraph:
         if target_skill in known_skills:
             return []
 
+        # Skills outside the hardcoded taxonomy (most real job postings
+        # mention skills this graph doesn't know about) have no path to find.
+        if not self.graph.has_node(target_skill):
+            return [target_skill]
+
         best_path = None
         min_cost = float('inf')
 

@@ -4,7 +4,7 @@ Load data from ApplyPilot database and convert to Career OS models.
 
 import sqlite3
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 from ..models import Job, UserProfile, Skill, SkillLevel
@@ -32,7 +32,7 @@ class ApplyPilotLoader:
         if not db_path.exists():
             raise FileNotFoundError(f"ApplyPilot database not found at {db_path}")
 
-        print(f"✓ Connected to ApplyPilot DB: {db_path}")
+        print(f"Connected to ApplyPilot DB: {db_path}")
 
     def load_jobs(self, min_score: int = 7, limit: Optional[int] = None) -> List[Job]:
         """
@@ -83,7 +83,7 @@ class ApplyPilotLoader:
 
         conn.close()
 
-        print(f"✓ Loaded {len(jobs)} jobs from ApplyPilot (score >= {min_score})")
+        print(f"Loaded {len(jobs)} jobs from ApplyPilot (score >= {min_score})")
 
         return jobs
 
@@ -112,7 +112,7 @@ class ApplyPilotLoader:
             if row['discovered_at']:
                 try:
                     date_posted = datetime.fromisoformat(row['discovered_at'])
-                except:
+                except ValueError:
                     pass
 
             # ApplyPilot fit score
@@ -316,84 +316,115 @@ class ApplyPilotLoader:
         return 2.0
 
 
+# Skill proficiency levels and AI-dependency multipliers aren't part of
+# config.yaml's schema (candidate.core_skills is a flat list of names) - they
+# require a hand-assessed judgment call this dict captures. Any skill listed
+# in config.yaml that isn't covered here falls back to _DEFAULT_SKILL_PROFILE.
+_SKILL_PROFILES: Dict[str, Tuple[SkillLevel, float, List[str]]] = {
+    "Machine Learning": (SkillLevel.WORKING, 0.7, ["YOLOv8 production system"]),
+    "Deep Learning": (SkillLevel.WORKING, 0.7, []),
+    "Computer Vision": (SkillLevel.WORKING, 0.7, ["92% mAP on edge devices"]),
+    "PyTorch": (SkillLevel.WORKING, 0.7, ["Fine-tuned models, custom pipelines"]),
+    "YOLOv8": (SkillLevel.WORKING, 0.7, []),
+    "OpenCV": (SkillLevel.WORKING, 0.6, []),
+    "Python": (SkillLevel.INDEPENDENT, 0.8, ["Multiple production projects"]),
+    "FastAPI": (SkillLevel.WORKING, 0.6, []),
+    "REST API": (SkillLevel.WORKING, 0.7, []),
+    "gRPC": (SkillLevel.AI_ASSISTED, 0.5, []),
+    "Docker": (SkillLevel.WORKING, 0.5, ["Containerized ML apps"]),
+    "AWS": (SkillLevel.AI_ASSISTED, 0.4, []),
+    "Kubernetes": (SkillLevel.AI_ASSISTED, 0.3, []),
+    "Rust": (SkillLevel.WORKING, 0.6, ["Sentropy Engine"]),
+    "Java": (SkillLevel.AI_ASSISTED, 0.4, []),
+    "Go": (SkillLevel.AI_ASSISTED, 0.3, []),
+    "React": (SkillLevel.AI_ASSISTED, 0.3, []),
+    "Next.js": (SkillLevel.AI_ASSISTED, 0.3, []),
+    "TypeScript": (SkillLevel.AI_ASSISTED, 0.4, []),
+    "LLM": (SkillLevel.WORKING, 0.6, []),
+    "NLP": (SkillLevel.WORKING, 0.6, []),
+}
+_DEFAULT_SKILL_PROFILE: Tuple[SkillLevel, float, List[str]] = (SkillLevel.WORKING, 0.6, [])
+
+
+def _find_config_path() -> Optional[Path]:
+    """Look for config.yaml at the project root, then ~/.applypilot/."""
+    project_config = Path(__file__).parent.parent.parent / "config.yaml"
+    if project_config.exists():
+        return project_config
+
+    home_config = Path.home() / ".applypilot" / "config.yaml"
+    if home_config.exists():
+        return home_config
+
+    return None
+
+
 def create_user_profile_from_config() -> UserProfile:
     """
-    Create user profile from your actual skills.
+    Build a UserProfile from config.yaml's `candidate` section.
 
-    TODO: Could load from config.yaml or resume.txt
-    For now, hardcoded based on your background.
+    Contact info, years of experience, target roles, salary range, and
+    sponsorship/remote preferences come directly from config.yaml. Skill
+    proficiency levels come from _SKILL_PROFILES above, since config.yaml
+    only stores skill names, not levels.
+
+    Raises:
+        FileNotFoundError: if config.yaml isn't found at the project root
+            or in ~/.applypilot/.
     """
-    from ..models import Experience, UserPreferences
+    import yaml
+    from ..models import UserPreferences
+
+    config_path = _find_config_path()
+    if config_path is None:
+        raise FileNotFoundError(
+            "config.yaml not found at project root or ~/.applypilot/config.yaml"
+        )
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    candidate = config.get("candidate", {})
+    job_search = config.get("job_search", {})
+
+    skills = []
+    for skill_name in candidate.get("core_skills", []):
+        level, ai_multiplier, evidence = _SKILL_PROFILES.get(skill_name, _DEFAULT_SKILL_PROFILE)
+        skills.append(Skill(skill_name, level, ai_multiplier=ai_multiplier, evidence=list(evidence)))
+
+    # Target roles in config.yaml are a single comma-separated string
+    # ("ML Engineer, Backend Engineer, ..."); target_roles needs a list.
+    target_role_field = candidate.get("target_role", "")
+    target_roles = [r.strip() for r in target_role_field.split(",") if r.strip()]
+
+    resume_path = Path(__file__).parent.parent.parent / "personal" / f"{candidate.get('name', '').replace(' ', '_')}.txt"
+    if resume_path.exists():
+        resume_text = resume_path.read_text(encoding="utf-8")
+    else:
+        resume_text = (
+            f"{candidate.get('current_title', 'Engineer')} with "
+            f"{candidate.get('years_experience', 0)} years of experience."
+        )
+
+    remote_only = bool(job_search.get("remote_only", True))
 
     return UserProfile(
-        name="Abdullokh Abdukodirov",
-        email="abdullahabdulkadir0@gmail.com",
-        years_experience=2.0,
-        ai_proficiency=0.8,  # High AI usage
-        skills=[
-            # ML/AI - Core strengths
-            Skill("Machine Learning", SkillLevel.WORKING, ai_multiplier=0.7,
-                  evidence=["YOLOv8 production system"]),
-            Skill("Deep Learning", SkillLevel.WORKING, ai_multiplier=0.7),
-            Skill("Computer Vision", SkillLevel.WORKING, ai_multiplier=0.7,
-                  evidence=["92% mAP on edge devices"]),
-            Skill("PyTorch", SkillLevel.WORKING, ai_multiplier=0.7,
-                  evidence=["Fine-tuned models, custom pipelines"]),
-            Skill("YOLOv8", SkillLevel.WORKING, ai_multiplier=0.7),
-            Skill("OpenCV", SkillLevel.WORKING, ai_multiplier=0.6),
-
-            # Programming - Strong
-            Skill("Python", SkillLevel.INDEPENDENT, ai_multiplier=0.8,
-                  evidence=["Multiple production projects"]),
-
-            # Backend - Moderate
-            Skill("FastAPI", SkillLevel.WORKING, ai_multiplier=0.6),
-            Skill("REST API", SkillLevel.WORKING, ai_multiplier=0.7),
-            Skill("gRPC", SkillLevel.AI_ASSISTED, ai_multiplier=0.5),
-
-            # Infrastructure - Learning
-            Skill("Docker", SkillLevel.WORKING, ai_multiplier=0.5,
-                  evidence=["Containerized ML apps"]),
-            Skill("AWS", SkillLevel.AI_ASSISTED, ai_multiplier=0.4),
-            Skill("Kubernetes", SkillLevel.AI_ASSISTED, ai_multiplier=0.3),
-
-            # Other languages - Varied
-            Skill("Rust", SkillLevel.WORKING, ai_multiplier=0.6,
-                  evidence=["Sentropy Engine"]),
-            Skill("Java", SkillLevel.AI_ASSISTED, ai_multiplier=0.4),
-            Skill("Go", SkillLevel.AI_ASSISTED, ai_multiplier=0.3),
-
-            # Frontend - Basic
-            Skill("React", SkillLevel.AI_ASSISTED, ai_multiplier=0.3),
-            Skill("Next.js", SkillLevel.AI_ASSISTED, ai_multiplier=0.3),
-            Skill("TypeScript", SkillLevel.AI_ASSISTED, ai_multiplier=0.4),
-
-            # LLM/AI - Growing
-            Skill("LLM", SkillLevel.WORKING, ai_multiplier=0.6),
-            Skill("AI", SkillLevel.WORKING, ai_multiplier=0.7),
-        ],
-        experience=[
-            Experience(
-                title="ML Engineer / Developer",
-                company="KOU STORM UAV",
-                description="Built YOLOv8 object detection system achieving 92% mAP on edge devices. Optimized inference to 40ms latency.",
-                start_date=datetime(2023, 1, 1),
-                achievements=[
-                    "92% mAP accuracy on custom dataset",
-                    "40ms inference latency on Raspberry Pi 5",
-                    "Real-time detection at 20+ FPS"
-                ],
-                skills_used=["Python", "PyTorch", "Computer Vision", "YOLOv8", "OpenCV"]
-            )
-        ],
-        target_roles=["ML Engineer", "AI Engineer", "Backend Engineer", "Full Stack Developer"],
-        target_domains=["Machine Learning", "Computer Vision", "AI/ML"],
-        resume_text="ML Engineer with 2 years experience in computer vision, deep learning, and production ML systems. Built YOLOv8 detection achieving 92% mAP on edge devices.",
+        name=candidate.get("name", "Unknown"),
+        email=candidate.get("email", ""),
+        years_experience=float(candidate.get("years_experience", 0)),
+        ai_proficiency=0.8,  # not in config.yaml's schema; reasonable default
+        skills=skills,
+        experience=[],
+        target_roles=target_roles,
+        target_domains=[],
+        resume_text=resume_text,
         preferences=UserPreferences(
-            remote=True,
+            remote=remote_only,
             hybrid_acceptable=True,
-            onsite_acceptable=False,
-            work_visa_required=True,
+            onsite_acceptable=not remote_only,
+            work_visa_required=bool(candidate.get("needs_sponsorship", False)),
+            min_salary=candidate.get("salary_min"),
+            max_salary=candidate.get("salary_max"),
             preferred_company_sizes=["startup", "midsize"],
         )
     )

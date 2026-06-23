@@ -35,7 +35,7 @@ class SemanticMatcher:
         print(f"Loading embedding model: {model_name}...")
         self.encoder = SentenceTransformer(model_name)
         self.skill_graph = SkillGraph()
-        print("✓ Semantic matcher ready")
+        print("Semantic matcher ready")
 
     def match(self, user: UserProfile, job: Job) -> MatchResult:
         """
