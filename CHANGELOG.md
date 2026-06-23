@@ -1,53 +1,48 @@
-# 📋 ApplyPilot Changelog
+# ApplyPilot Changelog
 
-All scan runs and major changes are logged here.
+Every scan run and any configuration change is logged here.
 
----
-
-## 2026-06-22 - Initial Setup ✨
+## 2026-06-22 - Initial scan
 
 ### Summary
-- 🚀 First complete scan
-- 📊 562 jobs discovered
-- ⭐ 30 perfect matches (8+ score)
-- ⭐ 121 good matches (7 score)
+
+- First complete scan after setup
+- 562 jobs discovered
+- 30 scored 8+ ("perfect match")
+- 121 scored 7 ("good match")
 
 ### Configuration
-- **LLM:** GPT-4o-mini via OpenRouter
-- **Search Queries:** 27 (18 English + 7 Turkish)
-- **Sites:** LinkedIn, Indeed, Glassdoor
-- **Filters:** 8 automatic filters
+
+- LLM: GPT-4o-mini via OpenRouter
+- Search queries: as configured in `searches.yaml` at the time
+- Sites: LinkedIn, Indeed, Glassdoor
+- Filters: the 8 rules in `scripts/scan/filter_jobs.py`
 
 ### Results
-- **Total Cost:** ~$0.73
-- **Duration:** ~30 minutes
-- **Perfect Match Rate:** 5.3% (30/562)
-- **Quality Match Rate:** 26.9% (151/562)
 
-### Filters Applied
-1. ❌ Senior/Lead/Principal positions
-2. ❌ Standalone Frontend roles
-3. ❌ Freelance/Contract jobs (16 filtered)
-4. ❌ Intern/Internship (2 filtered)
-5. ❌ Standalone JavaScript Developer
-6. ❌ Analytics Engineer
-7. ❌ Paris onsite jobs
-8. ❌ 4+ years experience required (12 filtered)
+- Total LLM cost: ~$0.73
+- Duration: ~30 minutes
+- Perfect match rate: 5.3% (30/562)
+- Combined 7+ match rate: 26.9% (151/562)
 
-### Top Job Types Found
-- ML/AI Engineer (40%)
-- Backend Engineer (27%)
-- Full Stack Engineer (17%)
-- Graduate Programs (17%)
+### Filters applied
 
-### Files Generated
+1. Senior/Lead/Principal positions
+2. Standalone frontend roles
+3. Freelance/contract roles (16 filtered)
+4. Internships (2 filtered)
+5. Standalone JavaScript Developer roles
+6. Analytics Engineer roles
+7. Paris onsite roles
+8. Roles requiring 4+ years experience (12 filtered)
+
+### Files generated
+
 - `reports/2026-06-22/applypilot_advanced_20260622_203154.xlsx`
 - `backups/db_20260622_*.sqlite`
 - `logs/2026-06-22.log`
 
----
-
-## Template for Future Scans
+## Template for future entries
 
 ```markdown
 ## YYYY-MM-DD - Scan #X
@@ -67,13 +62,10 @@ All scan runs and major changes are logged here.
 - Top locations:
 - Salary range:
 
-### Actions Taken
+### Actions taken
 - Applied to: X jobs
 - Interviews:
 - Offers:
 ```
 
----
-
-📝 **Instructions:**
-After each scan, add a new entry at the top with scan results.
+Add a new entry at the top of this file after each scan.
