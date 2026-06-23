@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-sys.path.insert(0, str(Path(__file__).parent))
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from career_os.models import Skill, SkillLevel, UserProfile, Job, Experience, UserPreferences
 from career_os.intelligence import SemanticMatcher, GapAnalyzer
@@ -105,13 +107,17 @@ def create_test_jobs() -> list[Job]:
     ]
 
 
-def test_semantic_matcher():
+@pytest.fixture(scope="module")
+def matcher():
+    return SemanticMatcher(model_name='all-MiniLM-L6-v2')  # Faster model
+
+
+def test_semantic_matcher(matcher):
     """Test semantic matching."""
     print("=" * 70)
     print("TEST 1: Semantic Matcher")
     print("=" * 70)
 
-    matcher = SemanticMatcher(model_name='all-MiniLM-L6-v2')  # Faster model
     profile = create_test_profile()
     jobs = create_test_jobs()
 
@@ -124,8 +130,10 @@ def test_semantic_matcher():
     print("Matching Results:")
     print("-" * 70)
 
+    results = {}
     for job in jobs:
         result = matcher.match(profile, job)
+        results[job.id] = result
 
         print(f"\nJob: {job.title} at {job.company}")
         print(f"  Overall Score: {result.overall_score:.1f}/100")
@@ -140,7 +148,21 @@ def test_semantic_matcher():
         print(f"\n  Analysis: {result.explanation}")
         print("-" * 70)
 
-    print("\n✓ Semantic matcher working\n")
+        # Every score is a valid percentage with an explanation
+        assert 0.0 <= result.overall_score <= 100.0
+        assert 0.0 <= result.confidence <= 1.0
+        assert result.explanation
+
+    # The exact-match ML Engineer job should score well above the role
+    # this profile is missing core required skills for (TensorFlow/Kubernetes)
+    assert results["job-1"].overall_score > results["job-2"].overall_score
+    # Job 1 requires only skills the profile already has
+    assert results["job-1"].skill_gaps == []
+    # Job 2 requires TensorFlow and Kubernetes, neither of which is in the profile
+    assert "TensorFlow" in results["job-2"].skill_gaps
+    assert "Kubernetes" in results["job-2"].skill_gaps
+
+    print("\nOK: Semantic matcher working\n")
 
 
 def test_gap_analyzer():
@@ -173,10 +195,29 @@ def test_gap_analyzer():
         print(f"   Jobs Unlocked: {gap.jobs_unlocked}")
 
         if gap.learning_path and len(gap.learning_path) > 1:
-            print(f"   Path: {' → '.join(gap.learning_path)}")
+            print(f"   Path: {' -> '.join(gap.learning_path)}")
 
     print("\n" + "-" * 70)
-    print("\n✓ Gap analyzer working\n")
+
+    # Neither target job requires anything the profile doesn't already have
+    # at INDEPENDENT+, except AWS, PostgreSQL, Kubernetes, Redis
+    gap_skills = {g.skill for g in gaps}
+    assert gap_skills == {"AWS", "Kubernetes", "PostgreSQL", "Redis"}
+
+    # Gaps must be sorted by ROI descending
+    rois = [g.roi for g in gaps]
+    assert rois == sorted(rois, reverse=True)
+
+    # Every gap has a positive learning cost. Learning path is only non-empty
+    # for skills the profile doesn't already have some level in (shortest_
+    # learning_path returns [] for a skill the profile already "knows", even
+    # if below the target proficiency level).
+    for gap in gaps:
+        assert gap.learning_cost_hours > 0
+        if gap.current_level == SkillLevel.UNKNOWN:
+            assert gap.learning_path
+
+    print("\nOK: Gap analyzer working\n")
 
 
 def test_learning_roadmap():
@@ -204,7 +245,7 @@ def test_learning_roadmap():
 
     for task in roadmap.tasks:
         print(f"\nWeek {task.start_week}-{task.start_week + task.duration_weeks - 1}: {task.skill}")
-        print(f"  Time: {task.hours_per_week}h/week × {task.duration_weeks} weeks = {task.total_hours}h total")
+        print(f"  Time: {task.hours_per_week}h/week x {task.duration_weeks} weeks = {task.total_hours}h total")
         print(f"  Impact: +{task.impact:.1f} career value")
         print(f"  Resources:")
         for resource in task.resources:
@@ -215,16 +256,24 @@ def test_learning_roadmap():
     print(f"\nTotal Investment: {roadmap.total_hours} hours over {roadmap.total_weeks} weeks")
     print(f"Expected ROI: +{roadmap.expected_fit_improvement:.0f}% fit score improvement")
 
-    print("\n✓ Roadmap generator working\n")
+    # The roadmap must respect the requested ceiling
+    assert roadmap.total_weeks <= 8
+    assert roadmap.tasks
+    # Tasks are scheduled back-to-back without overlapping weeks
+    for earlier, later in zip(roadmap.tasks, roadmap.tasks[1:]):
+        assert later.start_week >= earlier.start_week + earlier.duration_weeks
+    # Total hours across tasks matches the sum of individual task hours
+    assert roadmap.total_hours == sum(t.total_hours for t in roadmap.tasks)
+
+    print("\nOK: Roadmap generator working\n")
 
 
-def test_integration():
+def test_integration(matcher):
     """Test full pipeline."""
     print("=" * 70)
     print("TEST 4: Full Integration")
     print("=" * 70)
 
-    matcher = SemanticMatcher(model_name='all-MiniLM-L6-v2')
     analyzer = GapAnalyzer()
 
     profile = create_test_profile()
@@ -248,7 +297,7 @@ def test_integration():
     print("-" * 70)
 
     target_jobs = [j for j, r in good_matches]
-    gaps = analyzer.analyze(profile, target_jobs)
+    gaps = analyzer.analyze(profile, target_jobs) if target_jobs else []
 
     print(f"\nTop 3 skills to learn (by ROI):")
     for i, gap in enumerate(gaps[:3], 1):
@@ -266,40 +315,21 @@ def test_integration():
     print(f"\nExpected Outcome:")
     print(f"  Time investment: {roadmap.total_hours} hours")
     print(f"  Fit improvement: +{roadmap.expected_fit_improvement:.0f}%")
-    print(f"  New match scores (estimated):")
 
-    for job, result in good_matches:
-        estimated_new = min(result.overall_score + roadmap.expected_fit_improvement * 0.3, 100)
-        print(f"    {job.title:30}: {result.overall_score:5.1f} → {estimated_new:5.1f}")
+    # The full pipeline must produce internally consistent results: every
+    # match has a score, and the roadmap (if any gaps exist) stays within budget
+    assert all(0.0 <= r.overall_score <= 100.0 for _, r in matches)
+    assert roadmap.total_weeks <= 8
 
-    print("\n✓ Integration working\n")
-
-
-def run_all_tests():
-    """Run all Day 2 tests."""
-    print("\n" + "=" * 70)
-    print("  DAY 2 TESTS: Semantic Matcher + Gap Analyzer")
-    print("=" * 70)
-
-    try:
-        test_semantic_matcher()
-        test_gap_analyzer()
-        test_learning_roadmap()
-        test_integration()
-
-        print("=" * 70)
-        print("  ✓ ALL DAY 2 TESTS PASSED")
-        print("=" * 70)
-        print("\nDay 2 Complete! Ready for Day 3:")
-        print("  - Opportunity Scorer (acceptance probability)")
-        print("  - Market Intelligence")
-        print("  - Full Career OS integration")
-
-    except Exception as e:
-        print(f"\n✗ TEST FAILED: {e}")
-        import traceback
-        traceback.print_exc()
+    print("\nOK: Integration working\n")
 
 
 if __name__ == "__main__":
-    run_all_tests()
+    m = SemanticMatcher(model_name='all-MiniLM-L6-v2')
+    test_semantic_matcher(m)
+    test_gap_analyzer()
+    test_learning_roadmap()
+    test_integration(m)
+    print("=" * 70)
+    print("  OK: ALL DAY 2 TESTS PASSED")
+    print("=" * 70)

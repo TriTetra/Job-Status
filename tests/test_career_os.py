@@ -5,8 +5,10 @@ Test Career OS core functionality.
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add career_os to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from career_os.models import Skill, SkillLevel, UserProfile, Job
 from career_os.core import SkillGraph
@@ -18,7 +20,6 @@ def test_skill_levels():
     print("TEST 1: Skill Levels & Learning Cost")
     print("=" * 70)
 
-    # Create skills at different levels
     python = Skill(
         name="Python",
         level=SkillLevel.INDEPENDENT,
@@ -41,7 +42,16 @@ def test_skill_levels():
     print(f"  Effective level: {aws.effective_level():.1f}/5.0")
     print(f"  Cost to INDEPENDENT: {aws.learning_cost(SkillLevel.INDEPENDENT)} hours")
 
-    print("\n✓ Skill levels working")
+    # INDEPENDENT (3) * 0.8 multiplier
+    assert python.effective_level() == pytest.approx(2.4)
+    # AI_ASSISTED (1) * 0.5 multiplier
+    assert aws.effective_level() == pytest.approx(0.5)
+
+    # Already at INDEPENDENT, learning cost to a level it's already past is 0
+    assert python.learning_cost(SkillLevel.WORKING) == 0
+    assert python.learning_cost(SkillLevel.ADVANCED) > 0
+
+    print("\nOK: Skill levels working")
 
 
 def test_skill_graph():
@@ -63,7 +73,16 @@ def test_skill_graph():
     print("\nTransfer Learning Coefficients:")
     for from_skill, to_skill in transfers:
         factor = graph.get_transfer_factor(from_skill, to_skill)
-        print(f"  {from_skill:15} → {to_skill:15} : {factor:.2f}")
+        print(f"  {from_skill:15} -> {to_skill:15} : {factor:.2f}")
+        # Every declared transfer relationship must be a real coefficient
+        assert 0.0 < factor <= 1.0
+
+    # Known transfer weights, read directly from the graph definition
+    assert graph.get_transfer_factor("Python", "FastAPI") == pytest.approx(0.8)
+    assert graph.get_transfer_factor("Python", "Go") == pytest.approx(0.4)
+
+    # Unrelated skills have no transfer path
+    assert graph.get_transfer_factor("Python", "Photography") == 0.0
 
     # Test learning paths
     print("\nLearning Paths:")
@@ -75,9 +94,12 @@ def test_skill_graph():
         path = graph.shortest_learning_path(known, target)
         print(f"\n  To learn {target}:")
         if path:
-            print(f"    Path: {' → '.join(path)}")
+            print(f"    Path: {' -> '.join(path)}")
         else:
             print(f"    Already known!")
+        # A target not already known must resolve to a non-empty path
+        assert target not in known
+        assert path
 
     # Test learning discount
     print("\nLearning Cost Discounts:")
@@ -92,9 +114,17 @@ def test_skill_graph():
         original_cost = 40  # Base hours
         actual_cost = int(original_cost * discount)
 
-        print(f"  {target:15} : {discount:.0%} discount ({original_cost}h → {actual_cost}h)")
+        print(f"  {target:15} : {discount:.0%} discount ({original_cost}h -> {actual_cost}h)")
 
-    print("\n✓ Skill graph working")
+        # Discount factor is always bounded between 0.3 (max discount) and 1.0 (none)
+        assert 0.3 <= discount <= 1.0
+
+    # Rust has no transfer edge from Python/Docker in the graph, so no discount
+    assert graph.calculate_learning_discount(known_skills, "Rust") == 1.0
+    # FastAPI transfers strongly from Python at ADVANCED level, so it's discounted
+    assert graph.calculate_learning_discount(known_skills, "FastAPI") < 1.0
+
+    print("\nOK: Skill graph working")
 
 
 def test_user_profile():
@@ -128,11 +158,19 @@ def test_user_profile():
     for skill in sorted(profile.skills, key=lambda s: s.level, reverse=True):
         level_name = SkillLevel(skill.level).name
         effective = skill.effective_level()
-        print(f"  {skill.name:20} L{skill.level} ({level_name:12}) → {effective:.1f} effective")
+        print(f"  {skill.name:20} L{skill.level} ({level_name:12}) -> {effective:.1f} effective")
 
     print(f"\nHigh proficiency (L3+): {len(profile.high_proficiency_skills())}")
 
-    print("\n✓ User profile working")
+    assert len(profile.skills) == 7
+    assert profile.has_skill("Python", SkillLevel.WORKING) is True
+    assert profile.has_skill("Rust", SkillLevel.AI_ASSISTED) is False
+    # Only Python is at INDEPENDENT (L3) or above
+    assert len(profile.high_proficiency_skills()) == 1
+    assert profile.get_skill("Python").level == SkillLevel.INDEPENDENT
+    assert profile.get_skill("Nonexistent") is None
+
+    print("\nOK: User profile working")
 
 
 def test_job_matching_concept():
@@ -191,34 +229,18 @@ def test_job_matching_concept():
     print(f"  Missing: {', '.join(missing)}")
     print(f"  Match: {match_pct:.0f}%")
 
-    print("\n✓ Job matching concept working")
+    assert matched == ["Python", "PyTorch", "Docker"]
+    assert missing == ["AWS"]
+    assert match_pct == pytest.approx(75.0)
 
-
-def run_all_tests():
-    """Run all tests."""
-    print("\n" + "=" * 70)
-    print("  CAREER OS CORE TESTS")
-    print("=" * 70)
-
-    try:
-        test_skill_levels()
-        test_skill_graph()
-        test_user_profile()
-        test_job_matching_concept()
-
-        print("\n" + "=" * 70)
-        print("  ✓ ALL TESTS PASSED")
-        print("=" * 70)
-        print("\nCore systems operational. Ready for:")
-        print("  1. Semantic Matcher implementation")
-        print("  2. Gap Analyzer implementation")
-        print("  3. Opportunity Scorer implementation")
-
-    except Exception as e:
-        print(f"\n✗ TEST FAILED: {e}")
-        import traceback
-        traceback.print_exc()
+    print("\nOK: Job matching concept working")
 
 
 if __name__ == "__main__":
-    run_all_tests()
+    test_skill_levels()
+    test_skill_graph()
+    test_user_profile()
+    test_job_matching_concept()
+    print("\n" + "=" * 70)
+    print("  OK: ALL TESTS PASSED")
+    print("=" * 70)
