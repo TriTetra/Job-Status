@@ -136,9 +136,13 @@ def match_skills(requirements_text):
     matched = []
     missing = []
 
+    def has_word(token, text):
+        pattern = r'(?<![a-z0-9])' + re.escape(token) + r'(?![a-z0-9])'
+        return re.search(pattern, text) is not None
+
     # Eşleşenleri bul
     for skill in ALL_YOUR_SKILLS:
-        if skill in text_lower:
+        if has_word(skill, text_lower):
             matched.append(skill)
 
     # Yaygın teknolojileri ara (eksik olanlar için)
@@ -149,7 +153,7 @@ def match_skills(requirements_text):
     ]
 
     for tech in common_techs:
-        if tech in text_lower and tech not in ALL_YOUR_SKILLS:
+        if has_word(tech, text_lower) and tech not in ALL_YOUR_SKILLS:
             missing.append(tech)
 
     # Match percentage

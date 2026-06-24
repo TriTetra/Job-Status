@@ -2,6 +2,7 @@
 Load data from ApplyPilot database and convert to Career OS models.
 """
 
+import re
 import sqlite3
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -53,12 +54,13 @@ class ApplyPilotLoader:
                 url,
                 title,
                 location,
-                description,
+                COALESCE(full_description, description) AS description,
                 fit_score,
                 score_reasoning,
                 site,
                 salary,
-                discovered_at
+                discovered_at,
+                application_url
             FROM jobs
             WHERE fit_score >= ?
             ORDER BY fit_score DESC, discovered_at DESC
@@ -104,8 +106,8 @@ class ApplyPilotLoader:
             location = row['location'] or "Unknown"
             description = row['description'] or ""
 
-            # Extract company from title or URL
-            company = self._extract_company(title, url)
+            # Extract company from title, URL, application URL, or description
+            company = self._extract_company(title, url, row['application_url'], description)
 
             # Date
             date_posted = None
@@ -162,17 +164,39 @@ class ApplyPilotLoader:
             print(f"Warning: Failed to parse job {row.get('url', 'unknown')}: {e}")
             return None
 
-    def _extract_company(self, title: str, url: str) -> str:
-        """Extract company name from title or URL."""
-        # Try to extract from URL (linkedin.com/company/xyz)
-        import re
+    # Known ATS/job-board domains that never identify the employer in the URL.
+    _KNOWN_ATS_DOMAINS = (
+        'greenhouse.io', 'grnh.se', 'lever.co', 'indeed.com', 'linkedin.com',
+        'glassdoor.com', 'workday.com', 'myworkdayjobs.com', 'ashbyhq.com',
+        'bamboohr.com', 'smartrecruiters.com', 'icims.com', 'jobvite.com',
+    )
 
+    # Generic words the description regexes below sometimes capture instead
+    # of an actual company name (e.g. "About This Role", "Join Us").
+    _COMPANY_BLOCKLIST = {
+        'this', 'us', 'our', 'we', 'the', 'about', 'a', 'an', 'our client',
+        'this role', 'this position', 'this job', 'this team', 'build',
+        'i', 'you', 'they', 'it', 'our team', 'our company',
+    }
+
+    def _extract_company(self, title: str, url: str,
+                          application_url: Optional[str] = None,
+                          description: str = "") -> str:
+        """
+        Extract company name from title, URL, application URL, or description.
+
+        None of these are reliable alone - most postings in practice (esp.
+        $/hr contractor listings via evaluation platforms) simply don't name
+        the employer anywhere ApplyPilot stores. This tries several signals
+        in order and falls back to "Unknown" rather than guessing.
+        """
+        # LinkedIn job postings sometimes link the employer's own page
         if 'linkedin.com' in url:
             match = re.search(r'/company/([^/]+)', url)
             if match:
                 return match.group(1).replace('-', ' ').title()
 
-        # Try to extract from title (often "Title - Company" or "Title at Company")
+        # "Title - Company" or "Title at Company"
         if ' - ' in title:
             parts = title.split(' - ')
             if len(parts) >= 2:
@@ -183,7 +207,32 @@ class ApplyPilotLoader:
             if len(parts) >= 2:
                 return parts[-1].strip()
 
-        # Default
+        # The apply link sometimes goes straight to the employer's own
+        # domain (e.g. https://digitalharborfoundation.org/apply/...) rather
+        # than a generic ATS - extract the registrable domain as a last resort.
+        if application_url:
+            domain_match = re.search(r'https?://(?:www\.)?([a-z0-9\-]+)\.[a-z.]+',
+                                      application_url, re.IGNORECASE)
+            if domain_match:
+                domain = domain_match.group(0)
+                if not any(ats in domain.lower() for ats in self._KNOWN_ATS_DOMAINS):
+                    return domain_match.group(1).replace('-', ' ').title()
+
+        # Common description openers: "At Acme, we build..." / "Join Acme!"
+        if description:
+            text = description[:600]
+            patterns = [
+                r'^At ([A-Z][\w&.,\'’\-]*(?:\s+[A-Z][\w&.,\'’\-]*){0,4}),\s+we',
+                r'\bJoin ([A-Z][\w&.,\'’\-]*(?:\s+[A-Z][\w&.,\'’\-]*){0,4})[\s,!.]',
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, text)
+                if match:
+                    candidate = match.group(1).strip().rstrip('.,')
+                    if candidate.lower() not in self._COMPANY_BLOCKLIST and len(candidate) > 1:
+                        return candidate
+
+        # No reliable signal found - be honest about it rather than guessing
         return "Unknown"
 
     def _is_remote(self, location: str, description: str) -> bool:
@@ -210,8 +259,6 @@ class ApplyPilotLoader:
         """
         if not salary_str:
             return None, None
-
-        import re
 
         # Extract numbers
         numbers = re.findall(r'\d+', salary_str.replace(',', ''))
@@ -245,9 +292,25 @@ class ApplyPilotLoader:
         # Default
         return "unknown"
 
+    # Headings that typically introduce the actual requirements, as opposed
+    # to company-overview or benefits paragraphs that happen to namedrop
+    # tools the candidate would use day-to-day but didn't ask for.
+    _REQUIREMENTS_HEADING_RE = re.compile(
+        r'(requirements?|qualifications?|what you.?ll need|skills?( required)?'
+        r'|tech stack|you have|must have)\s*:?\s*\n',
+        re.IGNORECASE
+    )
+
     def _extract_skills(self, description: str, title: str) -> List[str]:
         """
         Extract required skills from description.
+
+        When the posting has an identifiable "Requirements"/"Qualifications"/
+        etc. section, only that section is scanned for skill keywords - this
+        avoids picking up tools mentioned in passing (company's tech stack,
+        "nice to have"s buried in a benefits blurb) as if they were required.
+        About 35% of real postings have such a heading; the rest fall back to
+        scanning the full text, which is noisier but better than nothing.
 
         Args:
             description: Job description
@@ -256,7 +319,18 @@ class ApplyPilotLoader:
         Returns:
             List of skill names
         """
-        text = (description + " " + title).lower()
+        heading_match = self._REQUIREMENTS_HEADING_RE.search(description)
+        if heading_match:
+            # Scan from the heading to the next blank-line-delimited heading
+            # (or end of text), capped so a missing closing boundary can't
+            # pull in the rest of the posting.
+            section = description[heading_match.end():heading_match.end() + 1500]
+            next_heading = re.search(r'\n[A-Z][^\n]{0,40}:?\s*\n', section)
+            if next_heading:
+                section = section[:next_heading.start()]
+            text = (section + " " + title).lower()
+        else:
+            text = (description + " " + title).lower()
 
         # Common skills to look for
         skill_keywords = {
@@ -273,7 +347,8 @@ class ApplyPilotLoader:
         found_skills = []
 
         for skill in skill_keywords:
-            if skill.lower() in text:
+            pattern = r'(?<![a-z0-9])' + re.escape(skill.lower()) + r'(?![a-z0-9])'
+            if re.search(pattern, text):
                 found_skills.append(skill)
 
         return found_skills
@@ -289,8 +364,6 @@ class ApplyPilotLoader:
         Returns:
             Required years (default 2.0)
         """
-        import re
-
         text = (title + " " + description).lower()
 
         # Check for seniority in title

@@ -63,10 +63,10 @@ def main():
     engine = CareerDecisionEngine(matcher, analyzer, scorer)
 
     # Full analiz
-    result = engine.analyze_opportunities(jobs, profile, min_score=60.0)
+    result = engine.analyze_opportunities(jobs, profile, min_score=50.0)
 
     print(f"\n✓ Analiz tamamlandı!")
-    print(f"  - {result['viable_count']} viable iş (skor >= 60)")
+    print(f"  - {result['viable_count']} viable iş (skor >= 50)")
     print(f"  - {len(result['apply_now'])} APPLY NOW")
     print(f"  - {len(result['consider'])} CONSIDER")
 
