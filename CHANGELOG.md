@@ -5,9 +5,97 @@ Sıralama: en yeniden en eskiye.
 
 ---
 
-## [Unreleased] — Phase 1C başlayacak (scan_history tracking)
+## Phase Tamamlanma Tablosu
+
+| Phase | İçerik | Durum | Tarih |
+|-------|---------|-------|-------|
+| Phase 0 | Hazırlık: git tag, backup, API key rotation, architecture planning | ✅ Tamam | 2026-07-13 |
+| Phase 1A | PostgreSQL DB layer: 4 tablo, Alembic migrations, repositories | ✅ Tamam | 2026-07-13 |
+| Phase 1B | Career Scores → PostgreSQL; skill extraction fix (AI gap); threshold fix (0 APPLY→10 APPLY) | ✅ Tamam | 2026-07-14 |
+| Phase 1C | Scan history tracking: `scan_history` tablosu, `discovered_in_this_scan` flag, bulk diff | ✅ Tamam | 2026-07-14 |
+| Phase 2A | `packages/intelligence/` migration; `career_os/intelligence/` → backward-compat shim | ✅ Tamam | 2026-07-14 |
+| Phase 2B | `services/hiring-agent/` (CV scoring); OpenRouter desteği; GitHub token fix; `services/resume-intelligence/` adapter | ✅ Tamam | 2026-07-14 |
+| Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
+| Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
+| Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
 
 ---
+
+## [Phase 2B] — 2026-07-14 — CV Scoring Servisi ✅
+
+### Değişiklikler
+
+**`services/hiring-agent/`** (yeni, ana repo'ya entegre edildi)
+- Ayrı git submodule değil — `.git` kaldırıldı, direkt repo içinde yaşıyor
+- PDF → PyMuPDF → JSONResume → GitHub enrichment → LLM evaluation pipeline
+- Scoring: Open Source (35) + Self Projects (30) + Production (25) + Technical (10) + bonus/deductions
+- OpenRouter desteği: `openai/gpt-4o-mini` default, Ollama yok (VPS'te Ollama kurulu değil)
+- **`prompt.py`:** `load_dotenv()` → `load_dotenv(Path(__file__).parent / ".env")` — token artık herhangi bir `cwd`'dan çalışınca doğru yükleniyor
+- **`github.py`:** GitHub token zaten set edilmişken "Set GITHUB_TOKEN" tip mesajı gizlendi
+
+**`services/resume-intelligence/hiring_agent_adapter.py`** (yeni)
+- `score_resume(pdf_path)` — `score.py`'yi subprocess olarak çalıştırır, `resume_evaluations.csv`'nin son satırını okur, scores dict döner
+- `enrich_career_scores(session, scores)` — hiring-agent sonuçlarını `career_scores.explanation` JSONB'ye `"resume_score"` key'i altında yazar; zaten enriched satırları atlar
+- `HiringAgentAdapter` class API: `HiringAgentAdapter(pdf_path).run()`
+
+### CV Değerlendirme Sonuçları — Abdullokh Abdukodirov
+
+```
+Toplam Puan: 55/100
+
+Open Source:        0/35  (kendi projeler, başkasına katkı yok)
+Self Projects:     25/30  (Sentropy Engine, IMMUNO-TCR, YADIGAR — karmaşık, gerçek etki)
+Production:        20/25  (Full Stack + Computer Vision rolleri, ölçülebilir başarılar)
+Technical Skills:  10/10  (Python, Rust, Go, ML/AI framework'leri)
+
+Bonus: 0   Deduction: 0
+```
+
+**Güçlü Yönler:** Production experience, ML/AI breadth, karmaşık self-projects  
+**İyileştirme:** Open source katkılar (0/35 en büyük fırsat), portfolio site, collaborative projeler
+
+### GitHub Token Fix
+- Önceki durum: `GITHUB_TOKEN` `.env`'de comment'li (`# GITHUB_TOKEN=`) → 60 req/hr (unauthenticated)
+- Şimdiki durum: Token set + `load_dotenv()` path fix → **4991/5000 req/hr** ✅
+- Token scope: sadece `public_repo` (read-only public repos — yeterli)
+
+---
+
+## [Phase 2A] — 2026-07-14 — Intelligence Paketi Migrasyonu ✅
+
+### Değişiklikler
+
+**`packages/intelligence/`** (yeni)
+- `semantic_matcher.py`, `opportunity_scorer.py`, `gap_analyzer.py` — canonical konumları
+- `__init__.py` — `SemanticMatcher`, `OpportunityScorer`, `CareerDecisionEngine`, `GapAnalyzer` export'ları
+
+**`career_os/intelligence/__init__.py`** — backward-compat shim'e dönüştürüldü
+```python
+from packages.intelligence import SemanticMatcher, OpportunityScorer, ...
+```
+
+**`scripts/strategy/apply_strategy.py`** — import `career_os.intelligence` → `packages.intelligence`
+
+---
+
+## [Phase 1C] — 2026-07-14 — Scan History Tracking ✅
+
+### Değişiklikler
+
+**`packages/db/repositories/scan_history_repo.py`**
+- `get_all_known_urls()` eklendi — tek sorguda tüm bilinen URL'leri set olarak döner (O(1) per-job lookup)
+
+**`scripts/scan/run_full_scan.py`**
+- `scan_timestamp = datetime.utcnow()` — tüm scan için tek timestamp
+- `load_jobs_from_applypilot()` — ApplyPilot DB'den scored job'ları çeker
+- `track_scan_history(jobs, scanned_at)` — bulk set-diff ile new/known ayırt eder, SAVEPOINT per job
+- Step 4.5 olarak pipeline'a eklendi; Step 7'de yeni job'lar listelenir
+
+**`scripts/test_scan_history.py`** (yeni) — verification script
+
+---
+
+## [Phase 1B] — 2026-07-14 — Career Scores → PostgreSQL ✅
 
 ## [Phase 1B] — 2026-07-14 — Career Scores → PostgreSQL ✅
 
