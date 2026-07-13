@@ -97,6 +97,7 @@ def main():
         repo = CareerScoreRepository(session)
 
         for opp in all_opportunities:
+            sp = session.begin_nested()  # SAVEPOINT — bir job hatası diğerlerini etkilemez
             try:
                 job_skills = [s.lower() for s in opp.job.required_skills]
                 skill_gaps = [s for s in job_skills if s not in user_skill_names]
@@ -115,20 +116,22 @@ def main():
 
                 repo.save_score(
                     url=opp.job.url,
-                    career_score=opp.career_score,
-                    fit_score=opp.fit_score,
-                    acceptance_probability=opp.acceptance_probability,
-                    career_value=opp.career_value,
-                    market_demand=opp.market_demand,
-                    expected_value=opp.expected_value,
-                    recommendation=opp.recommendation,
+                    career_score=float(opp.career_score),
+                    fit_score=float(opp.fit_score),
+                    acceptance_probability=float(opp.acceptance_probability),
+                    career_value=float(opp.career_value),
+                    market_demand=float(opp.market_demand),
+                    expected_value=float(opp.expected_value),
+                    recommendation=str(opp.recommendation)[:100],
                     skill_gaps=skill_gaps,
                     explanation=explanation,
                     scanned_at=scanned_at,
                 )
+                sp.commit()
                 saved_count += 1
 
             except Exception as e:
+                sp.rollback()
                 failed_count += 1
                 if failed_count <= 3:
                     print(f"   ! {opp.job.url[:60]}... — {e}")

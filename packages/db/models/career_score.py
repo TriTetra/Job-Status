@@ -27,8 +27,8 @@ class CareerScore(Base, TimestampMixin):
     market_demand: Mapped[float] = mapped_column(Float, nullable=False)
     expected_value: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # APPLY | CONSIDER | SKIP
-    recommendation: Mapped[str] = mapped_column(String(20), nullable=False)
+    # APPLY | CONSIDER | SKIP (full text from OpportunityScorer)
+    recommendation: Mapped[str] = mapped_column(String(100), nullable=False)
 
     # JSONB: native indexing, not TEXT blobs
     skill_gaps: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
