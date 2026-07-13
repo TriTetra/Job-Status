@@ -107,6 +107,72 @@ def get_db_stats():
     return stats
 
 
+def load_jobs_from_applypilot() -> list:
+    """Load all scored jobs from ApplyPilot DB for scan_history tracking."""
+    if not APPLYPILOT_DB.exists():
+        log("ApplyPilot DB not found", "WARNING")
+        return []
+    try:
+        conn = sqlite3.connect(str(APPLYPILOT_DB))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT url, fit_score
+            FROM jobs
+            WHERE fit_score IS NOT NULL
+            ORDER BY fit_score DESC
+        """)
+        jobs = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        log(f"Loaded {len(jobs)} jobs from ApplyPilot DB")
+        return jobs
+    except Exception as e:
+        log(f"Failed to load jobs from ApplyPilot: {e}", "ERROR")
+        return []
+
+
+def track_scan_history(jobs: list, scanned_at: datetime):
+    """Record which jobs appeared in this scan, marking new vs known."""
+    from packages.db.connection import db
+    from packages.db.repositories import ScanHistoryRepository
+
+    if not jobs:
+        log("No jobs to track", "WARNING")
+        return
+
+    with db.session_scope() as session:
+        repo = ScanHistoryRepository(session)
+        known_urls = repo.get_all_known_urls()
+
+        saved_count = 0
+        new_count = 0
+        failed_count = 0
+
+        for job in jobs:
+            sp = session.begin_nested()
+            try:
+                url = job["url"]
+                is_new = url not in known_urls
+                repo.record_scan(
+                    url=url,
+                    applypilot_score=job.get("fit_score"),
+                    career_os_score=None,
+                    discovered_in_this_scan=is_new,
+                    scanned_at=scanned_at,
+                )
+                sp.commit()
+                saved_count += 1
+                if is_new:
+                    new_count += 1
+            except Exception as e:
+                sp.rollback()
+                failed_count += 1
+                if failed_count <= 5:
+                    log(f"Failed to track {job.get('url', '?')[:60]}: {e}", "WARNING")
+
+    log(f"Tracked {saved_count} jobs ({new_count} new, {failed_count} failed)")
+
+
 def backup_database():
     """Veritabanını yedekle"""
     if not APPLYPILOT_DB.exists():
@@ -230,6 +296,8 @@ def run_full_scan():
     """Ana tarama fonksiyonu"""
 
     start_time = datetime.now()
+    scan_timestamp = datetime.utcnow()
+
     log("=" * 80)
     log("🚀 APPLYPILOT FULL SCAN STARTED")
     log("=" * 80)
@@ -239,13 +307,13 @@ def run_full_scan():
     # ========================================================================
     # STEP 1: Backup existing database
     # ========================================================================
-    log("\n📦 STEP 1/6: Backing up database...")
+    log("\n📦 STEP 1/7: Backing up database...")
     backup_database()
 
     # ========================================================================
     # STEP 2: Run discovery (find new jobs)
     # ========================================================================
-    log("\n🔍 STEP 2/6: Discovering new jobs...")
+    log("\n🔍 STEP 2/7: Discovering new jobs...")
 
     cmd = [str(APPLYPILOT_EXE), "run", "discover", "--hours-old", "72"]
     success, output = run_command(cmd, "Job Discovery")
@@ -257,7 +325,7 @@ def run_full_scan():
     # ========================================================================
     # STEP 3: Run scoring (score all jobs)
     # ========================================================================
-    log("\n⭐ STEP 3/6: Scoring jobs with AI...")
+    log("\n⭐ STEP 3/7: Scoring jobs with AI...")
 
     cmd = [str(APPLYPILOT_EXE), "run", "score", "--min-score", "7"]
     success, output = run_command(cmd, "Job Scoring")
@@ -269,7 +337,7 @@ def run_full_scan():
     # ========================================================================
     # STEP 4: Run filters (remove unwanted jobs)
     # ========================================================================
-    log("\n🔧 STEP 4/6: Filtering jobs...")
+    log("\n🔧 STEP 4/7: Filtering jobs...")
 
     cmd = ["python", str(SCRIPT_DIR / "filter_jobs.py")]
     success, output = run_command(cmd, "Job Filtering")
@@ -279,9 +347,20 @@ def run_full_scan():
         success_overall = False
 
     # ========================================================================
+    # STEP 4.5: Track scan history
+    # ========================================================================
+    log("\n📋 STEP 4.5/7: Tracking scan history...")
+
+    jobs = load_jobs_from_applypilot()
+    if jobs:
+        track_scan_history(jobs, scan_timestamp)
+    else:
+        log("No jobs to track in scan_history", "WARNING")
+
+    # ========================================================================
     # STEP 5: Generate Excel report
     # ========================================================================
-    log("\n📊 STEP 5/6: Generating Excel report...")
+    log("\n📊 STEP 5/7: Generating Excel report...")
 
     report_dir = create_report_directory()
 
@@ -289,7 +368,6 @@ def run_full_scan():
     success, output = run_command(cmd, "Excel Generation")
 
     if success:
-        # Move generated Excel to report directory
         excel_files = list((PROJECT_ROOT / "excel_exports").glob("applypilot_advanced_*.xlsx"))
         if excel_files:
             latest_excel = max(excel_files, key=lambda p: p.stat().st_mtime)
@@ -303,15 +381,38 @@ def run_full_scan():
     # ========================================================================
     # STEP 6: Create summary and save history
     # ========================================================================
-    log("\n📝 STEP 6/6: Creating summary...")
+    log("\n📝 STEP 6/7: Creating summary...")
 
     stats = get_db_stats()
     if stats:
         create_summary(stats, report_dir)
 
-    # Save run history
     duration = (datetime.now() - start_time).total_seconds()
     save_run_history(stats, duration, success_overall)
+
+    # ========================================================================
+    # STEP 7: Scan history statistics
+    # ========================================================================
+    log("\n📈 STEP 7/7: Scan history statistics...")
+
+    try:
+        from packages.db.connection import db
+        from packages.db.repositories import ScanHistoryRepository
+
+        with db.session_scope() as session:
+            repo = ScanHistoryRepository(session)
+            new_jobs = repo.get_new_this_scan(scan_timestamp)
+
+            if new_jobs:
+                log(f"New jobs in this scan: {len(new_jobs)}")
+                top_new = sorted(new_jobs, key=lambda x: x.applypilot_score or 0, reverse=True)[:5]
+                for job in top_new:
+                    log(f"   • score {job.applypilot_score}: {job.url[:70]}")
+            else:
+                log("No new jobs this scan (all already known)")
+
+    except Exception as e:
+        log(f"Failed to show scan history stats: {e}", "WARNING")
 
     # ========================================================================
     # DONE
