@@ -19,6 +19,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from career_os.data import ApplyPilotLoader, create_user_profile_from_config
 from career_os.intelligence import SemanticMatcher, GapAnalyzer, OpportunityScorer, CareerDecisionEngine
+from packages.db.connection import db
+from packages.db.repositories import CareerScoreRepository
 
 
 def main():
@@ -82,6 +84,57 @@ def main():
     # Prioritized list (diversified)
     all_opportunities = scorer.rank_opportunities(jobs, profile)
     prioritized = engine.prioritize_applications(all_opportunities, max_applications=15)
+
+    # 4.5. PostgreSQL'e kaydet
+    print("\n[4.5/5] Skorları PostgreSQL'e kaydediyorum...")
+    scanned_at = datetime.utcnow()
+    saved_count = 0
+    failed_count = 0
+
+    user_skill_names = {s.name.lower() for s in profile.skills}
+
+    with db.session_scope() as session:
+        repo = CareerScoreRepository(session)
+
+        for opp in all_opportunities:
+            try:
+                job_skills = [s.lower() for s in opp.job.required_skills]
+                skill_gaps = [s for s in job_skills if s not in user_skill_names]
+
+                explanation = {
+                    "company": opp.job.company,
+                    "company_size": opp.job.company_size,
+                    "location": opp.job.location,
+                    "remote": opp.job.remote,
+                    "required_years": opp.job.required_years,
+                    "user_years": profile.years_experience,
+                    "salary_range": {"min": opp.job.salary_min, "max": opp.job.salary_max},
+                    "matched_skills": [s for s in job_skills if s in user_skill_names],
+                    "sponsors_visa": opp.job.sponsors_visa,
+                }
+
+                repo.save_score(
+                    url=opp.job.url,
+                    career_score=opp.career_score,
+                    fit_score=opp.fit_score,
+                    acceptance_probability=opp.acceptance_probability,
+                    career_value=opp.career_value,
+                    market_demand=opp.market_demand,
+                    expected_value=opp.expected_value,
+                    recommendation=opp.recommendation,
+                    skill_gaps=skill_gaps,
+                    explanation=explanation,
+                    scanned_at=scanned_at,
+                )
+                saved_count += 1
+
+            except Exception as e:
+                failed_count += 1
+                if failed_count <= 3:
+                    print(f"   ! {opp.job.url[:60]}... — {e}")
+
+    print(f"   OK {saved_count} skor kaydedildi" +
+          (f" ({failed_count} basarisiz)" if failed_count else ""))
 
     # 5. Dosyalara kaydet
     output_dir = Path("career_os_output")
