@@ -5,7 +5,42 @@ Sıralama: en yeniden en eskiye.
 
 ---
 
-## [Unreleased] — Phase 1A başlayacak (Database Layer)
+## [Unreleased] — Phase 1B başlayacak (apply_strategy.py → DB bağlantısı)
+
+---
+
+## [Phase 1A] — 2026-07-13 — PostgreSQL Database Layer ✅
+
+### infrastructure/docker/
+- `docker-compose.yml` — PostgreSQL 16-alpine + Adminer (port 8080), healthcheck, named volume
+- `init.sql` — `uuid-ossp`, `pg_trgm`, `btree_gin` extensions; `vector` Phase 2'ye ertelendi
+
+### packages/db/models/
+- `base.py` — `DeclarativeBase` + `TimestampMixin` (created_at / updated_at)
+- `career_score.py` — (url, scanned_at) composite PK zaman serisi; JSONB `skill_gaps` + `explanation`; GIN index + 4 btree index
+- `application.py` — pipeline state machine (`to_apply → applied → phone_screen → offer / rejected`); JSONB `interview_rounds`
+- `email.py` — cold email + follow-up; `sent_at / opened_at / replied_at` tracking; FK→applications CASCADE
+- `scan_history.py` — job bazında scan kaydı; `discovered_in_this_scan` flag; 3 index
+
+### packages/db/
+- `connection.py` — singleton `QueuePool` (size=10, overflow=20), `session_scope` context manager, `DB_ECHO` toggle
+- `repositories/base.py` — `Generic[T]` CRUD: get / get_all / create / update / delete
+- `repositories/career_score_repo.py` — `save_score`, `get_latest`, `get_top_opportunities` (window function), `get_trends`
+- `repositories/application_repo.py` — `upsert`, `mark_applied`, `advance_status`, `get_pipeline_summary`
+- `repositories/scan_history_repo.py` — `record_scan`, `get_first_seen`, `get_new_this_scan`
+- `alembic.ini` — `DATABASE_URL` env override; file template with date prefix
+- `migrations/env.py` — online + offline migration modes; auto-imports `Base.metadata`
+
+### Migration: `49c3e6a25ee5` — initial_schema
+- Alembic autogenerate ile oluşturuldu, canlı PostgreSQL 16'ya uygulandı
+- 4 tablo, 8 index, 1 FK oluştu — `alembic upgrade head` clean çalıştı
+
+### Doğrulama
+```
+docker-compose up -d        → career-os-postgres: Healthy ✅
+alembic revision --autogenerate → 4 tablo, 8 index detected ✅
+alembic upgrade head        → clean ✅
+```
 
 ---
 
