@@ -5,7 +5,33 @@ Sıralama: en yeniden en eskiye.
 
 ---
 
-## [Unreleased] — 2026-07-13 — Architecture Planning Session
+## [Unreleased] — Phase 1A başlayacak (Database Layer)
+
+---
+
+## [Phase 0] — 2026-07-13 — Hazırlık Tamamlandı
+
+### 0.1 — Git Tag `v0-final`
+- Tüm planning doc'ları commit edildi (CODEBASE_OVERVIEW, DATABASE_AUDIT, VISION, ARCHITECTURE, MIGRATION_REPORT, tam CHANGELOG)
+- `git tag v0-final` — v0 kodu donduruldu
+
+### 0.2 — Full Backup (`backups/v0-final/`)
+- `~/.applypilot/applypilot.db` → `backups/v0-final/applypilot.db`
+- `reports/` → `backups/v0-final/reports/`
+- `docs/tracking/JOB_APPLICATIONS.md` → `backups/v0-final/JOB_APPLICATIONS.md`
+- `backups/` .gitignore'da — git'e gitmez
+
+### 0.3 — API Key Rotation
+- `config.yaml`'daki plaintext API key → `.env` dosyasına taşındı
+- `config.yaml` artık `${OPENROUTER_API_KEY}` placeholder kullanıyor
+- `.env` .gitignore'da (ve zaten başından beri öyleydi — key hiç git'e girmedi)
+- `career_os/config_loader.py` oluşturuldu: `.env` yükler, `${VAR}` substitution yapar, dış bağımlılık yok
+- `config.yaml.example` güncellendi
+- `.gitignore`'a eklendi: `career_os_output/`, `cold_emails/`, `learning_plan/`, `job_requirements_analysis/`, `.vscode/`, `.idea/`
+
+---
+
+## [Architecture Planning] — 2026-07-13 — Architecture Planning Session
 
 Bu seans koda hiç dokunmadı. Tamamen analiz, mimari tasarım ve belgeleme üzerine.
 
