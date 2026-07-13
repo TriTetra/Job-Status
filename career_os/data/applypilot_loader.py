@@ -389,35 +389,44 @@ class ApplyPilotLoader:
         return 2.0
 
 
-# Skill proficiency levels and AI-dependency multipliers aren't part of
-# config.yaml's schema (candidate.core_skills is a flat list of names) - they
-# require a hand-assessed judgment call this dict captures. Any skill listed
-# in config.yaml that isn't covered here falls back to _DEFAULT_SKILL_PROFILE.
-_SKILL_PROFILES: Dict[str, Tuple[SkillLevel, float, List[str]]] = {
-    "AI": (SkillLevel.WORKING, 0.7, ["ML systems, LLM integrations"]),
-    "Machine Learning": (SkillLevel.WORKING, 0.7, ["YOLOv8 production system"]),
-    "Deep Learning": (SkillLevel.WORKING, 0.7, []),
-    "Computer Vision": (SkillLevel.WORKING, 0.7, ["92% mAP on edge devices"]),
-    "PyTorch": (SkillLevel.WORKING, 0.7, ["Fine-tuned models, custom pipelines"]),
-    "YOLOv8": (SkillLevel.WORKING, 0.7, []),
-    "OpenCV": (SkillLevel.WORKING, 0.6, []),
-    "Python": (SkillLevel.INDEPENDENT, 0.8, ["Multiple production projects"]),
-    "FastAPI": (SkillLevel.WORKING, 0.6, []),
-    "REST API": (SkillLevel.WORKING, 0.7, []),
-    "gRPC": (SkillLevel.AI_ASSISTED, 0.5, []),
-    "Docker": (SkillLevel.WORKING, 0.5, ["Containerized ML apps"]),
-    "AWS": (SkillLevel.AI_ASSISTED, 0.4, []),
-    "Kubernetes": (SkillLevel.AI_ASSISTED, 0.3, []),
-    "Rust": (SkillLevel.WORKING, 0.6, ["Sentropy Engine"]),
-    "Java": (SkillLevel.AI_ASSISTED, 0.4, []),
-    "Go": (SkillLevel.AI_ASSISTED, 0.3, []),
-    "React": (SkillLevel.AI_ASSISTED, 0.3, []),
-    "Next.js": (SkillLevel.AI_ASSISTED, 0.3, []),
-    "TypeScript": (SkillLevel.AI_ASSISTED, 0.4, []),
-    "LLM": (SkillLevel.WORKING, 0.6, []),
-    "NLP": (SkillLevel.WORKING, 0.6, []),
-}
 _DEFAULT_SKILL_PROFILE: Tuple[SkillLevel, float, List[str]] = (SkillLevel.WORKING, 0.6, [])
+
+_LEVEL_MAP = {
+    "AI_ASSISTED": SkillLevel.AI_ASSISTED,
+    "WORKING": SkillLevel.WORKING,
+    "INDEPENDENT": SkillLevel.INDEPENDENT,
+    "ADVANCED": SkillLevel.ADVANCED,
+    "EXPERT": SkillLevel.EXPERT,
+}
+
+
+def _load_skill_profiles_from_config(config: dict) -> Dict[str, Tuple[SkillLevel, float, List[str]]]:
+    """
+    Read skill proficiency levels from config.yaml's candidate.skill_profiles section.
+
+    Format in config.yaml:
+        candidate:
+          skill_profiles:
+            Python:
+              level: INDEPENDENT
+              ai_multiplier: 0.8
+              evidence: ["Multiple production projects"]
+            YOLOv8:
+              level: WORKING
+              ai_multiplier: 0.7
+              evidence: []
+
+    Skills in core_skills but not in skill_profiles fall back to _DEFAULT_SKILL_PROFILE.
+    """
+    profiles: Dict[str, Tuple[SkillLevel, float, List[str]]] = {}
+    raw = config.get("candidate", {}).get("skill_profiles", {})
+    for skill_name, data in (raw or {}).items():
+        level_str = (data.get("level") or "WORKING").upper()
+        level = _LEVEL_MAP.get(level_str, SkillLevel.WORKING)
+        ai_multiplier = float(data.get("ai_multiplier", 0.6))
+        evidence = list(data.get("evidence") or [])
+        profiles[skill_name] = (level, ai_multiplier, evidence)
+    return profiles
 
 
 def _find_config_path() -> Optional[Path]:
@@ -461,9 +470,11 @@ def create_user_profile_from_config() -> UserProfile:
     candidate = config.get("candidate", {})
     job_search = config.get("job_search", {})
 
+    skill_profiles = _load_skill_profiles_from_config(config)
+
     skills = []
     for skill_name in candidate.get("core_skills", []):
-        level, ai_multiplier, evidence = _SKILL_PROFILES.get(skill_name, _DEFAULT_SKILL_PROFILE)
+        level, ai_multiplier, evidence = skill_profiles.get(skill_name, _DEFAULT_SKILL_PROFILE)
         skills.append(Skill(skill_name, level, ai_multiplier=ai_multiplier, evidence=list(evidence)))
 
     # Target roles in config.yaml are a single comma-separated string

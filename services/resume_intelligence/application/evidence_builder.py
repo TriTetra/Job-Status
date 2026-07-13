@@ -8,6 +8,9 @@ Input:
 Output:
   evidence table rows: skill × project → confidence
   Dict[skill_name, aggregate_confidence] returned to caller
+
+Skill mappings come from knowledge/v1/skills/skill_graph.yaml via SkillLoader.
+Nothing is hardcoded here.
 """
 
 import csv
@@ -16,54 +19,11 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-# Allow running directly: python -m services.resume_intelligence.application.evidence_builder
 _ROOT = Path(__file__).parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-HIRING_AGENT_DIR = Path(__file__).parents[2] / "hiring-agent"
-
-# GitHub topic → canonical skill name
-_TOPIC_MAP: Dict[str, str] = {
-    "python": "Python",
-    "jupyter": "Python",
-    "pytorch": "PyTorch",
-    "tensorflow": "TensorFlow",
-    "opencv": "OpenCV",
-    "yolov8": "YOLOv8",
-    "computer-vision": "Computer Vision",
-    "deep-learning": "Deep Learning",
-    "machine-learning": "Machine Learning",
-    "stable-diffusion": "Stable Diffusion",
-    "image-processing": "OpenCV",
-    "genetic-algorithms": "Algorithms",
-    "evolutionary-computing": "Algorithms",
-    "optimization": "Algorithms",
-    "streamlit": "Streamlit",
-    "numpy": "NumPy",
-    "data-engineering": "Data Engineering",
-    "visualization": "Data Visualization",
-    "rust": "Rust",
-    "go": "Go",
-    "javascript": "JavaScript",
-    "typescript": "TypeScript",
-    "docker": "Docker",
-    "kubernetes": "Kubernetes",
-    "aws": "AWS",
-    "fastapi": "FastAPI",
-}
-
-# Repo language → canonical skill
-_LANG_MAP: Dict[str, str] = {
-    "python": "Python",
-    "jupyter notebook": "Python",
-    "rust": "Rust",
-    "go": "Go",
-    "javascript": "JavaScript",
-    "typescript": "TypeScript",
-    "c++": "C++",
-    "java": "Java",
-}
+HIRING_AGENT_DIR = Path(__file__).parents[2] / "hiring-agent"  # services/hiring-agent
 
 
 class EvidenceBuilder:
@@ -72,20 +32,18 @@ class EvidenceBuilder:
         self.csv_path = hiring_agent_path / "resume_evaluations.csv"
         self.cache_dir = hiring_agent_path / "cache"
 
+        from packages.knowledge import SkillLoader
+        self._loader = SkillLoader()
+
     def build(self, resume_basename: str = "Abdullokh_Abdukodirov") -> Dict[str, float]:
         """
         Full pipeline: read CSV + cache → write evidence rows → return confidences.
-
-        Returns:
-            {skill_name: aggregate_confidence (0.0–1.0)}
+        Returns {skill_name: aggregate_confidence (0.0–1.0)}
         """
         eval_scores = self._read_eval_scores(resume_basename)
         github_data = self._read_github_cache(resume_basename)
-
         records = self._extract_records(eval_scores, github_data)
-        confidences = self._write_to_db(records, eval_scores)
-
-        return confidences
+        return self._write_to_db(records, eval_scores)
 
     # ------------------------------------------------------------------
     # Readers
@@ -122,24 +80,30 @@ class EvidenceBuilder:
     # ------------------------------------------------------------------
 
     def _extract_records(self, eval_scores: dict, github_data: dict) -> List[dict]:
-        records = []
-        projects = github_data.get("projects", [])
+        topic_map = self._loader.topic_map
+        lang_map = self._loader.language_map
 
-        for project in projects:
+        records = []
+        for project in github_data.get("projects", []):
             name = project.get("name", "Unknown")
             url = project.get("github_url")
             commits = project.get("author_commit_count", 0) or 0
             details = project.get("github_details", {})
             stars = details.get("stars", 0) or 0
-            topics = details.get("topics", []) or []
+            topics = [t.lower() for t in (details.get("topics") or [])]
             language = (details.get("language") or "").lower()
 
-            skills = self._skills_from_project(topics, language)
+            skills: set[str] = set()
+            for t in topics:
+                if t in topic_map:
+                    skills.add(topic_map[t])
+            if language in lang_map:
+                skills.add(lang_map[language])
+
             if not skills:
                 continue
 
             for skill in skills:
-                confidence = self._confidence(commits, stars, eval_scores)
                 records.append(
                     {
                         "skill_name": skill,
@@ -147,7 +111,7 @@ class EvidenceBuilder:
                         "github_url": url,
                         "author_commits": commits,
                         "stars": stars,
-                        "confidence": confidence,
+                        "confidence": self._confidence(commits, stars, eval_scores),
                         "evaluation_scores": eval_scores,
                         "evidence_type": "github_project",
                     }
@@ -155,26 +119,13 @@ class EvidenceBuilder:
 
         return records
 
-    def _skills_from_project(self, topics: List[str], language: str) -> List[str]:
-        skills = set()
-
-        for topic in topics:
-            mapped = _TOPIC_MAP.get(topic.lower())
-            if mapped:
-                skills.add(mapped)
-
-        if language in _LANG_MAP:
-            skills.add(_LANG_MAP[language])
-
-        return list(skills)
-
     def _confidence(self, commits: int, stars: int, eval_scores: dict) -> float:
         """
         Confidence formula:
-          base            = technical_skills / 100          (0.0–1.0)
-          commit bonus    = min(commits / 100, 0.20)
-          star bonus      = min(stars / 50,   0.10)
-          production bonus= (production / 100) * 0.20
+          base             = technical_skills / 100   (0.0–1.0)
+          commit bonus     = min(commits / 100, 0.20)
+          star bonus       = min(stars / 50,   0.10)
+          production bonus = (production / 100) * 0.20
         Capped at 1.0.
         """
         base = eval_scores["technical_skills"] / 100
@@ -195,8 +146,6 @@ class EvidenceBuilder:
             repo = EvidenceRepository(session)
             for rec in records:
                 repo.add_evidence(**rec)
-
-            # Compute aggregate confidence per skill inside the same session
             skills_seen = {r["skill_name"] for r in records}
             confidences = {
                 skill: repo.calculate_skill_confidence(skill)
@@ -205,8 +154,6 @@ class EvidenceBuilder:
 
         print(f"Wrote {len(records)} evidence rows ({len(skills_seen)} skills)")
         return confidences
-
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _f(row: dict, key: str) -> float:
@@ -233,7 +180,6 @@ def build_evidence_graph(
 
 
 if __name__ == "__main__":
-    import sys
-
-    basename = sys.argv[1] if len(sys.argv) > 1 else "Abdullokh_Abdukodirov"
+    import sys as _sys
+    basename = _sys.argv[1] if len(_sys.argv) > 1 else "Abdullokh_Abdukodirov"
     build_evidence_graph(basename)

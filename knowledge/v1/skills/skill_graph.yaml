@@ -1,0 +1,666 @@
+# =============================================================================
+# Skill Graph — knowledge/v1/skills/skill_graph.yaml
+#
+# This is the single source of truth for all skill metadata.
+# Nothing in Python code should hardcode skill names, topics, or edges.
+#
+# Schema per skill:
+#   category:        language | framework | ml | infra | database | tool
+#   github_topics:   GitHub repo topics that map to this skill
+#   github_languages: GitHub repo.language values that map to this skill
+#   aliases:         Alternative names / job-posting keywords (case-insensitive match)
+#   transfers_to:    {SkillName: weight} — transfer learning edges (0.0–1.0)
+#                    0.9+ nearly identical, 0.7-0.9 strong, 0.5-0.7 moderate,
+#                    0.3-0.5 weak, <0.3 minimal
+# =============================================================================
+
+skills:
+
+  # ---------------------------------------------------------------------------
+  # LANGUAGES
+  # ---------------------------------------------------------------------------
+
+  Python:
+    category: language
+    github_topics: [python, jupyter, jupyter-notebook, cpython, python3, py]
+    github_languages: [python, "jupyter notebook"]
+    aliases: [py, python3, python2]
+    transfers_to:
+      FastAPI: 0.8
+      Django: 0.8
+      Flask: 0.8
+      NumPy: 0.7
+      Pandas: 0.7
+      PyTorch: 0.7
+      TensorFlow: 0.7
+      scikit-learn: 0.7
+      LangChain: 0.7
+      "Hugging Face": 0.7
+      JavaScript: 0.5
+
+  Rust:
+    category: language
+    github_topics: [rust, rust-lang, rustlang, wasm-rust]
+    github_languages: [rust]
+    aliases: [rustlang, rust-lang]
+    transfers_to:
+      "Systems Programming": 0.9
+      C: 0.5
+      Go: 0.4
+
+  Go:
+    category: language
+    github_topics: [go, golang, go-lang]
+    github_languages: [go]
+    aliases: [golang]
+    transfers_to:
+      gRPC: 0.8
+      Kubernetes: 0.6
+
+  Java:
+    category: language
+    github_topics: [java, java-spring, springboot]
+    github_languages: [java]
+    aliases: [java8, java11, java17]
+    transfers_to:
+      "Spring Boot": 0.9
+      Hibernate: 0.8
+      Kotlin: 0.8
+      "C#": 0.6
+      Scala: 0.7
+
+  JavaScript:
+    category: language
+    github_topics: [javascript, js, vanilla-js, es6, nodejs]
+    github_languages: [javascript]
+    aliases: [js, es6, es2015, ecmascript]
+    transfers_to:
+      TypeScript: 0.9
+      "Node.js": 0.8
+      React: 0.7
+      Vue: 0.7
+      Angular: 0.7
+      "Express.js": 0.8
+      "Next.js": 0.7
+      Python: 0.5
+
+  TypeScript:
+    category: language
+    github_topics: [typescript, ts, deno]
+    github_languages: [typescript]
+    aliases: [ts, typescript4, typescript5]
+    transfers_to:
+      React: 0.8
+      "Next.js": 0.8
+      "Node.js": 0.8
+      NestJS: 0.8
+
+  "C++":
+    category: language
+    github_topics: [cpp, cplusplus, "c-plus-plus", cmake]
+    github_languages: ["c++"]
+    aliases: [cpp, cplusplus, "c plus plus"]
+    transfers_to:
+      Rust: 0.4
+      C: 0.8
+
+  C:
+    category: language
+    github_topics: [c, clang, embedded-c]
+    github_languages: [c]
+    aliases: []
+    transfers_to:
+      "C++": 0.8
+      Rust: 0.3
+
+  Kotlin:
+    category: language
+    github_topics: [kotlin, android-kotlin]
+    github_languages: [kotlin]
+    aliases: []
+    transfers_to:
+      Java: 0.8
+
+  Scala:
+    category: language
+    github_topics: [scala, akka, spark]
+    github_languages: [scala]
+    aliases: []
+    transfers_to:
+      Java: 0.7
+
+  "C#":
+    category: language
+    github_topics: [csharp, dotnet, "dot-net", aspnet, blazor]
+    github_languages: ["c#"]
+    aliases: [csharp, dotnet, ".net"]
+    transfers_to:
+      Java: 0.6
+
+  # ---------------------------------------------------------------------------
+  # WEB FRAMEWORKS
+  # ---------------------------------------------------------------------------
+
+  FastAPI:
+    category: framework
+    github_topics: [fastapi, async-python, pydantic]
+    github_languages: []
+    aliases: [fast-api]
+    transfers_to:
+      Flask: 0.8
+      Django: 0.7
+
+  Django:
+    category: framework
+    github_topics: [django, django-rest-framework, drf]
+    github_languages: []
+    aliases: [django-rest-framework, drf]
+    transfers_to:
+      FastAPI: 0.7
+      Flask: 0.8
+
+  Flask:
+    category: framework
+    github_topics: [flask, flask-api]
+    github_languages: []
+    aliases: []
+    transfers_to:
+      FastAPI: 0.8
+      Django: 0.7
+
+  React:
+    category: framework
+    github_topics: [react, reactjs, react-hooks, jsx]
+    github_languages: []
+    aliases: [reactjs, "react.js"]
+    transfers_to:
+      "Next.js": 0.9
+      "React Native": 0.8
+      Vue: 0.7
+      Angular: 0.6
+
+  "Next.js":
+    category: framework
+    github_topics: [nextjs, "next-js", vercel]
+    github_languages: []
+    aliases: [nextjs, next]
+    transfers_to:
+      React: 0.9
+
+  Vue:
+    category: framework
+    github_topics: [vue, vuejs, vue3, nuxt]
+    github_languages: ["vue"]
+    aliases: [vuejs, "vue.js"]
+    transfers_to:
+      React: 0.7
+      Angular: 0.6
+
+  Angular:
+    category: framework
+    github_topics: [angular, angularjs, "ng-"]
+    github_languages: []
+    aliases: [angularjs]
+    transfers_to:
+      React: 0.6
+      Vue: 0.6
+
+  "Express.js":
+    category: framework
+    github_topics: [express, expressjs, "express-js"]
+    github_languages: []
+    aliases: [express, expressjs]
+    transfers_to:
+      "Node.js": 0.9
+      NestJS: 0.7
+
+  NestJS:
+    category: framework
+    github_topics: [nestjs, "nest-js"]
+    github_languages: []
+    aliases: [nest]
+    transfers_to:
+      "Express.js": 0.7
+
+  "Node.js":
+    category: framework
+    github_topics: [nodejs, "node-js", npm, bun]
+    github_languages: []
+    aliases: [node, nodejs]
+    transfers_to:
+      "Express.js": 0.8
+      NestJS: 0.7
+
+  Streamlit:
+    category: framework
+    github_topics: [streamlit, streamlit-app]
+    github_languages: []
+    aliases: []
+    transfers_to:
+      Gradio: 0.8
+
+  "Spring Boot":
+    category: framework
+    github_topics: [spring-boot, springboot, spring]
+    github_languages: []
+    aliases: [spring, springboot]
+    transfers_to:
+      Java: 0.9
+
+  # ---------------------------------------------------------------------------
+  # ML / AI
+  # ---------------------------------------------------------------------------
+
+  "Machine Learning":
+    category: ml
+    github_topics: [machine-learning, ml, sklearn, scikit-learn]
+    github_languages: []
+    aliases: [ml, "machine learning"]
+    transfers_to:
+      "Deep Learning": 0.7
+      "Computer Vision": 0.6
+      NLP: 0.6
+
+  "Deep Learning":
+    category: ml
+    github_topics: [deep-learning, dl, neural-network, neural-networks]
+    github_languages: []
+    aliases: [dl, "deep learning"]
+    transfers_to:
+      "Computer Vision": 0.8
+      NLP: 0.7
+      PyTorch: 0.7
+      TensorFlow: 0.7
+
+  "Computer Vision":
+    category: ml
+    github_topics: [computer-vision, cv, image-recognition, object-detection, image-processing]
+    github_languages: []
+    aliases: [cv, "computer vision"]
+    transfers_to:
+      YOLOv8: 0.7
+      OpenCV: 0.8
+
+  NLP:
+    category: ml
+    github_topics: [nlp, natural-language-processing, text-classification, sentiment-analysis]
+    github_languages: []
+    aliases: [nlp, "natural language processing"]
+    transfers_to:
+      LLM: 0.8
+      "Hugging Face": 0.7
+
+  LLM:
+    category: ml
+    github_topics: [llm, large-language-model, gpt, llama, gemini]
+    github_languages: []
+    aliases: [llm, "large language model", gpt, llama]
+    transfers_to:
+      LangChain: 0.8
+      "Hugging Face": 0.7
+      RAG: 0.7
+      "AI Agents": 0.6
+
+  AI:
+    category: ml
+    github_topics: [ai, artificial-intelligence, ai-ml]
+    github_languages: []
+    aliases: [ai, "artificial intelligence"]
+    transfers_to:
+      "Machine Learning": 0.8
+      LLM: 0.7
+
+  PyTorch:
+    category: ml
+    github_topics: [pytorch, torch, libtorch]
+    github_languages: []
+    aliases: [torch]
+    transfers_to:
+      "Computer Vision": 0.7
+      NLP: 0.7
+      Transformers: 0.7
+      YOLOv8: 0.6
+
+  TensorFlow:
+    category: ml
+    github_topics: [tensorflow, tf, keras, tensorflow2]
+    github_languages: []
+    aliases: [tf, keras]
+    transfers_to:
+      Keras: 0.9
+      "TensorFlow Lite": 0.8
+      PyTorch: 0.7
+
+  Keras:
+    category: ml
+    github_topics: [keras]
+    github_languages: []
+    aliases: []
+    transfers_to:
+      TensorFlow: 0.9
+      PyTorch: 0.7
+
+  YOLOv8:
+    category: ml
+    github_topics: [yolov8, ultralytics, yolo, yolov5, yolov7, yolov9]
+    github_languages: []
+    aliases: [yolo, ultralytics, yolov5, yolov7, yolov9, yolov10]
+    transfers_to:
+      "Computer Vision": 0.7
+      "Object Detection": 0.9
+
+  OpenCV:
+    category: ml
+    github_topics: [opencv, cv2, image-processing, computer-vision]
+    github_languages: []
+    aliases: [cv2, "open cv"]
+    transfers_to:
+      "Computer Vision": 0.8
+
+  "scikit-learn":
+    category: ml
+    github_topics: [scikit-learn, sklearn]
+    github_languages: []
+    aliases: [sklearn, scikit]
+    transfers_to:
+      "Machine Learning": 0.8
+
+  LangChain:
+    category: ml
+    github_topics: [langchain, langchain-python]
+    github_languages: []
+    aliases: ["lang chain"]
+    transfers_to:
+      LLM: 0.8
+      RAG: 0.8
+
+  "Hugging Face":
+    category: ml
+    github_topics: [huggingface, transformers, diffusers]
+    github_languages: []
+    aliases: [huggingface, hf, transformers]
+    transfers_to:
+      NLP: 0.7
+      LLM: 0.7
+
+  Transformers:
+    category: ml
+    github_topics: [transformers, attention, bert, gpt2]
+    github_languages: []
+    aliases: [bert, gpt2, "attention mechanism"]
+    transfers_to:
+      NLP: 0.8
+      LLM: 0.7
+
+  RAG:
+    category: ml
+    github_topics: [rag, "retrieval-augmented-generation", vector-search]
+    github_languages: []
+    aliases: ["retrieval augmented generation", "retrieval-augmented"]
+    transfers_to:
+      LLM: 0.8
+      LangChain: 0.7
+
+  "AI Agents":
+    category: ml
+    github_topics: [ai-agents, agentic, autonomous-agent, multi-agent]
+    github_languages: []
+    aliases: [agents, "agentic ai"]
+    transfers_to:
+      LLM: 0.7
+      LangChain: 0.7
+
+  "Stable Diffusion":
+    category: ml
+    github_topics: [stable-diffusion, diffusion-models, diffusers, sdxl, controlnet]
+    github_languages: []
+    aliases: [sdxl, diffusion, controlnet]
+    transfers_to:
+      "Deep Learning": 0.6
+      PyTorch: 0.6
+
+  NumPy:
+    category: ml
+    github_topics: [numpy, numerical-python]
+    github_languages: []
+    aliases: [np]
+    transfers_to:
+      Pandas: 0.7
+      PyTorch: 0.5
+
+  Pandas:
+    category: ml
+    github_topics: [pandas, dataframe, data-analysis]
+    github_languages: []
+    aliases: [pd]
+    transfers_to:
+      NumPy: 0.7
+      "Data Engineering": 0.6
+
+  # ---------------------------------------------------------------------------
+  # INFRASTRUCTURE & CLOUD
+  # ---------------------------------------------------------------------------
+
+  Docker:
+    category: infra
+    github_topics: [docker, dockerfile, containerization, compose]
+    github_languages: []
+    aliases: [container, containerization]
+    transfers_to:
+      "Docker Compose": 0.9
+      Kubernetes: 0.7
+      Podman: 0.8
+
+  "Docker Compose":
+    category: infra
+    github_topics: [docker-compose, compose]
+    github_languages: []
+    aliases: [compose]
+    transfers_to:
+      Docker: 0.9
+      Kubernetes: 0.6
+
+  Kubernetes:
+    category: infra
+    github_topics: [kubernetes, k8s, helm, kubectl]
+    github_languages: []
+    aliases: [k8s]
+    transfers_to:
+      Helm: 0.8
+      Istio: 0.7
+      ArgoCD: 0.7
+
+  Helm:
+    category: infra
+    github_topics: [helm, helm-chart, helmfile]
+    github_languages: []
+    aliases: ["helm chart"]
+    transfers_to:
+      Kubernetes: 0.8
+
+  AWS:
+    category: infra
+    github_topics: [aws, amazon-web-services, s3, ec2, lambda, sagemaker]
+    github_languages: []
+    aliases: [amazon-web-services, "amazon aws"]
+    transfers_to:
+      Lambda: 0.7
+      EC2: 0.7
+      S3: 0.7
+      RDS: 0.7
+      ECS: 0.7
+      EKS: 0.7
+      CloudFormation: 0.7
+      SageMaker: 0.6
+
+  GCP:
+    category: infra
+    github_topics: [gcp, "google-cloud", "google-cloud-platform", firebase]
+    github_languages: []
+    aliases: ["google cloud", "google cloud platform"]
+    transfers_to:
+      AWS: 0.6
+
+  Azure:
+    category: infra
+    github_topics: [azure, "microsoft-azure", "azure-functions"]
+    github_languages: []
+    aliases: ["microsoft azure"]
+    transfers_to:
+      AWS: 0.6
+
+  Terraform:
+    category: infra
+    github_topics: [terraform, infrastructure-as-code, iac, terragrunt]
+    github_languages: [hcl]
+    aliases: [iac, "infrastructure as code"]
+    transfers_to:
+      CloudFormation: 0.6
+      Ansible: 0.5
+
+  Linux:
+    category: infra
+    github_topics: [linux, ubuntu, debian, bash, shell]
+    github_languages: [shell]
+    aliases: [ubuntu, debian, bash, unix]
+    transfers_to: {}
+
+  # ---------------------------------------------------------------------------
+  # DATABASES
+  # ---------------------------------------------------------------------------
+
+  PostgreSQL:
+    category: database
+    github_topics: [postgresql, postgres, psql]
+    github_languages: []
+    aliases: [postgres, psql]
+    transfers_to:
+      MySQL: 0.8
+      SQL: 0.9
+
+  MySQL:
+    category: database
+    github_topics: [mysql, mariadb]
+    github_languages: []
+    aliases: [mariadb]
+    transfers_to:
+      PostgreSQL: 0.8
+      SQL: 0.9
+
+  SQL:
+    category: database
+    github_topics: [sql, sqlite, database]
+    github_languages: []
+    aliases: [sqlite, "structured query language"]
+    transfers_to:
+      PostgreSQL: 0.7
+      MySQL: 0.7
+
+  MongoDB:
+    category: database
+    github_topics: [mongodb, mongo, nosql, mongoose]
+    github_languages: []
+    aliases: [mongo, nosql]
+    transfers_to:
+      DynamoDB: 0.6
+      Cassandra: 0.5
+
+  Redis:
+    category: database
+    github_topics: [redis, caching, cache, redis-cache]
+    github_languages: []
+    aliases: [redis-cache]
+    transfers_to: {}
+
+  Elasticsearch:
+    category: database
+    github_topics: [elasticsearch, opensearch, elastic]
+    github_languages: []
+    aliases: [elastic, opensearch]
+    transfers_to: {}
+
+  # ---------------------------------------------------------------------------
+  # TOOLS / OTHER
+  # ---------------------------------------------------------------------------
+
+  Git:
+    category: tool
+    github_topics: [git, version-control, github]
+    github_languages: []
+    aliases: [version-control, vcs]
+    transfers_to: {}
+
+  gRPC:
+    category: tool
+    github_topics: [grpc, protobuf, protocol-buffers]
+    github_languages: []
+    aliases: [protobuf, "protocol buffers"]
+    transfers_to: {}
+
+  "REST API":
+    category: tool
+    github_topics: [rest-api, restful, openapi, swagger]
+    github_languages: []
+    aliases: [rest, restful, openapi, swagger]
+    transfers_to:
+      gRPC: 0.5
+
+  GraphQL:
+    category: tool
+    github_topics: [graphql, apollo, hasura]
+    github_languages: []
+    aliases: [apollo]
+    transfers_to:
+      "REST API": 0.6
+
+  Kafka:
+    category: tool
+    github_topics: [kafka, apache-kafka, message-queue]
+    github_languages: []
+    aliases: [apache-kafka]
+    transfers_to: {}
+
+  Algorithms:
+    category: tool
+    github_topics: [algorithms, data-structures, competitive-programming, genetic-algorithms,
+                    evolutionary-computing, optimization, heuristics]
+    github_languages: []
+    aliases: [dsa, "data structures", "competitive programming"]
+    transfers_to: {}
+
+  "Data Engineering":
+    category: tool
+    github_topics: [data-engineering, etl, data-pipeline, airflow, spark]
+    github_languages: []
+    aliases: [etl, "data pipeline"]
+    transfers_to:
+      Pandas: 0.6
+
+  "Data Visualization":
+    category: tool
+    github_topics: [visualization, matplotlib, plotly, seaborn, dashboard]
+    github_languages: []
+    aliases: [matplotlib, plotly, seaborn]
+    transfers_to: {}
+
+  "Systems Programming":
+    category: tool
+    github_topics: [systems, embedded, operating-systems, kernel]
+    github_languages: []
+    aliases: [embedded, systems]
+    transfers_to: {}
+
+  "Object Detection":
+    category: ml
+    github_topics: [object-detection, detection, bounding-box]
+    github_languages: []
+    aliases: []
+    transfers_to:
+      "Computer Vision": 0.8
+
+  # ---------------------------------------------------------------------------
+  # Cross-language edges (not per-skill above)
+  # ---------------------------------------------------------------------------
+  # These supplement the per-skill transfers_to above.
+  # Defined here to avoid duplication; loaded separately by skill_loader.
+  # ---------------------------------------------------------------------------

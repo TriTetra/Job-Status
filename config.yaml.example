@@ -39,6 +39,24 @@ candidate:
     - PyTorch
     - React
 
+  # Skill proficiency — optional, falls back to WORKING/0.6 if omitted.
+  # level: AI_ASSISTED | WORKING | INDEPENDENT | ADVANCED | EXPERT
+  # ai_multiplier: 0.0–1.0 (how much you rely on AI for this skill)
+  # evidence: list of proof strings (shown in explanations)
+  skill_profiles:
+    Python:
+      level: INDEPENDENT
+      ai_multiplier: 0.8
+      evidence: ["Multiple production projects"]
+    PyTorch:
+      level: WORKING
+      ai_multiplier: 0.7
+      evidence: ["Fine-tuned models, custom pipelines"]
+    React:
+      level: AI_ASSISTED
+      ai_multiplier: 0.3
+      evidence: []
+
   target_roles:
     - ML Engineer
     - Backend Engineer

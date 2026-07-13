@@ -22,6 +22,18 @@ class SkillGraph:
         self._build_taxonomy()
 
     def _build_taxonomy(self):
+        """Load skill graph from YAML, fall back to hardcoded edges if YAML unavailable."""
+        try:
+            from packages.knowledge import SkillLoader
+            loader = SkillLoader()
+            for from_skill, to_skill, weight in loader.transfer_edges:
+                self.graph.add_edge(from_skill, to_skill, weight=weight)
+            return
+        except Exception:
+            pass
+        self._build_taxonomy_hardcoded()
+
+    def _build_taxonomy_hardcoded(self):
         """
         Build complete skill relationship graph.
 
