@@ -1,7 +1,7 @@
 """Scan history repository."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from sqlalchemy import select
 
@@ -52,3 +52,8 @@ class ScanHistoryRepository(BaseRepository[ScanHistory]):
             .where(self.model.discovered_in_this_scan.is_(True))
         )
         return list(self.session.execute(stmt).scalars().all())
+
+    def get_all_known_urls(self) -> Set[str]:
+        """All job URLs ever seen across all scans (for bulk new/known diff)."""
+        stmt = select(self.model.url).distinct()
+        return set(self.session.execute(stmt).scalars().all())

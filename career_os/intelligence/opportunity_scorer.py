@@ -350,36 +350,34 @@ class OpportunityScorer:
         """
         Generate application recommendation.
 
+        Thresholds are calibrated for a visa-sponsorship-required candidate
+        (acceptance probability structurally ~0.10-0.25 due to sponsorship
+        penalty), so APPLY bars are set lower than a no-sponsorship baseline.
+
         Args:
-            career_score: Overall career score
-            acceptance: Acceptance probability
-            fit: Fit score
+            career_score: Overall career score (0-100)
+            acceptance: Acceptance probability (0.0-1.0)
+            fit: Fit score (0.0-1.0)
 
         Returns:
             Recommendation string
         """
-        # High value, high chance = definitely apply
-        if career_score >= 75 and acceptance >= 0.3:
-            return "APPLY - Strong opportunity"
-
-        # Good value, moderate chance = apply
-        if career_score >= 60 and acceptance >= 0.2:
-            return "APPLY - Good fit"
-
-        # High value but low chance = still worth a shot
-        if career_score >= 70 and acceptance >= 0.1:
-            return "CONSIDER - High value but competitive"
-
-        # Moderate value, low chance = maybe not
-        if career_score >= 50 and acceptance < 0.2:
-            return "CONSIDER - Build skills first"
-
-        # Low value or very low chance = skip
-        if career_score < 50 or acceptance < 0.1:
+        if career_score < 40 or acceptance < 0.05:
             return "SKIP - Better opportunities available"
 
-        # Default
-        return "CONSIDER - Review details"
+        if career_score >= 65 and acceptance >= 0.15:
+            return "APPLY - Strong opportunity"
+
+        if career_score >= 55 and acceptance >= 0.10:
+            return "APPLY - Good fit"
+
+        if career_score >= 50 and acceptance >= 0.08:
+            return "CONSIDER - Review details"
+
+        if career_score >= 45:
+            return "CONSIDER - Build skills first"
+
+        return "SKIP - Better opportunities available"
 
     def _build_company_tiers(self) -> Dict[str, str]:
         """Build company tier database."""

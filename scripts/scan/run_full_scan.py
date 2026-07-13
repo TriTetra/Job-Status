@@ -19,8 +19,11 @@ import subprocess
 import sqlite3
 import shutil
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timedelta
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 # ============================================================================

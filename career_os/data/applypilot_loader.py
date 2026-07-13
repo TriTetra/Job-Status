@@ -394,6 +394,7 @@ class ApplyPilotLoader:
 # require a hand-assessed judgment call this dict captures. Any skill listed
 # in config.yaml that isn't covered here falls back to _DEFAULT_SKILL_PROFILE.
 _SKILL_PROFILES: Dict[str, Tuple[SkillLevel, float, List[str]]] = {
+    "AI": (SkillLevel.WORKING, 0.7, ["ML systems, LLM integrations"]),
     "Machine Learning": (SkillLevel.WORKING, 0.7, ["YOLOv8 production system"]),
     "Deep Learning": (SkillLevel.WORKING, 0.7, []),
     "Computer Vision": (SkillLevel.WORKING, 0.7, ["92% mAP on edge devices"]),

@@ -5,7 +5,59 @@ Sıralama: en yeniden en eskiye.
 
 ---
 
-## [Unreleased] — Phase 1B başlayacak (apply_strategy.py → DB bağlantısı)
+## [Unreleased] — Phase 1C başlayacak (scan_history tracking)
+
+---
+
+## [Phase 1B] — 2026-07-14 — Career Scores → PostgreSQL ✅
+
+### Değişiklikler
+
+**`scripts/strategy/apply_strategy.py`**
+- `packages.db` import'u eklendi
+- Yeni adım `[4.5/5]`: `rank_opportunities()` sonrası tüm job'lar için `career_scores` tablosuna insert
+- `session.begin_nested()` (SAVEPOINT) per job — bir hata diğer kayıtları bozmaz
+- `float()` cast: `np.float64` → Python float (psycopg type safety)
+- `str()[:100]` guard: recommendation overflow'u önler
+- `.txt` çıktıları korundu — backward compatible
+
+**`packages/db/connection.py`**
+- `_load_dotenv()` eklendi — modül import edildiğinde `.env` otomatik yüklenir, her session'da `$env:DATABASE_URL` set etmeye gerek kalmaz
+
+**`packages/db/models/career_score.py`**
+- `recommendation: VARCHAR(20) → VARCHAR(100)`
+  `OpportunityScorer` `'CONSIDER - Review details'` (23 karakter) döndürüyor, 20'ye sığmıyordu
+
+**Migration: `bc16185b1de3`** — widen_recommendation_to_varchar100
+
+**`scripts/test_db_integration.py`** (yeni)
+- Toplam kayıt, son scan zamanı, recommendation dağılımı
+- Top 10 APPLY fırsatı (fallback: en yüksek skorlular)
+- JSONB unnest SQL: en sık eksik skill'ler
+- Örnek kayıt tam detayı
+
+### Doğrulama Sonuçları (2026-07-13 19:06 UTC)
+
+```
+Toplam kayıt:     100 / 100 job  (saved_count=100, failed=0)
+Recommendation:   CONSIDER - Review details: 66
+                  SKIP - Better opportunities: 20
+                  CONSIDER - Build skills first: 14
+Avg career score: 53.9/100
+Avg acceptance:   21.2%
+```
+
+**JSONB aggregation (en sık eksik skill'ler):**
+```
+ai              88 ilanda eksik   ← "ai" keyword extraction sorunu (bkz. not)
+javascript      50 ilanda eksik
+c++             47 ilanda eksik
+docker          19 ilanda eksik
+aws             19 ilanda eksik
+kubernetes      15 ilanda eksik
+```
+
+**Not:** `ai` 88 ilanda eksik göründü ama kullanıcının `Machine Learning`, `LLM`, `NLP` skill'leri var. "ai" bare keyword olarak match edilmiyor — bu `applypilot_loader.py`'deki skill normalization sorunu, Phase 1B değil. `company = "Unknown"` çoğu iş için aynı sebep — company extraction v0 sorunu.
 
 ---
 
