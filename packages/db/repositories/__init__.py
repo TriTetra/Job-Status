@@ -4,10 +4,12 @@ from .base import BaseRepository
 from .career_score_repo import CareerScoreRepository
 from .application_repo import ApplicationRepository
 from .scan_history_repo import ScanHistoryRepository
+from .evidence_repo import EvidenceRepository
 
 __all__ = [
     "BaseRepository",
     "CareerScoreRepository",
     "ApplicationRepository",
     "ScanHistoryRepository",
+    "EvidenceRepository",
 ]

@@ -5,6 +5,7 @@ from .career_score import CareerScore
 from .application import Application
 from .email import Email
 from .scan_history import ScanHistory
+from .evidence import Evidence
 
 __all__ = [
     "Base",
@@ -13,4 +14,5 @@ __all__ = [
     "Application",
     "Email",
     "ScanHistory",
+    "Evidence",
 ]

@@ -1,24 +1,22 @@
 """
-Adapter between hiring-agent (score.py + resume_evaluations.csv) and
-the career_scores PostgreSQL table.
+Adapter: hiring-agent (score.py + CSV) → career_scores PostgreSQL table.
 
-Usage:
-    scores = score_resume("personal/Abdullokh_Abdukodirov.pdf")
-    # or
-    with db.session() as session:
-        enrich_career_scores(session, scores)
+Public API:
+    score_resume(pdf_path)                   → scores dict (from CSV)
+    build_and_enrich(pdf_path, session)      → runs score.py + evidence + enriches DB
+    enrich_career_scores(session, scores)    → writes resume_score into explanation JSONB
 """
 
 import csv
+import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-HIRING_AGENT_DIR = Path(__file__).parent.parent / "hiring-agent"
+HIRING_AGENT_DIR = Path(__file__).parent.parent / "hiring-agent"  # services/hiring-agent
 CSV_PATH = HIRING_AGENT_DIR / "resume_evaluations.csv"
 
-# Numeric columns to cast to float (N/A → None)
 _SCORE_COLS = {
     "open_source_score", "open_source_max",
     "self_projects_score", "self_projects_max",
@@ -49,31 +47,42 @@ def score_resume(pdf_path: str | Path) -> dict[str, Any]:
     return HiringAgentAdapter(pdf_path).run()
 
 
+def build_and_enrich(pdf_path: str | Path, session) -> dict[str, Any]:
+    """
+    Full pipeline:
+      1. Run score.py → CSV
+      2. Build Evidence Graph from GitHub cache + CSV
+      3. Enrich career_scores.explanation with resume_score + skill confidences
+
+    Returns the scores dict.
+    """
+    scores = score_resume(pdf_path)
+
+    # Extract basename for cache lookup (e.g. "Abdullokh_Abdukodirov.pdf" → "Abdullokh_Abdukodirov")
+    basename = Path(pdf_path).stem
+
+    print("\nBuilding Evidence Graph...")
+    from services.resume_intelligence.application.evidence_builder import build_evidence_graph
+    confidences = build_evidence_graph(basename)
+
+    print("\nEnriching career_scores...")
+    enriched = _build_enrichment_payload(scores)
+    enriched["skill_confidence"] = confidences
+    n = _enrich_db(session, enriched)
+    print(f"Updated {n} career_score rows")
+
+    return scores
+
+
 def enrich_career_scores(session, resume_scores: dict[str, Any]) -> int:
     """
-    Merge resume_scores into career_scores.explanation for every row
-    that hasn't been enriched yet.
-
-    Returns the number of rows updated.
+    Merge resume_scores into career_scores.explanation for rows not yet enriched.
+    Returns number of rows updated.
     """
-    from sqlalchemy import update, select
-    from packages.db.models.career_score import CareerScore
-
     enrichment = _build_enrichment_payload(resume_scores)
     if not enrichment:
         return 0
-
-    stmt = select(CareerScore).where(
-        CareerScore.explanation["resume_score"].is_(None)
-    )
-    rows = session.execute(stmt).scalars().all()
-    for row in rows:
-        merged = dict(row.explanation)
-        merged["resume_score"] = enrichment
-        row.explanation = merged
-
-    session.flush()
-    return len(rows)
+    return _enrich_db(session, enrichment)
 
 
 # ---------------------------------------------------------------------------
@@ -81,25 +90,23 @@ def enrich_career_scores(session, resume_scores: dict[str, Any]) -> int:
 # ---------------------------------------------------------------------------
 
 def _run_score(pdf_path: Path) -> None:
-    """Run score.py as subprocess inside hiring-agent directory."""
     venv_python = HIRING_AGENT_DIR / ".venv" / "Scripts" / "python.exe"
     python = str(venv_python) if venv_python.exists() else sys.executable
 
     result = subprocess.run(
         [python, "score.py", str(pdf_path)],
         cwd=str(HIRING_AGENT_DIR),
-        capture_output=False,  # let stdout/stderr pass through
+        capture_output=False,
         text=True,
-        env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
     )
     if result.returncode != 0:
         raise RuntimeError(f"score.py exited with code {result.returncode}")
 
 
 def _read_last_csv_row() -> dict[str, Any]:
-    """Read the last row from resume_evaluations.csv and cast numeric fields."""
     if not CSV_PATH.exists():
-        raise FileNotFoundError(f"CSV not found after run: {CSV_PATH}")
+        raise FileNotFoundError(f"CSV not found: {CSV_PATH}")
 
     with CSV_PATH.open(encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -107,8 +114,7 @@ def _read_last_csv_row() -> dict[str, Any]:
     if not rows:
         raise ValueError("resume_evaluations.csv is empty")
 
-    raw = rows[-1]
-    return _cast_row(raw)
+    return _cast_row(rows[-1])
 
 
 def _cast_row(raw: dict[str, str]) -> dict[str, Any]:
@@ -125,7 +131,6 @@ def _cast_row(raw: dict[str, str]) -> dict[str, Any]:
 
 
 def _build_enrichment_payload(scores: dict[str, Any]) -> dict[str, Any]:
-    """Extract the evaluation sub-dict to store in career_scores.explanation."""
     keys = [
         "open_source_score", "open_source_max",
         "self_projects_score", "self_projects_max",
@@ -138,3 +143,20 @@ def _build_enrichment_payload(scores: dict[str, Any]) -> dict[str, Any]:
         "github_repos", "github_followers",
     ]
     return {k: scores[k] for k in keys if k in scores}
+
+
+def _enrich_db(session, enrichment: dict[str, Any]) -> int:
+    from sqlalchemy import select
+    from packages.db.models.career_score import CareerScore
+
+    stmt = select(CareerScore).where(
+        CareerScore.explanation["resume_score"].is_(None)
+    )
+    rows = session.execute(stmt).scalars().all()
+    for row in rows:
+        merged = dict(row.explanation)
+        merged["resume_score"] = enrichment
+        row.explanation = merged
+
+    session.flush()
+    return len(rows)
