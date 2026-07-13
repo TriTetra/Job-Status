@@ -1,69 +1,52 @@
-# Career OS profile template.
+# config.yaml.example
+# ====================
+# Bu dosyayi config.yaml olarak kopyala ve degerleri doldur.
+# API key'i config.yaml'a YAZMA -- .env dosyasina yaz.
 #
-# This file is NOT created by `applypilot init` - that wizard only creates
-# ~/.applypilot/profile.json, resume.txt, searches.yaml, and .env. config.yaml
-# is a separate, career_os-specific file with its own schema.
-#
-# Copy this to config.yaml (repo root) and fill in your own values:
-#   cp config.yaml.example config.yaml
-#
-# config.yaml is gitignored - it will not be committed.
-#
-# career_os/data/applypilot_loader.py looks for config.yaml here first, then
-# falls back to ~/.applypilot/config.yaml if this file doesn't exist.
+# cp config.yaml.example config.yaml
 
 llm:
-  provider: openai
-  api_key: your-api-key-here  # same key you put in ~/.applypilot/.env
+  provider: openrouter
+  api_key: ${OPENROUTER_API_KEY}
   base_url: https://openrouter.ai/api/v1
   model: openai/gpt-4o-mini
 
 job_search:
   location: Remote
-  radius_miles: 0
   remote_only: true
   hours_old: 72
   results_per_site: 50
   min_score: 8
 
 candidate:
-  name: Your Name
-  email: you@example.com
+  name: "Your Name"
+  email: "your.email@example.com"
   phone: "+1234567890"
-  city: Your City
-  country: Your Country
-  linkedin: https://www.linkedin.com/in/yourprofile/
-  github: https://github.com/yourusername
-  current_title: Your Current Title
-  target_role: ML Engineer, Backend Engineer, AI Engineer  # comma-separated
-  years_experience: 0
-  education: Your Degree
-  salary_min: 0
-  salary_max: 0
+  city: "Your City"
+  country: "Your Country"
+  linkedin: "https://linkedin.com/in/yourprofile"
+  github: "https://github.com/yourusername"
+  current_title: "ML Engineer"
+  years_experience: 2
+  salary_min: 40000
+  salary_max: 80000
   currency: USD
   work_authorized: false
   needs_sponsorship: true
-  available: immediately
 
-  # Skill names only - career_os/data/applypilot_loader.py assigns a
-  # proficiency level and AI-dependency multiplier to each one (see
-  # _SKILL_PROFILES in that file); skills not listed there get a
-  # conservative default.
   core_skills:
     - Python
-    - Machine Learning
+    - PyTorch
+    - React
 
   target_roles:
     - ML Engineer
     - Backend Engineer
 
   avoid:
-    - Senior (unless explicitly junior-friendly)
+    - Senior
     - Lead
-    - Principal
 
-# Optional - used by scripts/strategy/extract_requirements.py when tailoring
-# a resume to preserve specific company names, project names, and metrics.
 resume:
   preserve_companies: []
   preserve_projects: []

@@ -96,3 +96,16 @@ applypilot_package_*/
 *_OLD.*
 *_BACKUP.*
 README_OLD.md
+
+# Generated output directories (v1.0: these move to DB)
+career_os_output/
+cold_emails/
+learning_plan/
+job_requirements_analysis/
+applypilot_package_*/
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
