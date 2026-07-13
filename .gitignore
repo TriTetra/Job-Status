@@ -92,6 +92,11 @@ Thumbs.db
 applypilot_package_*/
 *.zip
 
+# Hiring-agent runtime artifacts
+services/hiring-agent/cache/
+services/hiring-agent/resume_evaluations.csv
+services/hiring-agent/.venv/
+
 # OLD/BACKUP files
 *_OLD.*
 *_BACKUP.*
