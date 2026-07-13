@@ -14,5 +14,10 @@ pyyaml>=6.0
 # scripts/tracking/sync_to_github.py - optional, only needed for GitHub Issues sync
 PyGithub>=2.0
 
+# packages/db - PostgreSQL layer (Phase 1A)
+sqlalchemy>=2.0
+psycopg[binary]>=3.1
+alembic>=1.13
+
 # tests/ - run with: pytest tests/
 pytest>=7.0
