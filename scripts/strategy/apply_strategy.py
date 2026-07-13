@@ -18,7 +18,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from career_os.data import ApplyPilotLoader, create_user_profile_from_config
-from career_os.intelligence import SemanticMatcher, GapAnalyzer, OpportunityScorer, CareerDecisionEngine
+from packages.intelligence import SemanticMatcher, GapAnalyzer, OpportunityScorer, CareerDecisionEngine
 from packages.db.connection import db
 from packages.db.repositories import CareerScoreRepository
 

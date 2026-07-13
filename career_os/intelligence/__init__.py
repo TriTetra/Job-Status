@@ -1,14 +1,21 @@
-"""Intelligence modules for Career OS."""
+"""Backward compatibility shim — redirects to packages.intelligence."""
 
-from .semantic_matcher import SemanticMatcher
-from .gap_analyzer import GapAnalyzer, SkillGap, LearningRoadmap
-from .opportunity_scorer import OpportunityScorer, CareerDecisionEngine
+from packages.intelligence import (
+    SemanticMatcher,
+    OpportunityScorer,
+    CareerDecisionEngine,
+    GapAnalyzer,
+    SkillGap,
+    LearningRoadmap,
+    LearningTask,
+)
 
 __all__ = [
-    'SemanticMatcher',
-    'GapAnalyzer',
-    'SkillGap',
-    'LearningRoadmap',
-    'OpportunityScorer',
-    'CareerDecisionEngine',
+    "SemanticMatcher",
+    "OpportunityScorer",
+    "CareerDecisionEngine",
+    "GapAnalyzer",
+    "SkillGap",
+    "LearningRoadmap",
+    "LearningTask",
 ]
