@@ -20,9 +20,47 @@ Sıralama: en yeniden en eskiye.
 | Phase 2J | Application Engine: `services/application_engine/cli.py`, 6 komut, state machine | ✅ Tamam | 2026-07-14 |
 | Refactor | Plugin + Config-Driven Architecture: hardcode sıfır, `config/plugins.yaml`, `ResumeParserPlugin` ABC | ✅ Tamam | 2026-07-14 |
 | Event Bus | Thread-safe pub/sub: `events/`, 18 domain event tipi, `apply_strategy` entegrasyonu | ✅ Tamam | 2026-07-14 |
+| ApplyPilot Plugin | `JobSourcePlugin` ABC, SQLite client/adapter, config-driven extraction, 6/6 test | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [ApplyPilot Plugin] — 2026-07-14 — Job Source Plugin (Week 2) ✅
+
+### Değişiklikler
+
+**`plugins/plugin_interface.py`** — `JobSourcePlugin` ABC eklendi
+- `scan(hours_old, min_score)` — raw job listesi
+- `normalize(raw_job)` — canonical schema'ya dönüşüm
+- `scan_and_normalize()` — convenience, hata izole
+
+**`config/plugins.yaml`** — `job_sources.applypilot` bloğu
+- `db_path`, `columns`, `table_name` — kaynak konfigürasyonu
+- `company_extraction`: ATS domain listesi (13 alan), blocklist (19 kelime), pattern sırası
+- `skill_extraction`: 37 keyword, requirements section scoping, `max_section_chars`
+- `salary_patterns`: 3 regex (USD, EUR, bare number) — YAML single-quote regex escaping fix uygulandı
+- `company_sizes`: big_tech (9 şirket), large (6 şirket)
+- `seniority`: title patterns (senior/junior/lead), description `(\d+)+ years` regex
+
+**`plugins/job_sources/applypilot/client.py`**
+- `ApplyPilotClient` — SQLite I/O, `hours_old` filtresi, `count_jobs()`, `get_all_urls()`
+- `ApplyPilotPlugin(JobSourcePlugin)` — high-level interface, `adapter` + `client` composition
+
+**`plugins/job_sources/applypilot/adapter.py`**
+- Company extraction: LinkedIn slug → title pattern → ATS-filtered app URL → description NLP
+- Skill extraction: requirements section öncelikli, word-boundary matching
+- Salary: 3 configurable regex pattern
+- Seniority: title keyword → description `X years experience`
+- Remote: `remote/anywhere/wfh` keyword scan
+
+**`plugins/plugin_loader.py`**
+- `load_job_source_plugin(name)` factory
+- `list_available_job_sources()` → metadata dict
+
+**`scripts/test_applypilot_plugin.py`** — 6/6 test geçti
+- 562 iş DB'de, 151 son 72 saatte, şirket extraction oranı %54
 
 ---
 
