@@ -15,9 +15,33 @@ Sıralama: en yeniden en eskiye.
 | Phase 1C | Scan history tracking: `scan_history` tablosu, `discovered_in_this_scan` flag, bulk diff | ✅ Tamam | 2026-07-14 |
 | Phase 2A | `packages/intelligence/` migration; `career_os/intelligence/` → backward-compat shim | ✅ Tamam | 2026-07-14 |
 | Phase 2B | `services/hiring-agent/` (CV scoring); OpenRouter desteği; GitHub token fix; `services/resume-intelligence/` adapter | ✅ Tamam | 2026-07-14 |
+| Phase 2G | Evidence Graph → DB: `evidence` tablosu, `EvidenceRepository`, `EvidenceBuilder` | ✅ Tamam | 2026-07-14 |
+| Phase 2I | Skill Graph YAML: `knowledge/v1/skills/skill_graph.yaml`, `SkillLoader`, hardcode yok | ✅ Tamam | 2026-07-14 |
+| Phase 2J | Application Engine: `services/application_engine/cli.py`, 6 komut, state machine | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [Phase 2J] — 2026-07-14 — Application Engine CLI ✅
+
+### Değişiklikler
+
+**`services/application_engine/__init__.py`** (yeni)
+
+**`services/application_engine/cli.py`** (yeni — typer tabanlı CLI)
+- `add` — URL, title, company, status, notes ile iş ekle (duplicate → warn, skip)
+- `update` — status değiştir; `applied` status'a geçince `applied_at` otomatik set edilir; notes append edilir
+- `list` — tüm işleri tablo olarak göster; `--status` ile filtrele
+- `summary` — pipeline count tablosu (to_apply/applied/phone_screen/...)
+- `stale` — N gündür güncellenmemiş aktif başvuruları listele (ghosted tespiti için)
+- `migrate-from-markdown` — `docs/tracking/JOB_APPLICATIONS.md`'daki gerçek URL satırlarını DB'ye import et; placeholder `[Apply](link)` satırlarını atlar
+- State machine: `to_apply → applied → phone_screen → technical → onsite → offer / rejected / ghosted / withdrawn`
+- Windows CP1252 uyumlu çıktı (emoji/unicode yok)
+
+**`packages/db/repositories/application_repo.py`** (güncellendi)
+- `get_stale(statuses, before)` eklendi — `stale` komutu için
 
 ---
 

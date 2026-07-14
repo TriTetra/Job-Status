@@ -52,3 +52,13 @@ class ApplicationRepository(BaseRepository[Application]):
             .group_by(self.model.status)
         ).all()
         return {row.status: row.n for row in rows}
+
+    def get_stale(self, statuses: List[str], before: datetime) -> List[Application]:
+        """Jobs in `statuses` whose updated_at is older than `before`."""
+        stmt = (
+            select(self.model)
+            .where(self.model.status.in_(statuses))
+            .where(self.model.updated_at < before)
+            .order_by(self.model.updated_at)
+        )
+        return list(self.session.execute(stmt).scalars().all())
