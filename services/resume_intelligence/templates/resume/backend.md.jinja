@@ -1,0 +1,62 @@
+# {{ candidate.name }}
+
+**{{ target_title }}** | Backend Systems Engineer
+
+{{ candidate.email }}{% if candidate.github %} | GitHub: {{ candidate.github }}{% endif %}{% if candidate.linkedin %} | LinkedIn: {{ candidate.linkedin }}{% endif %}
+
+---
+
+## Summary
+
+{{ summary }}
+
+---
+
+## Technical Stack
+
+**Primary:** {{ emphasized_skills[:5] | join(' · ') }}
+
+### Skill Evidence
+{% for skill in emphasized_skills[:6] %}
+{% if evidence.get(skill) %}
+- **{{ skill }}** ({{ "%.0f" | format(evidence[skill].confidence * 100) }}% confidence) — {{ evidence[skill].evidence_list | length }} projects
+{% endif %}
+{% endfor %}
+
+---
+
+## Engineering Highlights
+
+{% for project in selected_projects %}
+### {{ project.suggested_title if project.suggested_title else project.name }}
+
+{% for bullet in project.key_bullets %}
+- **{{ bullet }}**
+{% endfor %}
+
+{% endfor %}
+
+---
+
+## System Design & Scale
+
+{% if priorities.must_have %}
+**Required expertise demonstrated:** {{ priorities.must_have[:4] | join(', ') }}
+
+{% endif %}
+
+---
+
+## Education
+
+**{{ candidate.education }}**
+
+---
+
+## What I Bring to {{ target_company }}
+
+{% if priorities.summary %}
+{{ priorities.summary }}
+
+{% endif %}
+Focused on shipping reliable systems with measurable impact.

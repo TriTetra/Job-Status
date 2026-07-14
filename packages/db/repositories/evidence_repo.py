@@ -53,6 +53,15 @@ class EvidenceRepository(BaseRepository[Evidence]):
         weighted = sum(r.confidence * max(1, r.author_commits) for r in rows)
         return weighted / total_weight
 
+    def get_all_evidence_for_user(self, user_id: str = "default") -> List[Evidence]:
+        """Return all evidence rows for a user, sorted by confidence desc."""
+        stmt = (
+            select(self.model)
+            .where(self.model.user_id == user_id)
+            .order_by(self.model.confidence.desc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
     def skill_summary(self, user_id: str = "default") -> Dict[str, dict]:
         """Aggregate stats per skill — useful for reports / debug."""
         stmt = (

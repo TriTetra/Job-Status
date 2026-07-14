@@ -1,0 +1,59 @@
+# {{ candidate.name }}
+
+**{{ target_title }}** | ML/AI Specialist
+
+{{ candidate.email }}{% if candidate.github %} | GitHub: {{ candidate.github }}{% endif %}{% if candidate.linkedin %} | LinkedIn: {{ candidate.linkedin }}{% endif %}
+
+---
+
+## Summary
+
+{{ summary }}
+
+---
+
+## Technical Expertise
+
+**Core Focus:** {{ emphasized_skills[:4] | join(', ') }}
+
+{% for skill in emphasized_skills %}
+{% if evidence.get(skill) %}
+### {{ skill }} — {{ "%.0f" | format(evidence[skill].confidence * 100) }}% confidence
+{% for ev in evidence[skill].evidence_list[:2] %}
+- **{{ ev.project_name }}** — {{ ev.author_commits }} commits, {{ ev.stars }} stars{% if ev.github_url %} ([GitHub]({{ ev.github_url }})){% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+---
+
+## Featured Projects
+
+{% for project in selected_projects %}
+### {{ project.suggested_title if project.suggested_title else project.name }}
+
+{{ project.reasoning }}
+
+{% for bullet in project.key_bullets %}
+- {{ bullet }}
+{% endfor %}
+
+{% endfor %}
+
+---
+
+## Education
+
+**{{ candidate.education }}**
+
+---
+
+## Why {{ target_company }}?
+
+{% if priorities.culture_signals %}
+**Aligned with your values:** {{ priorities.culture_signals | join(', ') }}
+
+{% endif %}
+{% if priorities.summary %}
+{{ priorities.summary }}
+{% endif %}
