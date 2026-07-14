@@ -1,0 +1,47 @@
+fact_types:
+  application_outcome:
+    required_fields: [stage, outcome]
+    optional_fields: [reason, job_title, applied_at, responded_at]
+    example:
+      stage: phone_screen
+      outcome: rejected
+      reason: "experience_gap"
+      job_title: "ML Engineer"
+
+  interview_topic:
+    required_fields: [topics]
+    optional_fields: [round, difficulty]
+    example:
+      topics: ["Docker", "Redis", "system_design"]
+      round: "technical"
+      difficulty: "medium"
+
+  response_time:
+    required_fields: [days_to_response]
+    optional_fields: [stage]
+    example:
+      days_to_response: 14
+      stage: "after_technical"
+
+  recruiter:
+    required_fields: [name]
+    optional_fields: [linkedin_url, email, helpfulness]
+    example:
+      name: "Jane Doe"
+      helpfulness: 4
+
+  salary_offer:
+    required_fields: [base_salary, currency]
+    optional_fields: [equity_percent, bonus, level]
+    example:
+      base_salary: 180000
+      currency: "USD"
+      equity_percent: 0.1
+      level: "L4"
+
+  cultural_note:
+    required_fields: [note]
+    optional_fields: [sentiment]
+    example:
+      note: "Very technical interviewers, less behavioral"
+      sentiment: "neutral"

@@ -1,0 +1,152 @@
+tier: big_tech
+description: "Top-tier tech companies with high bar and high compensation"
+
+shared:
+  acceptance_multiplier: 0.25
+  career_value_bonus: 0.2
+  visa_sponsorship: true
+  remote_friendly: true
+
+companies:
+  google:
+    canonical_name: "Google LLC"
+    industry: "Search / Cloud / AI"
+    headquarters: "Mountain View, CA"
+    employee_count: 180000
+    tech_stack:
+      - Python
+      - Go
+      - Java
+      - C++
+      - Kubernetes
+      - TensorFlow
+      - JAX
+      - BigQuery
+      - Spanner
+    interview_rounds:
+      - {round: 1, type: "recruiter_screen", duration_min: 30}
+      - {round: 2, type: "phone_screen", duration_min: 45, topics: ["coding", "system_design"]}
+      - {round: 3, type: "virtual_onsite", duration_min: 180, topics: ["coding", "system_design", "behavioral"]}
+      - {round: 4, type: "team_match", duration_min: 60}
+    salary_ranges:
+      backend: {min: 180000, max: 350000, currency: "USD", level: "L4-L5"}
+      ml: {min: 200000, max: 400000, currency: "USD", level: "L4-L5"}
+    culture_signals:
+      - research-focused
+      - open-source-friendly
+      - scale-oriented
+
+  meta:
+    canonical_name: "Meta Platforms"
+    industry: "Social / AI / VR"
+    headquarters: "Menlo Park, CA"
+    employee_count: 67000
+    tech_stack:
+      - Python
+      - C++
+      - Rust
+      - React
+      - PyTorch
+      - Presto
+    interview_rounds:
+      - {round: 1, type: "recruiter_screen", duration_min: 30}
+      - {round: 2, type: "technical_phone", duration_min: 60, topics: ["coding", "system_design"]}
+      - {round: 3, type: "onsite", duration_min: 240, topics: ["coding", "system_design", "behavioral"]}
+    salary_ranges:
+      backend: {min: 170000, max: 340000, currency: "USD", level: "E4-E5"}
+      ml: {min: 190000, max: 380000, currency: "USD", level: "E4-E5"}
+    red_flags:
+      - {type: "layoff", date: "2023-11", severity: "high", count: 11000}
+
+  amazon:
+    canonical_name: "Amazon"
+    industry: "E-commerce / Cloud / AI"
+    headquarters: "Seattle, WA"
+    employee_count: 1500000
+    tech_stack:
+      - Java
+      - Python
+      - AWS
+      - DynamoDB
+      - Lambda
+      - SageMaker
+    interview_rounds:
+      - {round: 1, type: "online_assessment", duration_min: 90}
+      - {round: 2, type: "phone_screen", duration_min: 60, topics: ["coding", "leadership_principles"]}
+      - {round: 3, type: "loop", duration_min: 300, topics: ["coding", "system_design", "leadership_principles"]}
+    salary_ranges:
+      backend: {min: 150000, max: 300000, currency: "USD", level: "L5-L6"}
+    culture_signals:
+      - leadership-principles-focused
+      - scale-oriented
+
+  apple:
+    canonical_name: "Apple Inc."
+    industry: "Hardware / Software / Services"
+    headquarters: "Cupertino, CA"
+    tech_stack:
+      - Swift
+      - Objective-C
+      - Python
+      - C++
+      - Kubernetes
+    culture_signals:
+      - secrecy
+      - design-focused
+
+  microsoft:
+    canonical_name: "Microsoft"
+    industry: "Software / Cloud / AI"
+    headquarters: "Redmond, WA"
+    tech_stack:
+      - C#
+      - Python
+      - TypeScript
+      - Azure
+      - Kubernetes
+      - .NET
+    culture_signals:
+      - enterprise-focused
+      - open-source-friendly
+
+  netflix:
+    canonical_name: "Netflix"
+    industry: "Streaming / Entertainment"
+    headquarters: "Los Gatos, CA"
+    tech_stack:
+      - Java
+      - Python
+      - React
+      - AWS
+      - Kafka
+      - Cassandra
+    culture_signals:
+      - freedom-and-responsibility
+      - high-performance
+
+  openai:
+    canonical_name: "OpenAI"
+    industry: "AI Research"
+    headquarters: "San Francisco, CA"
+    tech_stack:
+      - Python
+      - PyTorch
+      - JAX
+      - Kubernetes
+      - Triton
+    culture_signals:
+      - research-focused
+      - safety-focused
+
+  anthropic:
+    canonical_name: "Anthropic"
+    industry: "AI Research"
+    headquarters: "San Francisco, CA"
+    tech_stack:
+      - Python
+      - PyTorch
+      - JAX
+      - Rust
+    culture_signals:
+      - research-focused
+      - safety-focused

@@ -9,6 +9,8 @@ from .evidence import Evidence
 from .job import Job
 from .user_settings import UserSettings
 from .user_custom_skills import UserCustomSkill
+from .company import Company
+from .company_memory import CompanyMemory
 
 __all__ = [
     "Base",
@@ -21,4 +23,6 @@ __all__ = [
     "Job",
     "UserSettings",
     "UserCustomSkill",
+    "Company",
+    "CompanyMemory",
 ]

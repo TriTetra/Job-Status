@@ -1,0 +1,87 @@
+tier: unicorn
+description: "High-growth companies with strong engineering culture"
+
+shared:
+  acceptance_multiplier: 0.45
+  career_value_bonus: 0.15
+  remote_friendly: true
+
+companies:
+  stripe:
+    industry: "Fintech / Payments"
+    headquarters: "San Francisco, CA"
+    employee_count: 8000
+    tech_stack:
+      - Ruby
+      - Go
+      - Rust
+      - Python
+      - Kafka
+      - AWS
+      - Scala
+    interview_rounds:
+      - {round: 1, type: "recruiter_screen", duration_min: 30}
+      - {round: 2, type: "technical_phone", duration_min: 60, topics: ["coding", "system_design"]}
+      - {round: 3, type: "onsite", duration_min: 240, topics: ["coding", "system_design", "API_design"]}
+    salary_ranges:
+      backend: {min: 180000, max: 320000, currency: "USD", level: "L2-L3"}
+    culture_signals:
+      - API-design-focused
+      - writing-heavy
+    sponsors_visa: true
+
+  databricks:
+    industry: "Data / AI Platform"
+    headquarters: "San Francisco, CA"
+    tech_stack:
+      - Scala
+      - Python
+      - Java
+      - Apache Spark
+      - Delta Lake
+      - Kubernetes
+    culture_signals:
+      - research-focused
+      - data-engineering-focused
+    sponsors_visa: true
+
+  snowflake:
+    industry: "Data Cloud"
+    headquarters: "Bozeman, MT"
+    tech_stack:
+      - C++
+      - Java
+      - Python
+      - AWS
+      - Azure
+      - GCP
+
+  confluent:
+    industry: "Data Streaming"
+    headquarters: "Mountain View, CA"
+    tech_stack:
+      - Java
+      - Scala
+      - Python
+      - Kafka
+      - Kubernetes
+
+  elastic:
+    industry: "Search / Observability"
+    headquarters: "Amsterdam / San Francisco"
+    tech_stack:
+      - Java
+      - Go
+      - Python
+      - Elasticsearch
+      - Kubernetes
+
+  mongodb:
+    industry: "Database"
+    headquarters: "New York, NY"
+    tech_stack:
+      - C++
+      - Go
+      - Python
+      - MongoDB
+      - Kubernetes
