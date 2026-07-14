@@ -1,0 +1,19 @@
+name: feedback_learning
+version: "0.1.0"
+description: "Model calibration from application outcomes (Phase 5)"
+enabled: false
+rollout_percentage: 0
+
+dependencies:
+  - resume_ai
+  - target_aware_resume
+
+requires:
+  - application_outcomes_data
+
+metrics:
+  - model_accuracy_improvement
+  - applications_tracked
+
+owner: "analytics-engine"
+docs: "Planned: services/analytics_engine/feedback_learner.py"
