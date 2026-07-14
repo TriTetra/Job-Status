@@ -22,7 +22,10 @@ The user has the following evidence-backed skills (with confidence scores):
 {% for skill, data in evidence.items() | sort(attribute='1.confidence', reverse=true) %}
 ### {{ skill }} (confidence: {{ "%.2f" | format(data.confidence) }})
 {% for ev in data.evidence_list[:3] %}
-- **{{ ev.project_name }}**: {{ ev.author_commits }} commits, {{ ev.stars }} stars
+- **{{ ev.project_name }}**: {{ ev.author_commits }} commits, {{ ev.stars }} stars{% if ev.loc_count %}, {{ "{:,}".format(ev.loc_count) }} LOC{% endif %}{% if ev.language %}, primary={{ ev.language }}{% endif %}
+  {% if ev.topics %}- Topics: {{ ev.topics | join(', ') }}
+  {% endif %}{% if ev.has_tests or ev.has_docs or ev.has_releases %}- Quality: {% if ev.has_tests %}has_tests=true {% endif %}{% if ev.has_docs %}has_docs=true {% endif %}{% if ev.has_releases %}has_releases=true{% endif %}
+  {% endif %}{% if ev.pr_count %}- PRs merged: {{ ev.pr_count }}{% endif %}
   - GitHub: {{ ev.github_url }}
 {% endfor %}
 {% endfor %}
@@ -53,7 +56,7 @@ Consider:
     {
       "name": "Project Name",
       "reason": "Why this project is perfect for this target",
-      "key_metrics": ["92% mAP", "40ms latency"]
+      "key_metrics": ["Use ONLY real metrics visible in the evidence above — LOC counts, commit counts, star counts, topics. Do NOT invent numbers."]
     }
   ],
   "summary_focus": "One-sentence positioning (e.g., 'ML Engineer with production CV experience and research publications')",

@@ -131,6 +131,15 @@ class ResumeGenerator:
                 "author_commits": ev.author_commits,
                 "stars": ev.stars,
                 "github_url": ev.github_url,
+                # Real GitHub metrics from Phase 3B enrichment
+                "loc_count": ev.loc_count,
+                "language": ev.language,
+                "topics": ev.topics or [],
+                "has_tests": ev.has_tests,
+                "has_docs": ev.has_docs,
+                "has_releases": ev.has_releases,
+                "pr_count": ev.pr_count,
+                "issue_count": ev.issue_count,
             })
             grouped[skill]["confidence"] = max(grouped[skill]["confidence"], ev.confidence)
 
