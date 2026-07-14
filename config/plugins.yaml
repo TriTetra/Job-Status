@@ -67,3 +67,161 @@ resume_parsers:
       - areas_for_improvement
       - github_repos
       - github_followers
+
+# ---------------------------------------------------------------------------
+# Job Sources
+# ---------------------------------------------------------------------------
+
+job_sources:
+  applypilot:
+    enabled: true
+    version: "1.0.0"
+    description: "ApplyPilot SQLite job source (LinkedIn, Indeed, Glassdoor)"
+
+    # Database path
+    db_path: "~/.applypilot/applypilot.db"
+
+    # Scan parameters
+    default_hours_old: 72
+    default_min_score: 7
+
+    # Table name in ApplyPilot DB
+    table_name: "jobs"
+
+    # Column mapping (ApplyPilot schema)
+    columns:
+      url: "url"
+      title: "title"
+      company: "company"
+      location: "location"
+      description: "description"
+      full_description: "full_description"
+      fit_score: "fit_score"
+      score_reasoning: "score_reasoning"
+      salary: "salary"
+      site: "site"
+      discovered_at: "discovered_at"
+      application_url: "application_url"
+
+    # Company extraction settings
+    company_extraction:
+      ats_domains:
+        - greenhouse.io
+        - grnh.se
+        - lever.co
+        - indeed.com
+        - linkedin.com
+        - glassdoor.com
+        - workday.com
+        - myworkdayjobs.com
+        - ashbyhq.com
+        - bamboohr.com
+        - smartrecruiters.com
+        - icims.com
+        - jobvite.com
+
+      blocklist:
+        - this
+        - us
+        - our
+        - we
+        - the
+        - about
+        - a
+        - an
+        - our client
+        - this role
+        - this position
+        - this job
+        - this team
+        - build
+        - i
+        - you
+        - they
+        - it
+        - our team
+        - our company
+
+    # Skill extraction settings
+    skill_extraction:
+      prefer_requirements_section: true
+      max_section_chars: 1500
+      keywords:
+        - Python
+        - Java
+        - JavaScript
+        - TypeScript
+        - Go
+        - Rust
+        - "C++"
+        - PyTorch
+        - TensorFlow
+        - scikit-learn
+        - Keras
+        - React
+        - Vue
+        - Angular
+        - Next.js
+        - FastAPI
+        - Django
+        - Flask
+        - Spring Boot
+        - Express.js
+        - AWS
+        - GCP
+        - Azure
+        - Docker
+        - Kubernetes
+        - PostgreSQL
+        - MySQL
+        - MongoDB
+        - Redis
+        - Machine Learning
+        - Deep Learning
+        - Computer Vision
+        - NLP
+        - LLM
+        - AI
+        - MLOps
+        - Data Engineering
+
+    # Salary parsing patterns (Python re syntax)
+    salary_patterns:
+      - pattern: '\$?(\d+)k?-\$?(\d+)k?'
+        multiplier: 1000
+      - pattern: '€?(\d+)k?-€?(\d+)k?'
+        multiplier: 1000
+      - pattern: '(\d+),?000-(\d+),?000'
+        multiplier: 1
+
+    # Company size classification
+    company_sizes:
+      big_tech:
+        - google
+        - meta
+        - amazon
+        - apple
+        - microsoft
+        - netflix
+        - openai
+        - anthropic
+        - facebook
+      large:
+        - stripe
+        - databricks
+        - snowflake
+        - confluent
+        - elastic
+        - mongodb
+
+    # Seniority extraction
+    seniority:
+      title_patterns:
+        - pattern: "senior|sr\\."
+          years: 5.0
+        - pattern: "junior|jr\\."
+          years: 1.0
+        - pattern: "lead|principal"
+          years: 7.0
+      description_pattern: '(\d+)\+?\s*years?\s+(?:of\s+)?experience'
+      default_years: 2.0

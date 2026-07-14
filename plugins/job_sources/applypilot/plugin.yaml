@@ -1,0 +1,5 @@
+name: applypilot
+version: "1.0.0"
+description: "ApplyPilot SQLite job source (LinkedIn, Indeed, Glassdoor)"
+type: job-source
+enabled: true
