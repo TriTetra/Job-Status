@@ -1,0 +1,69 @@
+resume_parsers:
+  hiring-agent:
+    enabled: true
+    version: "1.0.0"
+
+    # Paths (relative to project root)
+    install_dir: "services/hiring-agent"
+    venv_python_windows: ".venv/Scripts/python.exe"
+    venv_python_unix: ".venv/bin/python"
+
+    # Files
+    score_script: "score.py"
+    csv_filename: "resume_evaluations.csv"
+    cache_dir: "cache"
+
+    # CSV schema
+    csv_columns:
+      scores:
+        - open_source_score
+        - open_source_max
+        - self_projects_score
+        - self_projects_max
+        - production_score
+        - production_max
+        - technical_skills_score
+        - technical_skills_max
+        - total_score
+        - total_max
+        - bonus_points
+        - deductions
+
+      metadata:
+        - total_work_experience
+        - total_education
+        - total_skills
+        - total_projects
+        - github_repos
+        - github_followers
+        - github_following
+
+    # Confidence formula weights
+    confidence_formula:
+      base_divisor: 100
+      commit_bonus_max: 0.20
+      commit_divisor: 100
+      star_bonus_max: 0.10
+      star_divisor: 50
+      production_weight: 0.20
+
+    # Fields merged into career_scores.explanation["resume_score"]
+    enrichment_keys:
+      - open_source_score
+      - open_source_max
+      - self_projects_score
+      - self_projects_max
+      - production_score
+      - production_max
+      - technical_skills_score
+      - technical_skills_max
+      - total_score
+      - total_max
+      - bonus_points
+      - bonus_breakdown
+      - deductions
+      - deduction_reasons
+      - key_strengths
+      - areas_for_improvement
+      - github_repos
+      - github_followers

@@ -1,0 +1,5 @@
+name: hiring-agent
+version: "1.0.0"
+description: "Hiring-Agent resume parser (score.py + CSV + GitHub cache)"
+type: resume-parser
+enabled: true
