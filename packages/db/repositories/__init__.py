@@ -8,6 +8,7 @@ from .evidence_repo import EvidenceRepository
 from .job_repo import JobRepository
 from .user_settings_repo import UserSettingsRepository
 from .company_repo import CompanyRepository, CompanyMemoryRepository
+from .market_signal_repo import MarketSignalRepository
 
 __all__ = [
     "BaseRepository",
@@ -19,4 +20,5 @@ __all__ = [
     "UserSettingsRepository",
     "CompanyRepository",
     "CompanyMemoryRepository",
+    "MarketSignalRepository",
 ]

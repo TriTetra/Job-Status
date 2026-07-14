@@ -11,6 +11,7 @@ from .user_settings import UserSettings
 from .user_custom_skills import UserCustomSkill
 from .company import Company
 from .company_memory import CompanyMemory
+from .market_signal import MarketSignal
 
 __all__ = [
     "Base",
@@ -25,4 +26,5 @@ __all__ = [
     "UserCustomSkill",
     "Company",
     "CompanyMemory",
+    "MarketSignal",
 ]
