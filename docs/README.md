@@ -18,6 +18,12 @@
 | Phase 2 — Intelligence Core | [PHASE_2_REPORT](v1/phases/PHASE_2_REPORT.md) |
 | Phase 3 — Company & Market | [PHASE_3_REPORT](v1/phases/PHASE_3_REPORT.md) |
 
+### Frontend & UI
+
+| Belge | Açıklama |
+|-------|----------|
+| [UI_DESIGN_V1](v1/UI_DESIGN_V1.md) | v1 UI/UX tasarım planı — "Observe → Understand → Act" |
+
 ### Geliştirme Belgeleri
 
 | Belge | Açıklama |
