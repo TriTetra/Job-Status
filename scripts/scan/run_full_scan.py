@@ -131,6 +131,14 @@ def load_jobs_from_applypilot() -> list:
         return []
 
 
+def _get_user_id() -> str:
+    try:
+        from career_os.config_loader import load_config
+        return load_config().get("user", {}).get("id", "default")
+    except Exception:
+        return "default"
+
+
 def track_scan_history(jobs: list, scanned_at: datetime):
     """Record which jobs appeared in this scan, marking new vs known."""
     from packages.db.connection import db
@@ -140,9 +148,11 @@ def track_scan_history(jobs: list, scanned_at: datetime):
         log("No jobs to track", "WARNING")
         return
 
+    user_id = _get_user_id()
+
     with db.session_scope() as session:
         repo = ScanHistoryRepository(session)
-        known_urls = repo.get_all_known_urls()
+        known_urls = repo.get_all_known_urls(user_id=user_id)
 
         saved_count = 0
         new_count = 0
@@ -154,6 +164,7 @@ def track_scan_history(jobs: list, scanned_at: datetime):
                 url = job["url"]
                 is_new = url not in known_urls
                 repo.record_scan(
+                    user_id=user_id,
                     url=url,
                     applypilot_score=job.get("fit_score"),
                     career_os_score=None,
@@ -401,7 +412,7 @@ def run_full_scan():
 
         with db.session_scope() as session:
             repo = ScanHistoryRepository(session)
-            new_jobs = repo.get_new_this_scan(scan_timestamp)
+            new_jobs = repo.get_new_this_scan(scan_timestamp, user_id=_get_user_id())
 
             if new_jobs:
                 log(f"New jobs in this scan: {len(new_jobs)}")

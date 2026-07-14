@@ -33,7 +33,7 @@ class EvidenceBuilder:
             "confidence_formula"
         ]
 
-    def build(self, pdf_path: Path, basename: str) -> Dict[str, float]:
+    def build(self, pdf_path: Path, basename: str, user_id: str = "default") -> Dict[str, float]:
         """
         Full pipeline: parse -> extract evidence -> write to DB.
 
@@ -42,7 +42,7 @@ class EvidenceBuilder:
         """
         resume_data = self.parser.parse(pdf_path, basename)
         records = self._extract_records(resume_data)
-        return self._write_to_db(records)
+        return self._write_to_db(records, user_id=user_id)
 
     # ------------------------------------------------------------------
     # Evidence extraction
@@ -108,14 +108,14 @@ class EvidenceBuilder:
     # DB write
     # ------------------------------------------------------------------
 
-    def _write_to_db(self, records: List[dict]) -> Dict[str, float]:
+    def _write_to_db(self, records: List[dict], user_id: str = "default") -> Dict[str, float]:
         with db.session_scope() as session:
             repo = EvidenceRepository(session)
             for rec in records:
-                repo.add_evidence(**rec)
+                repo.add_evidence(user_id=user_id, **rec)
             skills_seen = {r["skill_name"] for r in records}
             confidences = {
-                skill: repo.calculate_skill_confidence(skill)
+                skill: repo.calculate_skill_confidence(skill, user_id=user_id)
                 for skill in skills_seen
             }
         print(f"Wrote {len(records)} evidence rows ({len(skills_seen)} skills)")

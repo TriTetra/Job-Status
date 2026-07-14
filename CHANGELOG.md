@@ -22,9 +22,37 @@ Sıralama: en yeniden en eskiye.
 | Event Bus | Thread-safe pub/sub: `events/`, 18 domain event tipi, `apply_strategy` entegrasyonu | ✅ Tamam | 2026-07-14 |
 | ApplyPilot Plugin | `JobSourcePlugin` ABC, SQLite client/adapter, config-driven extraction, 6/6 test | ✅ Tamam | 2026-07-14 |
 | Single DB | PostgreSQL `jobs` tablosu, `JobRepository`, Alembic migration, 562 job sync | ✅ Tamam | 2026-07-14 |
+| Multi-User | `user_id` 5 tabloya eklendi, repo/caller güncellemesi, `config.yaml user.id` | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [Multi-User] — 2026-07-14 — Multi-user foundation ✅
+
+### Ne Yapıldı
+- **Alembic migration** `b2c3d4e5f6a7` — `user_id VARCHAR(100) NOT NULL DEFAULT 'default'`
+  5 tabloya eklendi: `career_scores`, `applications`, `emails`, `scan_history`, `evidence`
+- **Mevcut veriler** otomatik `user_id='default'` olarak backfill edildi (200 score, 562 scan, 25 evidence)
+- **Tüm repository metotları** `user_id: str = "default"` parametresi aldı:
+  `CareerScoreRepository`, `ApplicationRepository`, `EvidenceRepository`, `ScanHistoryRepository`
+- **Caller güncelleme**: `apply_strategy.py`, `run_full_scan.py`, `evidence_builder.py`
+  artık `config.yaml → user.id`'den `user_id` alıyor
+- **`config.yaml`** `user.id = "abdullokh"` bloğu eklendi
+- **`config_loader.py`** `user.id` yoksa otomatik `"default"` fallback
+
+### Test
+```
+python scripts/test_multiuser_migration.py
+# 5/5 PASS
+```
+
+### Mimari
+- PKs değiştirilmedi (emails FK bozulmaması için)
+- `user_id` filtre kolonu + index — tüm sorgular user'a göre izole
+- `jobs` tablosu shared (global katalog, user_id yok)
+- Phase 3 Auth'ta kolayca JWT/session → user_id mapping yapılabilir
 
 ---
 

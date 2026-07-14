@@ -17,6 +17,7 @@ from datetime import datetime
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from career_os.config_loader import load_config
 from career_os.data import ApplyPilotLoader, create_user_profile_from_config
 from packages.intelligence import SemanticMatcher, GapAnalyzer, OpportunityScorer, CareerDecisionEngine
 from packages.db.connection import db
@@ -91,6 +92,9 @@ def main():
     saved_count = 0
     failed_count = 0
 
+    _cfg = load_config()
+    user_id: str = _cfg.get("user", {}).get("id", "default")
+
     user_skill_names = {s.name.lower() for s in profile.skills}
 
     with db.session_scope() as session:
@@ -115,6 +119,7 @@ def main():
                 }
 
                 repo.save_score(
+                    user_id=user_id,
                     url=opp.job.url,
                     career_score=float(opp.career_score),
                     fit_score=float(opp.fit_score),

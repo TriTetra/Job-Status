@@ -20,6 +20,7 @@ class Evidence(Base, TimestampMixin):
     __tablename__ = "evidence"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
 
     skill_name: Mapped[str] = mapped_column(String(100), nullable=False)
     project_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -43,6 +44,7 @@ class Evidence(Base, TimestampMixin):
         Index("idx_evidence_skill", "skill_name"),
         Index("idx_evidence_project", "project_name"),
         Index("idx_evidence_confidence", "confidence"),
+        Index("idx_evidence_user", "user_id"),
     )
 
     def __repr__(self) -> str:

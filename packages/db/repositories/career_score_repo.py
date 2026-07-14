@@ -26,8 +26,10 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
         skill_gaps: list | None = None,
         explanation: dict | None = None,
         scanned_at: datetime | None = None,
+        user_id: str = "default",
     ) -> CareerScore:
         return self.create(
+            user_id=user_id,
             url=url,
             scanned_at=scanned_at or datetime.utcnow(),
             career_score=career_score,
@@ -41,18 +43,20 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
             explanation=explanation or {},
         )
 
-    def get_latest_score(self, url: str) -> Optional[CareerScore]:
+    def get_latest_score(self, url: str, user_id: str = "default") -> Optional[CareerScore]:
         stmt = (
             select(self.model)
+            .where(self.model.user_id == user_id)
             .where(self.model.url == url)
             .order_by(self.model.scanned_at.desc())
             .limit(1)
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
-    def get_history(self, url: str, limit: int = 10) -> List[CareerScore]:
+    def get_history(self, url: str, limit: int = 10, user_id: str = "default") -> List[CareerScore]:
         stmt = (
             select(self.model)
+            .where(self.model.user_id == user_id)
             .where(self.model.url == url)
             .order_by(self.model.scanned_at.desc())
             .limit(limit)
@@ -64,6 +68,7 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
         min_score: float = 60.0,
         recommendation: str = "APPLY",
         limit: int = 20,
+        user_id: str = "default",
     ) -> List[CareerScore]:
         """Latest score per job, filtered and ranked."""
         latest_subq = (
@@ -71,6 +76,7 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
                 self.model.url,
                 func.max(self.model.scanned_at).label("latest_scan"),
             )
+            .where(self.model.user_id == user_id)
             .group_by(self.model.url)
             .subquery()
         )
@@ -84,6 +90,7 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
                     self.model.scanned_at == latest_subq.c.latest_scan,
                 ),
             )
+            .where(self.model.user_id == user_id)
             .where(self.model.career_score >= min_score)
             .where(self.model.recommendation == recommendation)
             .order_by(self.model.career_score.desc())
@@ -91,11 +98,12 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
         )
         return list(self.session.execute(stmt).scalars().all())
 
-    def get_trends(self, url: str, days: int = 30) -> List[CareerScore]:
+    def get_trends(self, url: str, days: int = 30, user_id: str = "default") -> List[CareerScore]:
         """Score history over the last N days (oldest first)."""
         cutoff = datetime.utcnow() - timedelta(days=days)
         stmt = (
             select(self.model)
+            .where(self.model.user_id == user_id)
             .where(self.model.url == url)
             .where(self.model.scanned_at >= cutoff)
             .order_by(self.model.scanned_at.asc())

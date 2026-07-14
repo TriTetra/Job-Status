@@ -16,6 +16,7 @@ class ScanHistory(Base, TimestampMixin):
     __tablename__ = "scan_history"
 
     url: Mapped[str] = mapped_column(String(2048), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
     scanned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), primary_key=True, default=datetime.utcnow
     )
@@ -30,6 +31,7 @@ class ScanHistory(Base, TimestampMixin):
         Index("idx_sh_url", "url"),
         Index("idx_sh_time", "scanned_at"),
         Index("idx_sh_discovered", "discovered_in_this_scan"),
+        Index("idx_scan_history_user", "user_id"),
     )
 
     def __repr__(self) -> str:

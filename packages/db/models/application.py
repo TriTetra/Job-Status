@@ -20,6 +20,7 @@ class Application(Base, TimestampMixin):
     __tablename__ = "applications"
 
     url: Mapped[str] = mapped_column(String(2048), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default", index=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     company: Mapped[str | None] = mapped_column(String(200))
 

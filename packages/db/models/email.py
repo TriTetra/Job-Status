@@ -1,7 +1,7 @@
 """Email model — cold email + follow-up tracking."""
 
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
@@ -16,6 +16,7 @@ class Email(Base, TimestampMixin):
     __tablename__ = "emails"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default", index=True)
     url: Mapped[str] = mapped_column(
         String(2048),
         ForeignKey("applications.url", ondelete="CASCADE"),

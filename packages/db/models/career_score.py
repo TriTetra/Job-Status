@@ -11,13 +11,14 @@ from .base import Base, TimestampMixin
 class CareerScore(Base, TimestampMixin):
     """
     Every scan inserts a new row (url, scanned_at) composite PK.
-    This lets us track score drift over time and run trend queries.
+    user_id isolates rows per user; existing rows default to 'default'.
     """
 
     __tablename__ = "career_scores"
 
     url: Mapped[str] = mapped_column(String(2048), primary_key=True)
     scanned_at: Mapped[datetime] = mapped_column(primary_key=True, default=datetime.utcnow)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
 
     # Scores (0–100)
     career_score: Mapped[float] = mapped_column(Float, nullable=False)
@@ -40,6 +41,7 @@ class CareerScore(Base, TimestampMixin):
         Index("idx_cs_recommendation", "recommendation"),
         Index("idx_cs_career_score", "career_score"),
         Index("idx_cs_skill_gaps_gin", "skill_gaps", postgresql_using="gin"),
+        Index("idx_career_scores_user", "user_id"),
     )
 
     def __repr__(self) -> str:

@@ -59,4 +59,12 @@ def load_config(config_path: Path | None = None) -> dict:
 
     raw = path.read_text(encoding="utf-8")
     substituted = _substitute_env_vars(raw)
-    return yaml.safe_load(substituted)
+    config = yaml.safe_load(substituted)
+
+    # Ensure user.id always exists
+    if "user" not in config:
+        config["user"] = {}
+    if "id" not in config["user"]:
+        config["user"]["id"] = "default"
+
+    return config
