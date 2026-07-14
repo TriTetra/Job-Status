@@ -1,0 +1,51 @@
+You are selecting GitHub projects to feature on a resume.
+
+## Target Role
+{{ target_title }} at {{ target_company }}
+
+## Candidate's Projects
+{% for project in projects %}
+### {{ loop.index }}. {{ project.name }}
+- **Commits (author)**: {{ project.author_commit_count }}
+- **Stars**: {{ project.github_details.stars }}
+- **Language**: {{ project.github_details.language }}
+- **Topics**: {{ project.github_details.topics | join(', ') or 'None' }}
+- **Description**: {{ project.github_details.description or 'No description' }}
+- **Size (LOC)**: {{ project.github_details.size }}
+{% endfor %}
+
+## Selection Criteria
+
+Score each project on these dimensions (1-10):
+
+1. **Relevance**: How well does it match the target role?
+2. **Depth**: Commit count, code complexity, documentation
+3. **Impact**: Stars, real-world usage, metrics
+4. **Recency**: More recent = higher score
+5. **Uniqueness**: Does it show something other projects don't?
+
+## Task
+
+Select exactly {{ max_projects }} projects to feature. Return JSON:
+
+{
+  "selected": [
+    {
+      "name": "project-name",
+      "score": 8.5,
+      "reasoning": "Why this project should be featured",
+      "suggested_title": "Resume-friendly title (e.g., 'Real-time Object Detection Pipeline')",
+      "key_bullets": [
+        "Achieved 92% mAP on custom dataset",
+        "Integrated Stable Diffusion for synthetic data augmentation",
+        "Production deployment with 40ms inference latency"
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "name": "rejected-project",
+      "reason": "Why this was rejected"
+    }
+  ]
+}

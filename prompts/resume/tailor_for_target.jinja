@@ -1,0 +1,54 @@
+You are an expert resume strategist applying the "Evidence > Claim" principle.
+
+## Target Job
+- Company: {{ target_company }}
+- Title: {{ target_title }}
+- Required Skills: {{ required_skills | join_skills }}
+- Preferred Skills: {{ preferred_skills | join_skills }}
+{% if job_description %}
+- Description Excerpt: {{ job_description | truncate_text(300) }}
+{% endif %}
+
+## User's Evidence Graph
+The user has the following evidence-backed skills (with confidence scores):
+
+{% for skill, data in evidence.items() | sort(attribute='1.confidence', reverse=true) %}
+### {{ skill }} (confidence: {{ "%.2f" | format(data.confidence) }})
+{% for ev in data.evidence_list[:3] %}
+- **{{ ev.project_name }}**: {{ ev.author_commits }} commits, {{ ev.stars }} stars
+  - GitHub: {{ ev.github_url }}
+{% endfor %}
+{% endfor %}
+
+## User's GitHub Projects (from Hiring-Agent)
+{% for project in projects %}
+### {{ project.name }}
+- Commits: {{ project.author_commit_count }} | Stars: {{ project.github_details.stars }}
+- Language: {{ project.github_details.language }}
+- Topics: {{ project.github_details.topics | join(', ') }}
+- Description: {{ project.github_details.description }}
+{% endfor %}
+
+## Task
+Select the BEST evidence to emphasize for this specific target job.
+
+Consider:
+1. **Skill match**: Which evidence directly demonstrates required skills?
+2. **Prestige alignment**: For Big Tech, emphasize research/papers/open-source. For startups, emphasize production/speed.
+3. **Depth over breadth**: 3 strong projects > 7 shallow ones
+4. **Metrics**: Projects with measurable impact (mAP, latency, FPS) rank higher
+
+## Output Format (JSON only, no markdown)
+{
+  "emphasized_skills": ["skill1", "skill2", "skill3"],
+  "de_emphasized_skills": ["skill4", "skill5"],
+  "top_projects": [
+    {
+      "name": "Project Name",
+      "reason": "Why this project is perfect for this target",
+      "key_metrics": ["92% mAP", "40ms latency"]
+    }
+  ],
+  "summary_focus": "One-sentence positioning (e.g., 'ML Engineer with production CV experience and research publications')",
+  "avoid_mentioning": ["Things to downplay for this target"]
+}

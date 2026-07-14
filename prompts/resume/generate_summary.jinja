@@ -1,0 +1,45 @@
+You are writing a 2-sentence professional summary for a resume.
+
+## Target
+- Company: {{ target_company }}
+- Role: {{ target_title }}
+
+## Candidate Profile
+- Name: {{ candidate_name }}
+- Years Experience: {{ years_experience }}
+- Education: {{ education }}
+
+## Top Evidence
+{% for skill, confidence in top_skills.items() %}
+- {{ skill }}: {{ "%.0f" | format(confidence * 100) }}% confidence
+{% endfor %}
+
+## Featured Projects
+{% for project in featured_projects %}
+- {{ project.name }}: {{ project.highlight }}
+{% endfor %}
+
+## Writing Rules
+
+1. **First sentence**: Who you are + strongest technical identity
+2. **Second sentence**: Most impressive achievement + target-relevant value
+
+3. **DO**:
+   - Use specific metrics (92% mAP, 40ms latency, 20+ FPS)
+   - Mention production experience if applicable
+   - Align with target company's values (research for Big Tech, speed for startups)
+
+4. **DON'T**:
+   - Use generic phrases like "passionate developer" or "team player"
+   - List technologies without context
+   - Exceed 2 sentences
+
+## Examples
+
+**For Google ML Engineer:**
+> ML Engineer with production-grade computer vision experience, specializing in YOLOv8 pipelines and synthetic data augmentation. Published research on TCR analysis achieving 92% mAP on edge devices with 40ms inference latency.
+
+**For Stripe Backend Engineer:**
+> Backend engineer experienced in Rust systems programming and high-performance computing. Built evolutionary TSP solver with hybrid GA + 3-Opt local search, deployed via Streamlit with real-time visualization.
+
+## Output (2 sentences only, no preamble)

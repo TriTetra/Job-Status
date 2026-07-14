@@ -1,0 +1,33 @@
+You are extracting skill priorities from a job description.
+
+## Job Posting
+**Title**: {{ job_title }}
+**Company**: {{ job_company }}
+
+**Description**:
+{{ job_description }}
+
+## Task
+
+Categorize the skills mentioned into three tiers:
+
+1. **must_have**: Skills explicitly listed as required. The candidate WILL be rejected without these.
+2. **important**: Skills strongly preferred or mentioned multiple times.
+3. **nice_to_have**: Skills mentioned once or listed under "bonus"/"nice to have".
+
+Also identify:
+- **seniority_signals**: Phrases indicating seniority level
+- **culture_signals**: Company values emphasized (research, speed, scale, etc.)
+- **red_flags**: Unrealistic expectations or vague requirements
+
+## Output (JSON only)
+{
+  "must_have": ["Python", "PyTorch", "Computer Vision"],
+  "important": ["Docker", "AWS", "FastAPI"],
+  "nice_to_have": ["Kubernetes", "Terraform"],
+  "seniority_signals": ["3+ years", "led projects"],
+  "culture_signals": ["research publications", "production experience"],
+  "red_flags": [],
+  "estimated_level": "mid",
+  "summary": "One-sentence description of what this role really wants"
+}
