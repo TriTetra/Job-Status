@@ -12,6 +12,7 @@ from .user_custom_skills import UserCustomSkill
 from .company import Company
 from .company_memory import CompanyMemory
 from .market_signal import MarketSignal
+from .timeline import TimelineSnapshot, TimelineChange
 
 __all__ = [
     "Base",
@@ -27,4 +28,6 @@ __all__ = [
     "Company",
     "CompanyMemory",
     "MarketSignal",
+    "TimelineSnapshot",
+    "TimelineChange",
 ]
