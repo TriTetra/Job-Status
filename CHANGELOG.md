@@ -19,9 +19,43 @@ Sıralama: en yeniden en eskiye.
 | Phase 2I | Skill Graph YAML: `knowledge/v1/skills/skill_graph.yaml`, `SkillLoader`, hardcode yok | ✅ Tamam | 2026-07-14 |
 | Phase 2J | Application Engine: `services/application_engine/cli.py`, 6 komut, state machine | ✅ Tamam | 2026-07-14 |
 | Refactor | Plugin + Config-Driven Architecture: hardcode sıfır, `config/plugins.yaml`, `ResumeParserPlugin` ABC | ✅ Tamam | 2026-07-14 |
+| Event Bus | Thread-safe pub/sub: `events/`, 18 domain event tipi, `apply_strategy` entegrasyonu | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [Event Bus] — 2026-07-14 — Domain Event Pub/Sub Foundation ✅
+
+### Değişiklikler
+
+**`events/event_bus.py`** — Thread-safe singleton
+- `subscribe(event_type, handler)` — direct + `@decorator` syntax her ikisi de çalışıyor
+- `publish(event)` — handler hataları izole, diğer handler'ları durdurmaz
+- `get_history(event_type, limit)` — debug için son N event'i tutar (`deque(maxlen=1000)`)
+- `unsubscribe()`, `clear()`, `stats()` — tam kontrol
+- `RLock` — nested publish için reentrant lock
+
+**`events/event_types.py`** — `Event` base dataclass (UUID, UTC timestamp, source)
+
+**8 domain event modülü — 18 event tipi:**
+- `job_events`: `JobDiscovered`, `JobScored`, `JobExpired`, `JobMatched`
+- `application_events`: `ApplicationSubmitted`, `ApplicationRejected`, `ApplicationInterview`, `ApplicationOffer`
+- `resume_events`: `ResumeGenerated`, `EvidenceAdded`
+- `company_events`: `CompanyUpdated`, `CompanyHiringSpike`, `CompanyLayoff`
+- `market_events`: `SkillTrendDetected`, `MarketSignalDetected`, `SalaryTrendUpdated`
+- `learning_events`: `SkillLearned`, `RoadmapGenerated`, `ROICalculated`
+- `system_events`: `WeeklyReportGenerated`, `ModelCalibrated`, `FeatureToggled`
+
+**`scripts/strategy/apply_strategy.py`** — entegrasyon (backward compat)
+- Her `repo.save_score()` sonrası `JobScored` event'i publish ediliyor
+- DB transaction'ı dışında — hata event bus'ı etkilemez, bus hatası DB'yi etkilemez
+
+**`scripts/test_event_bus.py`** — 8 test (hepsi geçti)
+
+**Phase 2 yol haritası:**
+- Redis Streams'e geçmek = sadece `event_bus.py` içini değiştir, tüm subscriber'lar aynı kalır
 
 ---
 
