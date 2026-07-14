@@ -389,6 +389,71 @@ class ApplyPilotLoader:
         return 2.0
 
 
+def create_user_profile_from_db(user_id: str, session) -> Optional["UserProfile"]:
+    """
+    Build a UserProfile from the user_settings DB table.
+
+    Returns None if no settings row exists for this user_id, allowing callers
+    to fall back to create_user_profile_from_config().
+
+    Args:
+        user_id: The user identifier (matches user_settings.user_id).
+        session:  SQLAlchemy Session — caller is responsible for lifecycle.
+    """
+    from packages.db.repositories import UserSettingsRepository
+    from packages.domain import UserPreferences
+
+    repo = UserSettingsRepository(session)
+    profile_data = repo.get_profile(user_id)
+    if not profile_data:
+        return None
+
+    skills_data = repo.get_skills(user_id)
+    prefs_data = repo.get_preferences(user_id)
+
+    skills = []
+    for s in skills_data:
+        name = s.get("name", "")
+        if not name:
+            continue
+        level_str = (s.get("level") or "WORKING").upper()
+        level = _LEVEL_MAP.get(level_str, SkillLevel.WORKING)
+        ai_multiplier = float(s.get("ai_multiplier", 0.6))
+        evidence = list(s.get("evidence") or [])
+        skills.append(Skill(name, level, ai_multiplier=ai_multiplier, evidence=evidence))
+
+    # Merge custom skills from user_custom_skills table
+    custom_skill_names = repo.get_custom_skills(user_id)
+    existing_names = {s.name.lower() for s in skills}
+    for cname in custom_skill_names:
+        if cname.lower() not in existing_names:
+            skills.append(Skill(cname, SkillLevel.WORKING, ai_multiplier=0.6))
+
+    target_role_field = profile_data.get("target_role", "")
+    target_roles = [r.strip() for r in target_role_field.split(",") if r.strip()] if target_role_field else []
+
+    return UserProfile(
+        name=profile_data.get("name", "Unknown"),
+        email=profile_data.get("email", ""),
+        years_experience=float(profile_data.get("years_experience", 0)),
+        ai_proficiency=float(profile_data.get("ai_proficiency", 0.8)),
+        skills=skills,
+        experience=[],
+        target_roles=target_roles,
+        target_domains=[],
+        resume_text=profile_data.get("resume_text", ""),
+        preferences=UserPreferences(
+            remote=bool(prefs_data.get("remote", True)),
+            hybrid_acceptable=bool(prefs_data.get("hybrid_acceptable", True)),
+            onsite_acceptable=bool(prefs_data.get("onsite_acceptable", False)),
+            work_visa_required=bool(prefs_data.get("work_visa_required", False)),
+            min_salary=prefs_data.get("min_salary"),
+            max_salary=prefs_data.get("max_salary"),
+            preferred_company_sizes=prefs_data.get("preferred_company_sizes", ["startup", "midsize"]),
+        ),
+    )
+
+
 _DEFAULT_SKILL_PROFILE: Tuple[SkillLevel, float, List[str]] = (SkillLevel.WORKING, 0.6, [])
 
 _LEVEL_MAP = {

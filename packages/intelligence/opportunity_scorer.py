@@ -36,13 +36,21 @@ class OpportunityScorer:
         # Market demand data (could be real-time in production)
         self.skill_demand = self._build_demand_data()
 
-    def score(self, job: Job, user: UserProfile) -> OpportunityScore:
+    def score(
+        self,
+        job: Job,
+        user: UserProfile,
+        weights: Optional[Dict[str, float]] = None,
+    ) -> OpportunityScore:
         """
         Calculate comprehensive opportunity score.
 
         Args:
             job: Job posting
             user: User profile
+            weights: Optional per-user scoring weights dict with keys
+                     fit, acceptance, career_value, market_demand.
+                     Falls back to hardcoded defaults if not supplied.
 
         Returns:
             OpportunityScore with all metrics
@@ -65,12 +73,18 @@ class OpportunityScorer:
         # Component 4: Market Demand
         market = self._calculate_market_demand(job)
 
-        # Weighted Career Score
+        # Per-user weights (or hardcoded defaults)
+        w = weights or {}
+        w_fit = float(w.get("fit", 0.30))
+        w_acc = float(w.get("acceptance", 0.25))
+        w_cv = float(w.get("career_value", 0.25))
+        w_mkt = float(w.get("market_demand", 0.20))
+
         career_score = (
-            0.30 * fit +
-            0.25 * acceptance +
-            0.25 * career_value +
-            0.20 * market
+            w_fit * fit +
+            w_acc * acceptance +
+            w_cv * career_value +
+            w_mkt * market
         ) * 100
 
         # Expected Value (product of probabilities)
@@ -92,18 +106,24 @@ class OpportunityScorer:
             recommendation=recommendation
         )
 
-    def rank_opportunities(self, jobs: List[Job], user: UserProfile) -> List[OpportunityScore]:
+    def rank_opportunities(
+        self,
+        jobs: List[Job],
+        user: UserProfile,
+        weights: Optional[Dict[str, float]] = None,
+    ) -> List[OpportunityScore]:
         """
         Score and rank all opportunities.
 
         Args:
             jobs: List of job postings
             user: User profile
+            weights: Optional per-user scoring weights (passed through to score())
 
         Returns:
             List of OpportunityScore sorted by career_score (descending)
         """
-        scores = [self.score(job, user) for job in jobs]
+        scores = [self.score(job, user, weights=weights) for job in jobs]
         return sorted(scores, key=lambda s: s.career_score, reverse=True)
 
     def _estimate_acceptance(self, job: Job, user: UserProfile) -> float:
