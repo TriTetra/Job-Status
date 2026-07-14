@@ -13,6 +13,9 @@ from .company import Company
 from .company_memory import CompanyMemory
 from .market_signal import MarketSignal
 from .timeline import TimelineSnapshot, TimelineChange
+from .country import Country
+from .visa import Visa
+from .salary_range import SalaryRange
 
 __all__ = [
     "Base",
@@ -30,4 +33,7 @@ __all__ = [
     "MarketSignal",
     "TimelineSnapshot",
     "TimelineChange",
+    "Country",
+    "Visa",
+    "SalaryRange",
 ]

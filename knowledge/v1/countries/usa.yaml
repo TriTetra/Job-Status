@@ -1,0 +1,80 @@
+iso_code: US
+country: United States
+capital: Washington D.C.
+currency: USD
+language: English
+english_proficiency: native
+
+tech_hubs:
+  - city: San Francisco / Bay Area
+    description: Global tech epicenter, highest salaries, FAANG HQs
+    cost_of_living_index: 100
+    major_companies: [Google, Meta, Apple, Salesforce, Stripe]
+    avg_rent_1br_usd: 3200
+  - city: Seattle
+    description: Amazon & Microsoft HQs, growing startup scene
+    cost_of_living_index: 85
+    major_companies: [Amazon, Microsoft, Boeing, Expedia]
+    avg_rent_1br_usd: 2200
+  - city: New York
+    description: Finance-tech hub, strong VC ecosystem
+    cost_of_living_index: 95
+    major_companies: [Bloomberg, Goldman Sachs, Spotify, Etsy]
+    avg_rent_1br_usd: 3500
+  - city: Austin
+    description: Fastest growing hub, lower cost, Tesla/Apple campuses
+    cost_of_living_index: 70
+    major_companies: [Tesla, Apple, Dell, Oracle]
+    avg_rent_1br_usd: 1800
+
+visa:
+  primary: h1b
+  cap: 65000
+  cap_masters_exempt: 20000
+  processing_time_months: "6-12 (lottery in April)"
+  path_to_pr_years: "5-10 (EB-2/EB-3 backlog varies by country)"
+  alternatives: [O-1A, L-1A, EB-1A, TN (Canada/Mexico)]
+  notes: "H-1B lottery in April for Oct 1 start. High rejection rate."
+
+tax:
+  federal_rate_range: "10%-37%"
+  state_tax_ca: "1%-13.3%"
+  state_tax_tx: "0% (no state income tax)"
+  effective_single_200k_ca_pct: 38
+  effective_single_200k_tx_pct: 28
+  social_security_pct: 6.2
+  medicare_pct: 1.45
+
+work_culture:
+  vacation_days: 15
+  remote_friendly: high
+  notice_period_weeks: 2
+  work_hours_per_week: 45
+  overtime_culture: high
+  hierarchy: flat (startup) / moderate (FAANG)
+
+pros:
+  - Highest tech salaries globally (FAANG $200k-$500k+ total comp)
+  - Massive startup ecosystem and VC funding
+  - Strong network effects and career acceleration
+  - No-state-income-tax in TX, FL, WA
+  - RSU/equity culture creates wealth
+
+cons:
+  - H-1B visa lottery creates uncertainty (30% selection rate)
+  - Healthcare tied to employer (avg $500/month)
+  - Limited vacation (no federal minimum)
+  - Green card backlog: 20-50 years for India/China born
+  - High cost of living in top hubs
+
+salary_ranges:
+  ml_engineer:
+    junior_0_2y: {min: 130000, max: 180000}
+    mid_2_5y: {min: 180000, max: 250000}
+    senior_5_8y: {min: 250000, max: 380000}
+    staff_8y_plus: {min: 350000, max: 550000}
+  backend_engineer:
+    junior_0_2y: {min: 110000, max: 160000}
+    mid_2_5y: {min: 160000, max: 220000}
+    senior_5_8y: {min: 200000, max: 320000}
+    staff_8y_plus: {min: 280000, max: 450000}

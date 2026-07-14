@@ -1,0 +1,56 @@
+visa_type: EU Blue Card
+country: Germany
+category: work_permit
+
+overview:
+  description: "EU-wide work and residence permit for highly qualified non-EU citizens. Accepted in most EU countries."
+  duration: "4 years (renewable)"
+  path_to_pr: "5 years (3 years with B1 German)"
+  family_reunification: true
+
+eligibility:
+  education: "Bachelor's degree minimum (recognized by German authorities)"
+  salary_threshold_eur: 45300
+  salary_threshold_shortage_eur: 39682
+  job_offer: required
+  degree_recognition: "Anabin database or Statement of Comparability (anabin.kmk.org)"
+  notes: "Shortage occupations (IT, Engineering) have lower salary threshold."
+
+application:
+  processing_time: "2-4 months"
+  documents:
+    - Valid passport
+    - Job offer / employment contract
+    - University degree (translated + apostilled)
+    - Proof of health insurance
+    - Blocked account or employer guarantee
+    - Biometric photos
+    - Application form (Antrag auf Erteilung eines Aufenthaltstitels)
+  cost_eur: 100
+  where: "German embassy in home country, then Auslaenderbehoerde"
+  notes: "Apply at German embassy first, then convert to Blue Card within Germany."
+
+alternatives:
+  skilled_worker_visa:
+    description: "For vocational training + 2 years experience. No salary minimum."
+    salary_minimum: none
+  freelancer_visa:
+    description: "For self-employed professionals. Requires Freiberufler status."
+
+pros:
+  - Fast-track to PR (3 years with B1 German)
+  - Family can join immediately with full work rights
+  - Portability within EU after 18 months
+  - Recognized by all EU member states
+
+cons:
+  - German bureaucracy for initial application
+  - Degree must be recognized by German authorities
+  - Requires job offer before applying
+  - Language barrier for Auslaenderbehoerde visits
+
+best_for:
+  - Software engineers with recognized CS degrees
+  - ML/Data scientists
+  - Any STEM professional earning 45k+ EUR
+  - People planning to stay in Germany long-term

@@ -1,0 +1,35 @@
+role_family: Frontend Engineer
+currency: USD
+data_year: 2026
+source: "Levels.fyi, State of JS Survey 2026, Glassdoor"
+
+by_region:
+  san_francisco:
+    junior_0_2y: {min: 120000, max: 165000, median: 142000}
+    mid_2_5y: {min: 165000, max: 225000, median: 192000}
+    senior_5_8y: {min: 215000, max: 320000, median: 265000}
+    staff_8y_plus: {min: 300000, max: 450000, median: 370000}
+
+  remote_us:
+    junior_0_2y: {min: 95000, max: 135000, median: 114000}
+    mid_2_5y: {min: 135000, max: 185000, median: 158000}
+    senior_5_8y: {min: 175000, max: 260000, median: 215000}
+    staff_8y_plus: {min: 245000, max: 370000, median: 305000}
+
+  berlin:
+    junior_0_2y: {min: 48000, max: 63000, median: 55000}
+    mid_2_5y: {min: 63000, max: 82000, median: 72000}
+    senior_5_8y: {min: 78000, max: 108000, median: 92000}
+    staff_8y_plus: {min: 100000, max: 140000, median: 118000}
+
+  amsterdam:
+    junior_0_2y: {min: 50000, max: 66000, median: 57000}
+    mid_2_5y: {min: 66000, max: 87000, median: 76000}
+    senior_5_8y: {min: 83000, max: 115000, median: 97000}
+    staff_8y_plus: {min: 107000, max: 150000, median: 127000}
+
+  london:
+    junior_0_2y: {min: 42000, max: 58000, median: 49000}
+    mid_2_5y: {min: 58000, max: 77000, median: 67000}
+    senior_5_8y: {min: 74000, max: 105000, median: 88000}
+    staff_8y_plus: {min: 96000, max: 140000, median: 116000}

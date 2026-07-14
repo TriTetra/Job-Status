@@ -1,0 +1,72 @@
+iso_code: CA
+country: Canada
+capital: Ottawa
+currency: CAD
+language: English / French
+english_proficiency: native
+
+tech_hubs:
+  - city: Toronto
+    description: Largest tech hub, strong AI/ML ecosystem (Vector Institute)
+    cost_of_living_index: 75
+    major_companies: [Shopify, Thomson Reuters, RBC, Google DeepMind]
+    avg_rent_1br_cad: 2400
+  - city: Vancouver
+    description: West Coast hub, Amazon/Microsoft offices, gateway to Asia
+    cost_of_living_index: 80
+    major_companies: [Amazon, Microsoft, Electronic Arts, Hootsuite]
+    avg_rent_1br_cad: 2600
+  - city: Montreal
+    description: AI research capital (MILA), bilingual, low cost
+    cost_of_living_index: 60
+    major_companies: [Ubisoft, Element AI, CAE, Bombardier]
+    avg_rent_1br_cad: 1800
+
+visa:
+  primary: express_entry
+  processing_time_months: "6-8"
+  path_to_pr_years: 1
+  language_requirement: IELTS 6.0+ (CLB 7)
+  notes: "Express Entry CRS score ~480-520. Tech workers score high. PR in 1 year."
+  alternatives: [Global Talent Stream (2-week work permit), Provincial Nominee Program]
+
+tax:
+  federal_rate_range: "15%-33%"
+  provincial_tax_on: "varies (ON: 5.05%-13.16%, BC: 5.06%-20.5%)"
+  effective_single_120k_on_pct: 33
+  cpp_pct: 5.95
+  ei_pct: 1.66
+
+work_culture:
+  vacation_days: 14
+  remote_friendly: high
+  notice_period_weeks: 2
+  work_hours_per_week: 40
+  overtime_culture: moderate
+  hierarchy: flat
+
+pros:
+  - Fastest PR path globally (Express Entry, ~1 year)
+  - World-class AI research (Toronto, Montreal, Edmonton)
+  - Universal healthcare
+  - High quality of life, safe cities
+  - US border proximity (easy US job market access)
+
+cons:
+  - Salaries 30-40% below US for same roles
+  - High income tax in Ontario/BC
+  - Very expensive housing in Vancouver/Toronto
+  - Cold winters
+  - Limited Series A/B startup density vs US
+
+salary_ranges:
+  ml_engineer:
+    junior_0_2y: {min: 80000, max: 110000}
+    mid_2_5y: {min: 110000, max: 150000}
+    senior_5_8y: {min: 145000, max: 200000}
+    staff_8y_plus: {min: 190000, max: 260000}
+  backend_engineer:
+    junior_0_2y: {min: 70000, max: 95000}
+    mid_2_5y: {min: 95000, max: 135000}
+    senior_5_8y: {min: 130000, max: 180000}
+    staff_8y_plus: {min: 165000, max: 230000}

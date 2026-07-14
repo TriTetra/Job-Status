@@ -1,0 +1,35 @@
+role_family: Backend Engineer
+currency: EUR
+data_year: 2026
+source: "Glassdoor EU, Levels.fyi EU, StackOverflow Survey 2026"
+
+by_country:
+  DE:
+    junior_0_2y: {min: 50000, max: 65000, median: 57000}
+    mid_2_5y: {min: 65000, max: 85000, median: 74000}
+    senior_5_8y: {min: 80000, max: 115000, median: 96000}
+    staff_8y_plus: {min: 110000, max: 150000, median: 128000}
+
+  NL:
+    junior_0_2y: {min: 52000, max: 68000, median: 59000}
+    mid_2_5y: {min: 68000, max: 90000, median: 78000}
+    senior_5_8y: {min: 85000, max: 120000, median: 100000}
+    staff_8y_plus: {min: 112000, max: 155000, median: 132000}
+
+  GB:
+    junior_0_2y: {min: 45000, max: 60000, median: 52000}
+    mid_2_5y: {min: 60000, max: 80000, median: 69000}
+    senior_5_8y: {min: 78000, max: 110000, median: 92000}
+    staff_8y_plus: {min: 100000, max: 145000, median: 120000}
+
+  SE:
+    junior_0_2y: {min: 48000, max: 62000, median: 54000}
+    mid_2_5y: {min: 62000, max: 82000, median: 71000}
+    senior_5_8y: {min: 78000, max: 108000, median: 91000}
+    staff_8y_plus: {min: 105000, max: 145000, median: 123000}
+
+  PL:
+    junior_0_2y: {min: 30000, max: 42000, median: 35000}
+    mid_2_5y: {min: 42000, max: 62000, median: 51000}
+    senior_5_8y: {min: 58000, max: 85000, median: 70000}
+    staff_8y_plus: {min: 78000, max: 115000, median: 95000}

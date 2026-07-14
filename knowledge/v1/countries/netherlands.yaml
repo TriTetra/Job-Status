@@ -1,0 +1,70 @@
+iso_code: NL
+country: Netherlands
+capital: Amsterdam
+currency: EUR
+language: Dutch
+english_proficiency: very_high
+
+tech_hubs:
+  - city: Amsterdam
+    description: European startup hub, Booking.com, ASML ecosystem
+    cost_of_living_index: 78
+    major_companies: [Booking.com, Adyen, ASML, Philips, TomTom]
+    avg_rent_1br_eur: 1600
+  - city: Eindhoven
+    description: High-tech campus (ASML HQ), semiconductor ecosystem
+    cost_of_living_index: 60
+    major_companies: [ASML, Philips, NXP, DAF]
+    avg_rent_1br_eur: 1100
+
+visa:
+  primary: eu_blue_card
+  salary_threshold_eur: 46107
+  highly_skilled_migrant_threshold_eur: 46107
+  shortage_occupations: [Software Engineer, Data Engineer, ML Engineer, Semiconductor]
+  processing_time_months: "2-4"
+  path_to_pr_years: 5
+  notes: "30% tax ruling saves significant tax for first 5 years."
+  thirty_pct_ruling: true
+
+tax:
+  income_tax_range: "36.97%-49.5%"
+  effective_single_80k_with_30pct_pct: 22
+  effective_single_80k_without_30pct_pct: 38
+  thirty_pct_ruling_benefit: "30% of salary tax-free for 5 years for expats"
+  notes: "30% ruling is the biggest benefit for international hires."
+
+work_culture:
+  vacation_days: 25
+  remote_friendly: high
+  notice_period_months: 1
+  work_hours_per_week: 40
+  overtime_culture: very_low
+  hierarchy: very_flat
+  directness: very_high
+
+pros:
+  - 30% tax ruling saves 15-20k EUR/year for 5 years
+  - English is the working language everywhere
+  - Excellent work-life balance (Dutch culture)
+  - Central EU location, easy travel
+  - EU Blue Card path to long-term residency
+
+cons:
+  - Very expensive housing in Amsterdam
+  - High income tax without 30% ruling
+  - Bureaucratic IND (immigration) process
+  - Dutch language needed for full integration
+  - 30% ruling expires after 5 years (tax cliff)
+
+salary_ranges:
+  ml_engineer:
+    junior_0_2y: {min: 55000, max: 72000}
+    mid_2_5y: {min: 72000, max: 100000}
+    senior_5_8y: {min: 95000, max: 135000}
+    staff_8y_plus: {min: 125000, max: 175000}
+  backend_engineer:
+    junior_0_2y: {min: 50000, max: 68000}
+    mid_2_5y: {min: 68000, max: 90000}
+    senior_5_8y: {min: 85000, max: 120000}
+    staff_8y_plus: {min: 110000, max: 155000}

@@ -1,0 +1,62 @@
+visa_type: UK Skilled Worker
+country: United Kingdom
+category: work_permit
+
+overview:
+  description: "UK points-based work visa replacing Tier 2. For skilled workers with UK job offer."
+  duration: "Up to 5 years (renewable)"
+  path_to_pr: "5 years (Indefinite Leave to Remain)"
+  family_reunification: true
+
+eligibility:
+  education: "Not required (points-based)"
+  salary_threshold_gbp: 38700
+  shortage_occupation_threshold_gbp: 30960
+  job_offer: required
+  sponsor_license: "Employer must have UK Sponsor License"
+  english: "B1 CEFR (IELTS 4.0+ or equivalent)"
+  points_required: 70
+  notes: "Points: job offer (20) + salary (20) + sponsor (20) + English (10) + other (up to 30)"
+
+application:
+  processing_time: "3 weeks (inside UK) / 3 weeks (outside UK)"
+  documents:
+    - Certificate of Sponsorship (CoS) from employer
+    - Passport
+    - English language proof (IELTS/degree)
+    - TB test (some countries)
+    - Bank statements (28 days, 1270 GBP minimum)
+    - Biometric enrollment
+  cost_gbp: 719
+  healthcare_surcharge_gbp_per_year: 1035
+  where: "UKVI online + biometrics at VFS/UKVCAS"
+  notes: "Healthcare surcharge adds significant cost (~5k GBP for 5 years)."
+
+alternatives:
+  global_talent:
+    description: "For recognized leaders in tech/science/arts. No job offer needed. Endorsed by Tech Nation."
+  high_potential_individual:
+    description: "For graduates of top 50 global universities. 2-3 year stay, no job offer needed."
+    top_unis: true
+  graduate_visa:
+    description: "Post-study 2-year work visa (3 if PhD). Open work authorization."
+
+pros:
+  - Fast processing (3 weeks)
+  - English-speaking environment
+  - ILR (permanent residency) after 5 years
+  - Access to NHS (after healthcare surcharge)
+  - London is a top global financial/tech hub
+
+cons:
+  - Healthcare surcharge adds 5k GBP/5 years
+  - Salary threshold increased significantly in 2024
+  - GBP weakened vs USD/EUR
+  - Housing costs in London extremely high
+  - Tied to sponsor employer
+
+best_for:
+  - Fintech engineers (London hub)
+  - Those who prefer English-speaking environment
+  - People targeting ILR within 5 years
+  - Tech workers with offers from UK sponsor-licensed companies

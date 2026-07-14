@@ -1,0 +1,66 @@
+visa_type: H-1B
+country: United States
+category: work_permit
+
+overview:
+  description: "US specialty occupation work visa. Requires employer sponsorship and annual lottery."
+  duration: "3 years (renewable to 6, then extendable with I-140)"
+  path_to_pr: "EB-2/EB-3 green card (5-50 years depending on country of birth)"
+  family_reunification: true
+
+eligibility:
+  education: "Bachelor's degree in specialty occupation field"
+  job_offer: required
+  employer_sponsor: required
+  salary: "At least prevailing wage (LCA filing)"
+  cap: 65000
+  cap_masters_exempt: 20000
+  lottery_date: "Registration: March 1-18; Results: late March; Start date: Oct 1"
+  notes: "~30% selection rate. Masters exempt pool has better odds."
+
+application:
+  processing_time: "3-6 months (premium: 15 business days)"
+  documents:
+    - LCA (Labor Condition Application) - employer files
+    - I-129 petition - employer files
+    - DS-160 (visa application)
+    - SEVIS fee payment
+    - Passport valid 6+ months
+    - Diploma + transcripts
+    - Employment letter
+    - Previous US visa (if any)
+  cost_usd: 4500
+  cost_premium_usd: 6960
+  where: "USCIS (employer), then US consulate (applicant)"
+  notes: "Employer pays most fees. Premium processing recommended."
+
+alternatives:
+  o1a:
+    description: "For extraordinary ability. No cap, no lottery. Requires evidence of excellence."
+    timeline: "1-3 months with premium"
+  l1a:
+    description: "Intracompany transfer (manager/executive). Requires 1 year abroad at same company."
+  tn:
+    description: "For Canadians and Mexicans. Fast, cheap, no lottery."
+    countries: [CA, MX]
+  eb1a:
+    description: "EB-1A green card directly. No employer needed, no PERM. Extraordinary ability."
+
+pros:
+  - Access to US job market (highest salaries globally)
+  - Spouse gets H-4 visa (work authorization with H-4 EAD)
+  - Path to green card via EB-2/EB-3
+  - Premium processing available
+
+cons:
+  - 30% lottery selection rate creates uncertainty
+  - Tied to employer (difficult to switch jobs)
+  - Green card backlog: 20-50 years for India/China
+  - High legal fees ($3-7k)
+  - Cap reached within days of opening
+
+best_for:
+  - Software engineers at FAANG/funded startups
+  - People with O-1A evidence who want certainty
+  - Canadians/Mexicans (use TN instead)
+  - Those willing to play the long game for green card

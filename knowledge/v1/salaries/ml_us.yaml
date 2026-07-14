@@ -1,0 +1,37 @@
+role_family: ML Engineer
+currency: USD
+data_year: 2026
+source: "Levels.fyi 2026, Glassdoor, Blind"
+
+by_region:
+  san_francisco:
+    junior_0_2y: {min: 150000, max: 200000, median: 175000}
+    mid_2_5y: {min: 200000, max: 280000, median: 240000}
+    senior_5_8y: {min: 270000, max: 400000, median: 335000}
+    staff_8y_plus: {min: 380000, max: 600000, median: 490000}
+    top_companies:
+      openai: {mid: 350000, senior: 500000}
+      google_deepmind: {mid: 290000, senior: 420000}
+      meta_fair: {mid: 280000, senior: 410000}
+      anthropic: {mid: 320000, senior: 480000}
+
+  seattle:
+    junior_0_2y: {min: 130000, max: 175000, median: 152000}
+    mid_2_5y: {min: 175000, max: 240000, median: 205000}
+    senior_5_8y: {min: 230000, max: 340000, median: 280000}
+    staff_8y_plus: {min: 320000, max: 480000, median: 400000}
+    top_companies:
+      amazon_aws: {mid: 220000, senior: 310000}
+      microsoft_research: {mid: 240000, senior: 360000}
+
+  new_york:
+    junior_0_2y: {min: 130000, max: 175000, median: 150000}
+    mid_2_5y: {min: 170000, max: 240000, median: 200000}
+    senior_5_8y: {min: 225000, max: 330000, median: 270000}
+    staff_8y_plus: {min: 310000, max: 460000, median: 380000}
+
+  remote_us:
+    junior_0_2y: {min: 110000, max: 155000, median: 132000}
+    mid_2_5y: {min: 155000, max: 215000, median: 182000}
+    senior_5_8y: {min: 200000, max: 300000, median: 245000}
+    staff_8y_plus: {min: 280000, max: 420000, median: 350000}

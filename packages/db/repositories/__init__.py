@@ -9,6 +9,9 @@ from .job_repo import JobRepository
 from .user_settings_repo import UserSettingsRepository
 from .company_repo import CompanyRepository, CompanyMemoryRepository
 from .market_signal_repo import MarketSignalRepository
+from .country_repo import CountryRepository
+from .visa_repo import VisaRepository
+from .salary_repo import SalaryRangeRepository
 
 __all__ = [
     "BaseRepository",
@@ -21,4 +24,7 @@ __all__ = [
     "CompanyRepository",
     "CompanyMemoryRepository",
     "MarketSignalRepository",
+    "CountryRepository",
+    "VisaRepository",
+    "SalaryRangeRepository",
 ]

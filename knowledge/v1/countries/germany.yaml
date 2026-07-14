@@ -1,0 +1,73 @@
+iso_code: DE
+country: Germany
+capital: Berlin
+currency: EUR
+language: German
+english_proficiency: high
+
+tech_hubs:
+  - city: Berlin
+    description: Startup capital, strong VC ecosystem
+    cost_of_living_index: 65
+    major_companies: [Zalando, Delivery Hero, HelloFresh, Siemens]
+    avg_rent_1br_eur: 1200
+  - city: Munich
+    description: Engineering powerhouse, BMW/Siemens HQ
+    cost_of_living_index: 80
+    major_companies: [BMW, Siemens, MAN, Allianz]
+    avg_rent_1br_eur: 1600
+  - city: Hamburg
+    description: Media & logistics hub
+    cost_of_living_index: 72
+    major_companies: [Airbus, Otto Group, Hapag-Lloyd]
+    avg_rent_1br_eur: 1300
+
+visa:
+  primary: eu_blue_card
+  salary_threshold_eur: 45300
+  shortage_occupations: [Software Engineer, Data Scientist, ML Engineer, DevOps]
+  processing_time_months: "2-4"
+  path_to_pr_years: 5
+  language_requirement: B1 German (after 5y), B2 for faster PR
+
+tax:
+  income_tax_range: "14%-45%"
+  effective_single_80k_pct: 32
+  social_security_pct: 20
+  solidarity_surcharge: "5.5% of income tax"
+  church_tax_opt_out: true
+  notes: "Steuerklasse 1 for singles. Lohnsteuer withheld monthly."
+
+work_culture:
+  vacation_days: 28
+  remote_friendly: moderate
+  notice_period_months: 3
+  work_hours_per_week: 40
+  overtime_culture: low
+  hierarchy: moderate
+
+pros:
+  - EU Blue Card opens path to PR in 5 years (3 if German B1)
+  - Strong worker protections and unions
+  - Universal healthcare (GKV, ~350 EUR/month)
+  - 28+ days paid vacation by law
+  - Central location for EU travel
+
+cons:
+  - German bureaucracy (Anmeldung, Finanzamt, Krankenkasse)
+  - High income tax (up to 45%)
+  - Slow internet infrastructure outside major cities
+  - German language barrier for daily life
+  - Housing shortage in Berlin/Munich
+
+salary_ranges:
+  ml_engineer:
+    junior_0_2y: {min: 55000, max: 70000}
+    mid_2_5y: {min: 70000, max: 95000}
+    senior_5_8y: {min: 90000, max: 130000}
+    staff_8y_plus: {min: 120000, max: 170000}
+  backend_engineer:
+    junior_0_2y: {min: 50000, max: 65000}
+    mid_2_5y: {min: 65000, max: 85000}
+    senior_5_8y: {min: 80000, max: 115000}
+    staff_8y_plus: {min: 110000, max: 150000}

@@ -1,0 +1,67 @@
+iso_code: AE
+country: United Arab Emirates
+capital: Abu Dhabi
+currency: AED
+language: Arabic / English
+english_proficiency: high
+
+tech_hubs:
+  - city: Dubai
+    description: MENA tech hub, DIFC fintech ecosystem, hub for global companies
+    cost_of_living_index: 72
+    major_companies: [Careem, Noon, Talabat, Amazon MENA, Microsoft MENA]
+    avg_rent_1br_aed: 7000
+  - city: Abu Dhabi
+    description: Government-backed tech, G42 AI, ADGM fintech
+    cost_of_living_index: 68
+    major_companies: [G42, Mubadala, ADNOC, First Abu Dhabi Bank]
+    avg_rent_1br_aed: 5500
+
+visa:
+  primary: golden_visa
+  regular_work_visa: employer_sponsored
+  golden_visa_eligibility: "Salary 30k+ AED/month OR investment OR exceptional talent"
+  processing_time_weeks: "2-4"
+  path_to_pr: "Golden Visa is 10-year renewable, not permanent residency"
+  notes: "No PR pathway. Must hold employer-sponsored visa or Golden Visa."
+
+tax:
+  income_tax: 0
+  corporate_tax_pct: 9
+  vat_pct: 5
+  notes: "Zero personal income tax. Biggest draw for high earners."
+
+work_culture:
+  vacation_days: 22
+  remote_friendly: moderate
+  notice_period_months: 1
+  work_hours_per_week: 48
+  overtime_culture: moderate
+  hierarchy: high
+  weekend: Friday-Saturday (Sat-Sun in international companies)
+
+pros:
+  - Zero income tax
+  - High USD-pegged salaries
+  - World-class infrastructure and safety
+  - Tax-free savings potential
+  - Strategic hub for MENA, Africa, South Asia markets
+
+cons:
+  - No path to permanent residency
+  - Visa tied to employer (risk if job changes)
+  - High cost of schooling for families
+  - Cultural adjustment (conservative laws)
+  - Political/legal risks for expats
+
+salary_ranges:
+  ml_engineer:
+    junior_0_2y: {min: 180000, max: 240000}
+    mid_2_5y: {min: 240000, max: 330000}
+    senior_5_8y: {min: 320000, max: 440000}
+    staff_8y_plus: {min: 420000, max: 600000}
+  backend_engineer:
+    junior_0_2y: {min: 150000, max: 210000}
+    mid_2_5y: {min: 210000, max: 295000}
+    senior_5_8y: {min: 280000, max: 400000}
+    staff_8y_plus: {min: 370000, max: 520000}
