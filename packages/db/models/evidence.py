@@ -1,6 +1,9 @@
 """Evidence model — per-skill proof tracking from GitHub + CV evaluation."""
 
-from sqlalchemy import Float, Index, Integer, String
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,7 +27,7 @@ class Evidence(Base, TimestampMixin):
 
     skill_name: Mapped[str] = mapped_column(String(100), nullable=False)
     project_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    github_url: Mapped[str | None] = mapped_column(String(500))
+    github_url: Mapped[Optional[str]] = mapped_column(String(500))
 
     author_commits: Mapped[int] = mapped_column(Integer, default=0)
     stars: Mapped[int] = mapped_column(Integer, default=0)
@@ -38,6 +41,19 @@ class Evidence(Base, TimestampMixin):
     # github_project | production | certificate | hackathon
     evidence_type: Mapped[str] = mapped_column(
         String(50), default="github_project", nullable=False
+    )
+
+    # Real GitHub metrics (populated by Phase 3B enrichment)
+    loc_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    language: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    topics: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    pr_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    issue_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    has_releases: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    has_tests: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    has_docs: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    last_commit_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     __table_args__ = (
