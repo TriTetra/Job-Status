@@ -18,9 +18,47 @@ Sıralama: en yeniden en eskiye.
 | Phase 2G | Evidence Graph → DB: `evidence` tablosu, `EvidenceRepository`, `EvidenceBuilder` | ✅ Tamam | 2026-07-14 |
 | Phase 2I | Skill Graph YAML: `knowledge/v1/skills/skill_graph.yaml`, `SkillLoader`, hardcode yok | ✅ Tamam | 2026-07-14 |
 | Phase 2J | Application Engine: `services/application_engine/cli.py`, 6 komut, state machine | ✅ Tamam | 2026-07-14 |
+| Refactor | Plugin + Config-Driven Architecture: hardcode sıfır, `config/plugins.yaml`, `ResumeParserPlugin` ABC | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [Refactor] — 2026-07-14 — Plugin + Config-Driven Architecture ✅
+
+### Değişiklikler
+
+**Sorun:** `hiring_agent_adapter.py` ve `evidence_builder.py` içinde hardcoded path'ler, CSV column isimleri ve confidence katsayıları vardı.
+
+**`config/plugins.yaml`** (yeni — tek kaynak)
+- `install_dir`, `csv_filename`, `cache_dir`, `score_script` — tüm path'ler buradan
+- `csv_columns.scores` / `csv_columns.metadata` — CSV schema buradan
+- `confidence_formula` — `base_divisor`, `commit_bonus_max`, `star_bonus_max`, `production_weight` buradan
+- `enrichment_keys` — hangi alanların `career_scores.explanation`'a yazılacağı buradan
+
+**`plugins/plugin_interface.py`** (yeni)
+- `ResumeParserPlugin` ABC — `parse()`, `get_metadata()`, `get_enrichment_payload()`
+- `ResumeData` dataclass — parser çıktısı için tip güvenli struct
+
+**`plugins/resume_parsers/hiring_agent/client.py`** (yeni)
+- `HiringAgentPlugin(ResumeParserPlugin)` — tüm değerleri `plugins.yaml`'dan okur, sıfır hardcode
+
+**`plugins/plugin_loader.py`** (yeni)
+- `load_parser_plugin(name)` — factory pattern; yeni parser eklemek = 1 satır + klasör
+
+**`packages/config.py`** (yeni)
+- `load_plugin_config()` — `config/plugins.yaml` için `lru_cache`'li loader
+
+**`services/resume_intelligence/application/evidence_builder.py`** (refactor)
+- Artık `ResumeParserPlugin` interface'ini kabul ediyor — hiring-agent'a bağımlı değil
+- Confidence katsayıları config'den okunuyor
+
+**`services/resume_intelligence/hiring_agent_adapter.py`** (refactor)
+- `HiringAgentPlugin`'i kullanıyor; `_build_enrichment_payload()` hardcoded key listesi kaldırıldı
+
+**`scripts/test_plugin_refactor.py`** (yeni)
+- 8 adımlı structural test — config yükleme, plugin instantiation, formula doğrulama
 
 ---
 
