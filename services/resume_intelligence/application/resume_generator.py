@@ -227,8 +227,46 @@ class ResumeGenerator:
             job_description=priorities.get("summary", ""),
             evidence=evidence,
             projects=projects,
+            available_skills=list(evidence.keys()),
         )
-        return self.llm.generate_json(prompt)
+        result = self.llm.generate_json(prompt)
+        return self._normalize_skill_names(result, evidence)
+
+    def _normalize_skill_names(self, tailoring: dict, evidence: dict) -> dict:
+        """Map LLM-returned skill names to actual keys in the evidence graph."""
+        available = set(evidence.keys())
+        available_lower = {s.lower(): s for s in available}
+        mappings = tailoring.get("skill_mappings", {})
+
+        def resolve(skill: str):
+            if skill in available:
+                return skill
+            if skill.lower() in available_lower:
+                return available_lower[skill.lower()]
+            if skill in mappings and mappings[skill] in available:
+                return mappings[skill]
+            sl = skill.lower()
+            for real in available:
+                if sl in real.lower() or real.lower() in sl:
+                    return real
+            return None
+
+        normalized = []
+        for s in tailoring.get("emphasized_skills", []):
+            r = resolve(s)
+            if r and r not in normalized:
+                normalized.append(r)
+
+        # If the LLM returned nothing usable, fall back to top-confidence skills
+        if not normalized:
+            normalized = sorted(available, key=lambda k: evidence[k]["confidence"], reverse=True)[:5]
+
+        tailoring["emphasized_skills"] = normalized
+        tailoring["de_emphasized_skills"] = [
+            r for s in tailoring.get("de_emphasized_skills", [])
+            if (r := resolve(s))
+        ]
+        return tailoring
 
     def _select_projects(self, company, title, projects) -> dict:
         if not projects:

@@ -16,6 +16,16 @@ If the role is ML research, de-emphasize generic algorithms and infrastructure.
 - Role Summary: {{ job_description | truncate_text(300) }}
 {% endif %}
 
+## Available Skills in Evidence Graph (EXACT NAMES — use ONLY these)
+
+You MUST select emphasized_skills and de_emphasized_skills ONLY from this exact list.
+Do NOT invent skill names like "API design" or "distributed systems".
+If the target requires a concept not in this list, map it to the closest available skill.
+
+Available: {{ available_skills | join(', ') }}
+
+---
+
 ## User's Evidence Graph
 The user has the following evidence-backed skills (with confidence scores):
 
@@ -50,8 +60,12 @@ Consider:
 
 ## Output Format (JSON only, no markdown)
 {
-  "emphasized_skills": ["skill1", "skill2", "skill3"],
-  "de_emphasized_skills": ["skill4", "skill5"],
+  "emphasized_skills": ["Python", "FastAPI"],
+  "de_emphasized_skills": ["NumPy"],
+  "skill_mappings": {
+    "API design": "FastAPI",
+    "distributed systems": "Python"
+  },
   "top_projects": [
     {
       "name": "Project Name",
@@ -59,6 +73,8 @@ Consider:
       "key_metrics": ["Use ONLY real metrics visible in the evidence above — LOC counts, commit counts, star counts, topics. Do NOT invent numbers."]
     }
   ],
-  "summary_focus": "One-sentence positioning (e.g., 'ML Engineer with production CV experience and research publications')",
+  "summary_focus": "One-sentence positioning",
   "avoid_mentioning": ["Things to downplay for this target"]
 }
+
+IMPORTANT: emphasized_skills and de_emphasized_skills must contain ONLY skill names from the Available list above.
