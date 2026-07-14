@@ -5,7 +5,7 @@ Opportunity scoring with acceptance probability and career value.
 from typing import List, Dict, Optional
 import numpy as np
 
-from career_os.models import UserProfile, Job, OpportunityScore
+from packages.domain import UserProfile, Job, OpportunityScore
 
 
 class OpportunityScorer:

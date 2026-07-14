@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from collections import Counter
 
-from career_os.models import Skill, SkillLevel, UserProfile, Job
+from packages.domain import Skill, SkillLevel, UserProfile, Job
 from career_os.core.skill_graph import SkillGraph
 
 

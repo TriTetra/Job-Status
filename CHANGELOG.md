@@ -23,9 +23,38 @@ Sıralama: en yeniden en eskiye.
 | ApplyPilot Plugin | `JobSourcePlugin` ABC, SQLite client/adapter, config-driven extraction, 6/6 test | ✅ Tamam | 2026-07-14 |
 | Single DB | PostgreSQL `jobs` tablosu, `JobRepository`, Alembic migration, 562 job sync | ✅ Tamam | 2026-07-14 |
 | Multi-User | `user_id` 5 tabloya eklendi, repo/caller güncellemesi, `config.yaml user.id` | ✅ Tamam | 2026-07-14 |
+| Week 3 Domain | `packages/domain/` — identity/job/intelligence; shim'ler; 7/7 test | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [Week 3 Domain Migration] — 2026-07-14 ✅
+
+### Yapılan
+`career_os/models/` → `packages/domain/` migration: entity'ler 3 domain'e dağıtıldı.
+
+**Yeni yapı:**
+```
+packages/domain/
+├── identity/   skill.py, profile.py  (Skill, SkillLevel, UserProfile, Experience, UserPreferences)
+├── job/        job.py                (Job)
+└── intelligence/ match.py, scoring.py (MatchResult, OpportunityScore)
+```
+
+**Güncellemeler:**
+- `packages/intelligence/*.py` — `from packages.domain import ...` kullanıyor
+- `career_os/data/applypilot_loader.py` — `from packages.domain import ...`
+- `career_os/core/skill_graph.py` — `from packages.domain.identity.skill import Skill`
+- `career_os/models/` — backward-compat shim (re-export, aynı class instance)
+
+**Sınıf identity korundu:** `career_os.models.Skill is packages.domain.Skill` → True
+
+### Test
+```
+python scripts/test_domain_migration.py  # 7/7 PASS
+```
 
 ---
 

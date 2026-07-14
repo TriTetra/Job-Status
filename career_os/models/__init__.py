@@ -1,24 +1,13 @@
-"""Data models for Career OS."""
+"""Backward compat shim — use packages.domain instead."""
 
-from .skill import Skill, SkillLevel, SKILL_CATEGORIES, categorize_skill
-from .profile import (
-    Experience,
-    UserPreferences,
-    UserProfile,
-    Job,
-    MatchResult,
-    OpportunityScore
+from packages.domain import (
+    Skill, SkillLevel, SKILL_CATEGORIES, categorize_skill,
+    Experience, UserPreferences, UserProfile,
+    Job, MatchResult, OpportunityScore,
 )
 
 __all__ = [
-    'Skill',
-    'SkillLevel',
-    'SKILL_CATEGORIES',
-    'categorize_skill',
-    'Experience',
-    'UserPreferences',
-    'UserProfile',
-    'Job',
-    'MatchResult',
-    'OpportunityScore',
+    "Skill", "SkillLevel", "SKILL_CATEGORIES", "categorize_skill",
+    "Experience", "UserPreferences", "UserProfile",
+    "Job", "MatchResult", "OpportunityScore",
 ]

@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from career_os.models import UserProfile, Job, MatchResult, Skill, SkillLevel
+from packages.domain import UserProfile, Job, MatchResult, Skill, SkillLevel
 from career_os.core.skill_graph import SkillGraph
 
 

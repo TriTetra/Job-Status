@@ -4,7 +4,7 @@ Skill taxonomy and transfer learning graph.
 
 import networkx as nx
 from typing import List, Dict, Optional, Tuple
-from ..models.skill import Skill
+from packages.domain.identity.skill import Skill
 
 
 class SkillGraph:

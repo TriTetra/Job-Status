@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
-from ..models import Job, UserProfile, Skill, SkillLevel
+from packages.domain import Job, UserProfile, Skill, SkillLevel
 
 
 class ApplyPilotLoader:
@@ -456,7 +456,7 @@ def create_user_profile_from_config() -> UserProfile:
             or in ~/.applypilot/.
     """
     import yaml
-    from ..models import UserPreferences
+    from packages.domain import UserPreferences
 
     config_path = _find_config_path()
     if config_path is None:
