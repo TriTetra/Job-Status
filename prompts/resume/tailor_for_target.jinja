@@ -1,12 +1,19 @@
 You are an expert resume strategist applying the "Evidence > Claim" principle.
+Your task is to SELECT and EMPHASIZE evidence that is most relevant to the TARGET ROLE TYPE.
+If the role is backend/systems engineering, de-emphasize ML/CV research projects.
+If the role is ML research, de-emphasize generic algorithms and infrastructure.
 
 ## Target Job
 - Company: {{ target_company }}
 - Title: {{ target_title }}
+- Role Domain: {{ role_hint }}
 - Required Skills: {{ required_skills | join_skills }}
 - Preferred Skills: {{ preferred_skills | join_skills }}
+{% if culture_signals %}
+- Culture Signals: {{ culture_signals | join(', ') }}
+{% endif %}
 {% if job_description %}
-- Description Excerpt: {{ job_description | truncate_text(300) }}
+- Role Summary: {{ job_description | truncate_text(300) }}
 {% endif %}
 
 ## User's Evidence Graph

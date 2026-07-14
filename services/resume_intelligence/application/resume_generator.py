@@ -169,9 +169,35 @@ class ResumeGenerator:
     # LLM calls
     # ------------------------------------------------------------------
 
+    # Role-type keyword → inferred domain hints for when no JD is provided.
+    _ROLE_HINTS = {
+        "backend": "API design, REST/gRPC, distributed systems, reliability, scalability, SQL/NoSQL databases.",
+        "frontend": "React/Vue, TypeScript, CSS, performance optimization, accessibility.",
+        "fullstack": "frontend frameworks, REST APIs, databases, CI/CD.",
+        "ml engineer": "model training, PyTorch/TensorFlow, data pipelines, production ML serving.",
+        "machine learning": "model training, PyTorch/TensorFlow, feature engineering, experiment tracking.",
+        "data engineer": "data pipelines, Spark/Kafka, SQL, ETL, cloud data platforms.",
+        "platform": "distributed systems, Kubernetes, infrastructure automation, observability.",
+        "infrastructure": "Kubernetes, Terraform, CI/CD, cloud (AWS/GCP/Azure), SRE.",
+        "devops": "CI/CD, Docker, Kubernetes, monitoring, IaC.",
+        "security": "threat modeling, pentesting, encryption, compliance.",
+    }
+
+    def _role_hint(self, title: str) -> str:
+        t = title.lower()
+        for kw, hint in self._ROLE_HINTS.items():
+            if kw in t:
+                return hint
+        return "general software engineering skills relevant to the role and company domain."
+
     def _extract_priorities(self, title: str, company: str, description: str) -> dict:
         if not description:
-            description = f"{title} role at {company}. Infer typical requirements."
+            hint = self._role_hint(title)
+            description = (
+                f"{title} role at {company}. "
+                f"Infer typical requirements for this role type. "
+                f"Focus on: {hint}"
+            )
         prompt = template_loader.render(
             "job/extract_priorities.jinja",
             job_title=title,
@@ -187,7 +213,9 @@ class ResumeGenerator:
             target_title=title,
             required_skills=priorities.get("must_have", []),
             preferred_skills=priorities.get("important", []),
-            job_description=None,
+            culture_signals=priorities.get("culture_signals", []),
+            role_hint=self._role_hint(title),
+            job_description=priorities.get("summary", ""),
             evidence=evidence,
             projects=projects,
         )
@@ -219,6 +247,7 @@ class ResumeGenerator:
             "resume/generate_summary.jinja",
             target_company=company,
             target_title=title,
+            role_hint=self._role_hint(title),
             candidate_name=candidate.get("name", ""),
             years_experience=candidate.get("years_experience", 0),
             education=candidate.get("education", ""),

@@ -1,8 +1,12 @@
 You are writing a 2-sentence professional summary for a resume.
+Frame the candidate's experience through the lens of the TARGET ROLE TYPE.
+If writing for a backend role, emphasize systems/algorithms/reliability — not ML research.
+If writing for an ML role, emphasize model performance, training pipelines, and research — not generic backend.
 
 ## Target
 - Company: {{ target_company }}
 - Role: {{ target_title }}
+- Role Domain: {{ role_hint }}
 
 ## Candidate Profile
 - Name: {{ candidate_name }}
