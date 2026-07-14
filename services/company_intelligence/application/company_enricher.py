@@ -1,11 +1,11 @@
-"""Populate Company table from knowledge YAML and job postings."""
+﻿"""Populate Company table from knowledge YAML and job postings."""
 
 from datetime import datetime
 from typing import Dict, List
 
-from packages.db.connection import db
-from packages.db.repositories import CompanyRepository
-from packages.knowledge import CompanyLoader
+from core.db.connection import db
+from core.db.repositories import CompanyRepository
+from core.knowledge import CompanyLoader
 
 
 class CompanyEnricher:

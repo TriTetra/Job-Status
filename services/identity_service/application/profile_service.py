@@ -1,10 +1,10 @@
-"""User profile service."""
+﻿"""User profile service."""
 
 from typing import Optional
 
-from packages.db.connection import db
-from packages.db.repositories import UserSettingsRepository
-from packages.domain import UserPreferences, UserProfile
+from core.db.connection import db
+from core.db.repositories import UserSettingsRepository
+from core.domain import UserPreferences, UserProfile
 
 
 class ProfileService:
@@ -25,7 +25,7 @@ class ProfileService:
             prefs_data = settings.preferences or {}
             skills_data = settings.skills or []
 
-            from packages.domain.identity.skill import Skill, SkillLevel
+            from core.domain.identity.skill import Skill, SkillLevel
             skills = [
                 Skill(
                     name=s["name"],

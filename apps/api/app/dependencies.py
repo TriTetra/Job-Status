@@ -1,10 +1,10 @@
-"""FastAPI dependencies — DB session and user identity."""
+﻿"""FastAPI dependencies — DB session and user identity."""
 
 from typing import Generator
 
 from fastapi import Header
 
-from packages.db.connection import db
+from core.db.connection import db
 
 
 def get_db_session() -> Generator:

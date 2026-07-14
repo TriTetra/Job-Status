@@ -1,9 +1,9 @@
-"""Enrich evidence table rows with real GitHub metrics."""
+﻿"""Enrich evidence table rows with real GitHub metrics."""
 
 from typing import Any, Dict, Optional
 
-from packages.db.connection import db
-from packages.db.repositories import EvidenceRepository
+from core.db.connection import db
+from core.db.repositories import EvidenceRepository
 
 from .client import GitHubClient
 from .repo_analyzer import RepoAnalyzer

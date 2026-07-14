@@ -11,22 +11,315 @@ Sıralama: en yeniden en eskiye.
 |-------|---------|-------|-------|
 | Phase 0 | Hazırlık: git tag, backup, API key rotation, architecture planning | ✅ Tamam | 2026-07-13 |
 | Phase 1A | PostgreSQL DB layer: 4 tablo, Alembic migrations, repositories | ✅ Tamam | 2026-07-13 |
-| Phase 1B | Career Scores → PostgreSQL; skill extraction fix (AI gap); threshold fix (0 APPLY→10 APPLY) | ✅ Tamam | 2026-07-14 |
-| Phase 1C | Scan history tracking: `scan_history` tablosu, `discovered_in_this_scan` flag, bulk diff | ✅ Tamam | 2026-07-14 |
-| Phase 2A | `packages/intelligence/` migration; `career_os/intelligence/` → backward-compat shim | ✅ Tamam | 2026-07-14 |
-| Phase 2B | `services/hiring-agent/` (CV scoring); OpenRouter desteği; GitHub token fix; `services/resume-intelligence/` adapter | ✅ Tamam | 2026-07-14 |
+| Phase 1B | Career Scores → PostgreSQL; skill extraction fix; threshold fix | ✅ Tamam | 2026-07-14 |
+| Phase 1C | Scan history tracking: `scan_history` tablosu, bulk diff | ✅ Tamam | 2026-07-14 |
+| Phase 2A | `packages/intelligence/` migration; backward-compat shim | ✅ Tamam | 2026-07-14 |
+| Phase 2B | `services/hiring-agent/` CV scoring; OpenRouter; GitHub token fix | ✅ Tamam | 2026-07-14 |
 | Phase 2G | Evidence Graph → DB: `evidence` tablosu, `EvidenceRepository`, `EvidenceBuilder` | ✅ Tamam | 2026-07-14 |
-| Phase 2I | Skill Graph YAML: `knowledge/v1/skills/skill_graph.yaml`, `SkillLoader`, hardcode yok | ✅ Tamam | 2026-07-14 |
+| Phase 2I | Skill Graph YAML: 68 skill, 229 topic, `SkillLoader`, hardcode sıfır | ✅ Tamam | 2026-07-14 |
 | Phase 2J | Application Engine: `services/application_engine/cli.py`, 6 komut, state machine | ✅ Tamam | 2026-07-14 |
-| Refactor | Plugin + Config-Driven Architecture: hardcode sıfır, `config/plugins.yaml`, `ResumeParserPlugin` ABC | ✅ Tamam | 2026-07-14 |
-| Event Bus | Thread-safe pub/sub: `events/`, 18 domain event tipi, `apply_strategy` entegrasyonu | ✅ Tamam | 2026-07-14 |
-| ApplyPilot Plugin | `JobSourcePlugin` ABC, SQLite client/adapter, config-driven extraction, 6/6 test | ✅ Tamam | 2026-07-14 |
-| Single DB | PostgreSQL `jobs` tablosu, `JobRepository`, Alembic migration, 562 job sync | ✅ Tamam | 2026-07-14 |
-| Multi-User | `user_id` 5 tabloya eklendi, repo/caller güncellemesi, `config.yaml user.id` | ✅ Tamam | 2026-07-14 |
-| Week 3 Domain | `packages/domain/` — identity/job/intelligence; shim'ler; 7/7 test | ✅ Tamam | 2026-07-14 |
-| Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
-| Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
-| Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+| Refactor | Plugin + Config-Driven Architecture: `config/plugins.yaml`, `ResumeParserPlugin` ABC | ✅ Tamam | 2026-07-14 |
+| Event Bus | Thread-safe pub/sub: `events/`, 18 domain event tipi | ✅ Tamam | 2026-07-14 |
+| ApplyPilot Plugin | `JobSourcePlugin` ABC, SQLite client/adapter, config-driven | ✅ Tamam | 2026-07-14 |
+| Single DB | PostgreSQL `jobs` tablosu, `JobRepository`, 562 job sync | ✅ Tamam | 2026-07-14 |
+| Multi-User | `user_id` 5 tabloya eklendi, repo/caller güncellemesi | ✅ Tamam | 2026-07-14 |
+| Week 3 Domain | `packages/domain/` — identity/job/intelligence; 7/7 test | ✅ Tamam | 2026-07-14 |
+| Phase 2C | Target-aware resume generator: 4 LLM call, `available_skills` constraint | ✅ Tamam | 2026-07-14 |
+| Phase 3 (CI) | Company Intelligence: enricher, memory service, per-company advice | ✅ Tamam | 2026-07-14 |
+| Phase 3 (MI) | Market Intelligence: HN "Who is Hiring?" scanner, TechCrunch RSS | ✅ Tamam | 2026-07-14 |
+| Phase 3 (GH) | GitHub Enrichment: 9 real metrics, hallucination fix, `loc_count` | ✅ Tamam | 2026-07-14 |
+| Phase 3 (TL) | Timeline Layer: `track_snapshot()`, auto-diff, `detect_changes()` | ✅ Tamam | 2026-07-14 |
+| Phase 3 (KB) | Knowledge DB: 14 YAML → 5 country + 3 visa + 50+ salary rows | ✅ Tamam | 2026-07-14 |
+| Phase 4A | FastAPI Gateway: 24 endpoint, CORS, Pydantic v2, live-tested | ✅ Tamam | 2026-07-14 |
+| Phase 4B | Domain Migration: 15 entity → 6 subdomain (`core/domain/`) | ✅ Tamam | 2026-07-14 |
+| Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
+| Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
+| Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Docs v1] — 2026-07-14 — Versioned Architecture Reports ✅
+
+### Yapılan
+`docs/` dizini versioned `docs/v1/` layoutuna taşındı. Her fazın tam teknik raporu yazıldı ve codebase'e karşı doğrulandı.
+
+**Dizin Yapısı:**
+```
+docs/v1/
+├── ARCHITECTURE.md          — Genel mimari
+├── CODEBASE_OVERVIEW.md     — Tam codebase anatomisi
+├── SYSTEM_SUMMARY.md        — Executive summary
+├── VISION.md                — Ürün doktrini
+├── DIRECTORY_MAP.md         — Klasör açıklamaları
+├── development/
+│   ├── DATABASE_AUDIT.md
+│   └── MIGRATION_REPORT.md
+└── phases/
+    ├── PHASE_1_REPORT.md    — Foundation (DB, Events, CLI, Plugins, 24 endpoint)
+    ├── PHASE_2_REPORT.md    — Intelligence Core (Evidence Graph, Resume AI, Hiring-Agent)
+    └── PHASE_3_REPORT.md    — Company & Market Intelligence (8 DB tablo, Timeline, Knowledge DB)
+```
+
+**Raporlarda Doğrulanan Düzeltmeler:**
+- Faz 1: Endpoint sayısı 21→24 (companies 4, settings 4, main +root+health)
+- Faz 1: `POST /api/jobs/score` yok → `GET /api/jobs/pipeline`
+- Faz 2: Feature Registry `_archive/features/` altında (aktif dizinde değil)
+- Faz 2: Test sayısı 5→4 aktif (`test_feature_registry.py` → `_archive/scripts/`)
+- Faz 3: `CompanyMemoryRepository` ayrı dosyada değil — `company_repo.py` (L67) içinde
+
+---
+
+## [Phase 4D] — 2026-07-14 — Unified CLI ✅
+
+**Commit:** `654085c`
+
+### Yapılan
+
+**`apps/cli/main.py`** (182 satır) — Typer tabanlı unified CLI
+- 4 native komut: `version`, `status`, `scan`, `strategy`
+- 4 mounted sub-group: `track`, `resume`, `company`, `market`
+- Try/except mounting pattern — import failure silently skip edilir
+- `career-os` launcher script: `apps/cli/career_os_launcher.py`
+
+**Sub-group CLI'ları:**
+- `track` → `services/application_engine/cli.py`
+- `resume` → `services/resume_intelligence/cli.py`
+- `company` → `services/company_intelligence/cli.py`
+- `market` → `services/market_intelligence/cli.py`
+
+**Kullanım:**
+```
+career-os version
+career-os status
+career-os track add --url ... --title ... --company ...
+career-os resume generate --company Google --title "ML Engineer"
+career-os company show --name Google
+career-os market signals --source hackernews
+```
+
+---
+
+## [Phase 4C] — 2026-07-14 — Service Extraction ✅
+
+**Commit:** `a613a33`
+
+### Yapılan
+
+`packages/domain/` içinde iki yeni service modülü:
+
+**`core/services/identity_service.py`**
+- `IdentityService` — user profile, skill management, evidence CRUD
+- `get_user_profile()`, `add_skill()`, `get_evidence_summary()`
+
+**`core/services/job_intelligence.py`**
+- `JobIntelligenceService` — job scoring, pipeline filtering, career score queries
+- `score_jobs()`, `get_pipeline()`, `get_top_opportunities()`
+
+Her iki servis de `BaseRepository[T]` üzerinden DB'ye erişir; FastAPI router'ları bu servisleri dependency injection ile kullanır.
+
+---
+
+## [Phase 4B] — 2026-07-14 — Domain Migration ✅
+
+**Commit:** `f7c577d`
+
+### Yapılan
+
+15 entity, 6 subdomain'e migrate edildi:
+
+```
+core/domain/
+├── identity/     user.py, skill.py, profile.py
+├── job/          job.py, scan.py
+├── evidence/     evidence.py, github_metrics.py
+├── application/  application.py, email.py
+├── company/      company.py, memory.py
+└── market/       signal.py, timeline.py
+```
+
+**Backward-compat shim'ler:** `packages/domain/*.py` → `core/domain/*` re-export
+
+---
+
+## [Phase 4A] — 2026-07-14 — FastAPI Gateway ✅
+
+**Commit:** `3dd3fa2`
+
+### Yapılan
+
+**`apps/api/app/main.py`** — FastAPI app
+- 7 router mount + root + health = **24 endpoint** (live-tested)
+- CORS: `localhost:3000`, `localhost:3001`, `127.0.0.1:3000`
+
+**Router → Endpoint Tablosu:**
+
+| Router | Endpoint'ler | Sayı |
+|---|---|---|
+| jobs | GET /api/jobs, GET /api/jobs/pipeline, GET /api/jobs/{url} | 3 |
+| applications | GET /, GET /summary, POST /, PUT /{url} | 4 |
+| evidence | GET /, POST /build, GET /{skill}, DELETE /{id} | 4 |
+| companies | GET /, GET /hiring, GET /{name}, GET /{name}/memory | 4 |
+| market | GET /signals, GET /summary, GET /trend/{skill} | 3 |
+| settings | GET /, PUT /, GET /validate, POST /reload | 4 |
+| resume | GET /templates, POST /generate | 2 |
+| main | GET /, GET /health | 2 |
+
+**Dependency injection:** `get_db_session()`, `get_user_id()` — tüm router'larda tutarlı
+**Schemas:** Pydantic v2, `model_config = ConfigDict(from_attributes=True)`
+
+---
+
+## [Phase 3 — Knowledge DB] — 2026-07-14 ✅
+
+**Commit:** `4afc006` (DB-First Knowledge Layer)
+
+### Yapılan
+
+14 YAML dosyası → PostgreSQL (one-time seed, sonrası DB source of truth)
+
+**`scripts/seed_knowledge_from_yaml.py`** (213 satır)
+- `seed_countries()` → 5 kayıt (`germany`, `canada`, `netherlands`, `uae`, `usa`)
+- `seed_visas()` → 3 kayıt (EU Blue Card, US H1B, UK Skilled Worker)
+- `seed_salaries()` → 50+ kayıt (backend_eu, ml_us, frontend_global)
+- `session.merge()` upsert (iso_code / visa_type PK)
+- Salary: composite key manual upsert
+
+**DB Modeller:** `countries`, `visas`, `salary_ranges` — JSONB columns for flexible data
+
+**YAML Seed Dosyaları (14 adet, ~2,500 satır):**
+```
+infra/seeds/v1/countries/  → germany, canada, netherlands, uae, usa
+infra/seeds/v1/visa/       → eu_blue_card, us_h1b, uk_skilled_worker
+infra/seeds/v1/salaries/   → backend_eu, ml_us, frontend_global
+infra/seeds/v1/companies/  → big_tech, unicorns, company_memory_schema
+```
+
+**Sonuç:** `Total: 58 records seeded` — DB artık knowledge'ın canonical kaynağı
+
+---
+
+## [Phase 3 — Timeline Layer] — 2026-07-14 ✅
+
+### Yapılan
+
+**`core/timeline/timeline.py`** (295 satır)
+- `track_snapshot(entity_type, entity_id, data)` — zaman serisi snapshot
+- `_detect_and_record_changes()` — auto-diff: field-by-field önceki snapshot ile karşılaştır
+- `get_entity_history(entity_type, entity_id, days)` — temporal query
+- `detect_changes(entity_type, entity_id, field, days)` — field-level change query
+- `get_trending_entities(entity_type, field, days, limit)` — en çok değişen entity'ler
+
+**`core/db/models/timeline.py`** (53 satır)
+- `TimelineSnapshot` — entity state at a point in time (JSONB)
+- `TimelineChange` — field-level diff record (`old_value`, `new_value`, `change_type`)
+
+**Migration:** `add_timeline_tables.py` — 2 tablo + indexes
+
+**Kullanım Örneği:**
+```python
+timeline.track_snapshot("job", job_url, {"career_score": 91, "company": "Google"})
+# Otomatik diff → "career_score: 78 → 91 (↑ 16.7%)"
+```
+
+---
+
+## [Phase 3 — GitHub Enrichment] — 2026-07-14 ✅
+
+### Yapılan
+
+**Problem:** Evidence confidence'ı heuristik hesaplanıyordu (commit sayısı + star). LLM resume oluştururken GitHub URL yoksa project details hallucinate ediyordu.
+
+**Çözüm:** PyGithub → 9 gerçek metrik → `evidence` tablosuna yazıldı.
+
+**`plugins/enrichment/github/repo_analyzer.py`** (88 satır)
+- 9 metrik: `loc_count`, `language`, `topics`, `has_tests`, `has_docs`, `has_releases`, `pr_count`, `issue_count`, `contributor_count`
+
+**`plugins/enrichment/github/evidence_enricher.py`** (117 satır)
+- Her `evidence` kaydı için GitHub URL → repo_analyzer → DB UPDATE
+- Confidence formula güncellendi: LOC, has_tests, has_docs ağırlık eklenildi
+
+**`scripts/enrich_github_evidence.py`** (69 satır) — CLI runner
+
+**`services/resume_intelligence/application/resume_generator.py`**
+- `_load_evidence()` artık `loc_count`, `has_tests`, `pr_count` vs. DB'den okuyor
+- `_tailor_evidence()` → `available_skills=list(evidence.keys())` — LLM'e gerçek skill listesi verildi
+- `_normalize_skill_names()` — fuzzy match: LLM döndürdüğü skill adları → gerçek evidence key'leri
+
+**Sonuç:** LLM artık gerçek metriklerle çalışıyor, hallucination büyük ölçüde çözüldü.
+
+---
+
+## [Phase 3 — Market Intelligence] — 2026-07-14 ✅
+
+### Yapılan
+
+**HN "Who is Hiring?" Scanner:**
+- `plugins/market_signals/hackernews/client.py` (67 satır) — Algolia API
+- `plugins/market_signals/hackernews/who_is_hiring_parser.py` (72 satır) — comment → structured job
+- `plugins/market_signals/hackernews/signal_extractor.py` (122 satır)
+  - 272 job posting → 42 signal (Temmuz 2026)
+  - Top 20 skill demand, Top 20 company hiring spikes, remote/visa stats
+
+**TechCrunch Scanner:**
+- `plugins/market_signals/techcrunch/rss_client.py` (40 satır) — feedparser
+- `plugins/market_signals/techcrunch/signal_extractor.py` (105 satır) — funding/layoff detection
+
+**`core/db/models/market_signal.py`** — `signal_type`, `skills_affected` (JSONB array), `magnitude`
+**`core/db/repositories/market_signal_repo.py`** (182 satır)
+- `get_skill_trend()` — period-over-period (current window vs previous window)
+- `source_id` ile dedup
+
+**`services/market_intelligence/cli.py`** (97 satır) — `signals scan`, `trend show`, `summary`
+
+---
+
+## [Phase 3 — Company Intelligence] — 2026-07-14 ✅
+
+### Yapılan
+
+**`services/company_intelligence/application/company_enricher.py`** (75 satır)
+- Job posting → tech stack aggregation
+- `CompanyRepository.update_tech_stack()` — JSONB merge, existing skills korunur
+
+**`services/company_intelligence/application/company_memory.py`** (96 satır)
+- `record_interview_fact()` — "Google'da Docker ve Redis soruldu"
+- `get_advice_for_company()` — rejection pattern detection + advice generation
+- 3+ reject → "6 ay bekle", 1 reject → "phone screen'e hazırlan"
+
+**`core/db/repositories/company_repo.py`** (135 satır)
+- `CompanyRepository` + `CompanyMemoryRepository` — **aynı dosyada**
+- `get_or_create()`, `get_hiring_now()`, `find_by_tech_stack()`, `update_tech_stack()`
+- `add_fact()`, `get_facts_for_company()`, `get_company_summary()`
+
+**`services/company_intelligence/cli.py`** (97 satır) — `show`, `enrich`, `memory`
+
+**Migration:** `add_companies_and_memory.py` — `companies` + `company_memory` tabloları
+
+---
+
+## [Phase 2C] — 2026-07-14 — Target-Aware Resume Generator ✅
+
+### Yapılan
+
+**`services/resume_intelligence/application/resume_generator.py`** (357 satır)
+
+5-adımlı pipeline:
+1. Evidence DB + GitHub cache yükle
+2. `_extract_priorities()` — job title/company → `{must_have, important, culture_signals}`
+3. `_tailor_evidence()` — `available_skills` constraint → LLM hallucination önlendi
+4. `_select_projects()` — max 4 proje, score-based ranking
+5. `_generate_summary()` — 2-satır özet, max 200 token
+
+**`_normalize_skill_names()`** (35 satır)
+- LLM çıktısındaki skill adları → gerçek evidence key'leri
+- Exact match → lowercase match → skill_mappings dict → partial match → top-confidence fallback
+
+**`_role_hint()`** — JD yoksa role tipine göre domain hint injection (10 role tipi)
+
+**Jinja2 template rendering:** `services/resume_intelligence/templates/resume/`
+- `ml_research.md.jinja`, `backend.md.jinja`
+
+**Output:** `personal/{Name}_{Company}_{Role}.md` — Markdown CV
 
 ---
 

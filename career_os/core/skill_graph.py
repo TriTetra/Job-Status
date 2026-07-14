@@ -1,10 +1,10 @@
-"""
+﻿"""
 Skill taxonomy and transfer learning graph.
 """
 
 import networkx as nx
 from typing import List, Dict, Optional, Tuple
-from packages.domain.identity.skill import Skill
+from core.domain.identity.skill import Skill
 
 
 class SkillGraph:
@@ -24,7 +24,7 @@ class SkillGraph:
     def _build_taxonomy(self):
         """Load skill graph from YAML, fall back to hardcoded edges if YAML unavailable."""
         try:
-            from packages.knowledge import SkillLoader
+            from core.knowledge import SkillLoader
             loader = SkillLoader()
             for from_skill, to_skill, weight in loader.transfer_edges:
                 self.graph.add_edge(from_skill, to_skill, weight=weight)

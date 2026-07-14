@@ -1,23 +1,46 @@
-# ApplyPilot - external job discovery CLI (the core scraping/scoring engine)
-applypilot>=0.3.0
+# ============================================================
+# apps/api — FastAPI gateway (Phase 4A)
+# ============================================================
+fastapi>=0.111
+uvicorn[standard]>=0.29
+pydantic>=2.7
 
-# scripts/ - Excel export and reporting
-openpyxl>=3.1.0
+# ============================================================
+# apps/cli — Unified Typer CLI (Phase 4D)
+# ============================================================
+typer[all]>=0.12         # bundles rich
 
-# career_os/ - strategic scoring layer
-networkx>=3.0
-numpy>=1.24
-sentence-transformers>=2.2
-scikit-learn>=1.3
-pyyaml>=6.0
-
-# scripts/tracking/sync_to_github.py - optional, only needed for GitHub Issues sync
-PyGithub>=2.0
-
-# packages/db - PostgreSQL layer (Phase 1A)
+# ============================================================
+# packages/db — PostgreSQL + migrations
+# ============================================================
 sqlalchemy>=2.0
 psycopg[binary]>=3.1
 alembic>=1.13
 
-# tests/ - run with: pytest tests/
+# ============================================================
+# packages/intelligence — semantic scoring
+# ============================================================
+sentence-transformers>=2.2
+scikit-learn>=1.3
+numpy>=1.24
+networkx>=3.0
+
+# ============================================================
+# plugins/ — job sources, enrichment, market signals
+# ============================================================
+applypilot>=0.3.0        # job source plugin (dynamic load)
+PyGithub>=2.0            # plugins/enrichment/github/client.py
+feedparser>=6.0          # plugins/market_signals/techcrunch/
+requests>=2.31           # plugins/market_signals/hackernews/, llm_client
+
+# ============================================================
+# prompts/ + services — templating, config, env
+# ============================================================
+jinja2>=3.1
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# ============================================================
+# tests/
+# ============================================================
 pytest>=7.0

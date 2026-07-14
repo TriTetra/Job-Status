@@ -1,4 +1,4 @@
-"""Jobs router."""
+﻿"""Jobs router."""
 
 from typing import List, Optional
 
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.job import JobListResponse, JobWithScore
-from packages.db.repositories import CareerScoreRepository
+from core.db.repositories import CareerScoreRepository
 
 router = APIRouter()
 
@@ -53,7 +53,7 @@ def pipeline_counts(
     session: Session = Depends(get_db_session),
 ):
     """Return counts per recommendation bucket."""
-    from packages.db.repositories import ApplicationRepository
+    from core.db.repositories import ApplicationRepository
     repo = ApplicationRepository(session)
     return repo.get_pipeline_summary(user_id=user_id)
 

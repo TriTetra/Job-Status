@@ -1,11 +1,11 @@
-"""Extract MarketSignal rows from HN 'Who is hiring?' threads."""
+﻿"""Extract MarketSignal rows from HN 'Who is hiring?' threads."""
 
 from collections import Counter
 from datetime import datetime
 from typing import Optional
 
-from packages.db.connection import db
-from packages.db.repositories import MarketSignalRepository
+from core.db.connection import db
+from core.db.repositories import MarketSignalRepository
 
 from .client import HackerNewsClient
 from .who_is_hiring_parser import WhoIsHiringParser

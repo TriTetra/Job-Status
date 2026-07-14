@@ -1,4 +1,4 @@
-"""
+﻿"""
 Load data from ApplyPilot database and convert to Career OS models.
 """
 
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
-from packages.domain import Job, UserProfile, Skill, SkillLevel
+from core.domain import Job, UserProfile, Skill, SkillLevel
 
 
 class ApplyPilotLoader:
@@ -400,8 +400,8 @@ def create_user_profile_from_db(user_id: str, session) -> Optional["UserProfile"
         user_id: The user identifier (matches user_settings.user_id).
         session:  SQLAlchemy Session — caller is responsible for lifecycle.
     """
-    from packages.db.repositories import UserSettingsRepository
-    from packages.domain import UserPreferences
+    from core.db.repositories import UserSettingsRepository
+    from core.domain import UserPreferences
 
     repo = UserSettingsRepository(session)
     profile_data = repo.get_profile(user_id)
@@ -521,7 +521,7 @@ def create_user_profile_from_config() -> UserProfile:
             or in ~/.applypilot/.
     """
     import yaml
-    from packages.domain import UserPreferences
+    from core.domain import UserPreferences
 
     config_path = _find_config_path()
     if config_path is None:

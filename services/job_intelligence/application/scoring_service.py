@@ -1,4 +1,4 @@
-"""Job scoring service — orchestrates the scoring pipeline.
+﻿"""Job scoring service — orchestrates the scoring pipeline.
 
 OpportunityScorer is cheap to instantiate (no model download), so it's
 created eagerly. SemanticMatcher is only created when match() is needed
@@ -8,10 +8,10 @@ created eagerly. SemanticMatcher is only created when match() is needed
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from packages.db.connection import db
-from packages.db.repositories import CareerScoreRepository
-from packages.domain import Job, OpportunityScore, UserProfile
-from packages.intelligence import OpportunityScorer
+from core.db.connection import db
+from core.db.repositories import CareerScoreRepository
+from core.domain import Job, OpportunityScore, UserProfile
+from core.intelligence import OpportunityScorer
 
 
 class ScoringService:
@@ -37,7 +37,7 @@ class ScoringService:
         weights: Optional[Dict[str, float]] = None,
     ) -> List[OpportunityScore]:
         """Score jobs with full semantic matching (triggers model download on first call)."""
-        from packages.intelligence import SemanticMatcher
+        from core.intelligence import SemanticMatcher
         if self._scorer.matcher is None:
             self._scorer.matcher = SemanticMatcher()
         return self.score_jobs(jobs, profile, weights=weights)

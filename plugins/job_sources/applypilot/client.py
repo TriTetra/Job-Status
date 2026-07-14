@@ -1,4 +1,4 @@
-"""
+﻿"""
 ApplyPilot SQLite client.
 
 ApplyPilotClient  — low-level DB I/O only, no business logic.
@@ -9,7 +9,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from packages.config import load_plugin_config
+from core.config import load_plugin_config
 from plugins.plugin_interface import JobSourcePlugin
 
 

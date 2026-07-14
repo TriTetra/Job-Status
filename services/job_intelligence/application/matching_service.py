@@ -1,4 +1,4 @@
-"""Semantic matching service.
+﻿"""Semantic matching service.
 
 SemanticMatcher loads a 420MB embedding model — imported lazily so tests and
 lightweight callers don't pay that cost unless they actually call match().
@@ -6,7 +6,7 @@ lightweight callers don't pay that cost unless they actually call match().
 
 from typing import List, Optional
 
-from packages.domain import Job, MatchResult, UserProfile
+from core.domain import Job, MatchResult, UserProfile
 
 
 class MatchingService:
@@ -17,7 +17,7 @@ class MatchingService:
 
     def _get_matcher(self):
         if self._matcher is None:
-            from packages.intelligence import SemanticMatcher
+            from core.intelligence import SemanticMatcher
             self._matcher = SemanticMatcher()
         return self._matcher
 

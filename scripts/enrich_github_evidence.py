@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enrich evidence table with real GitHub metrics.
 
 Usage:
@@ -21,8 +21,8 @@ try:
 except ImportError:
     pass
 
-from packages.db.connection import db
-from packages.db.repositories import EvidenceRepository
+from core.db.connection import db
+from core.db.repositories import EvidenceRepository
 from plugins.enrichment.github.evidence_enricher import EvidenceEnricher
 from plugins.enrichment.github.client import GitHubClient
 

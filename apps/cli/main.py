@@ -1,4 +1,4 @@
-"""
+﻿"""
 CareerOS Unified CLI — single entry point.
 
 Usage:
@@ -66,11 +66,11 @@ def version():
 @app.command()
 def status():
     """Show counts for all DB tables."""
-    from packages.db.connection import db
-    from packages.db.models import Company, MarketSignal
-    from packages.db.models.career_score import CareerScore
-    from packages.db.models.application import Application
-    from packages.db.models.evidence import Evidence
+    from core.db.connection import db
+    from core.db.models import Company, MarketSignal
+    from core.db.models.career_score import CareerScore
+    from core.db.models.application import Application
+    from core.db.models.evidence import Evidence
     from sqlalchemy import func, select
 
     with db.session_scope() as session:
@@ -149,7 +149,7 @@ def strategy(
         typer.echo(f"  [strategy] Job source error: {e}", err=True)
         raise typer.Exit(code=1)
 
-    from packages.domain import Job
+    from core.domain import Job
     jobs = [
         Job(
             id=j["url"],

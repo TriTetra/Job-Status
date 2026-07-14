@@ -1,4 +1,4 @@
-"""
+﻿"""
 Import all jobs from ApplyPilot SQLite into the PostgreSQL jobs table.
 
 Usage:
@@ -16,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from packages.db.connection import db
-from packages.db.repositories import JobRepository
+from core.db.connection import db
+from core.db.repositories import JobRepository
 from plugins.plugin_loader import load_job_source_plugin
 
 

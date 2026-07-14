@@ -1,4 +1,4 @@
-"""
+﻿"""
 Adapter: hiring-agent plugin -> career_scores PostgreSQL table.
 
 Public API:
@@ -85,7 +85,7 @@ def enrich_career_scores(session, resume_data: ResumeData) -> int:
 
 def _enrich_db(session, enrichment: dict[str, Any]) -> int:
     from sqlalchemy import select
-    from packages.db.models.career_score import CareerScore
+    from core.db.models.career_score import CareerScore
 
     stmt = select(CareerScore).where(
         CareerScore.explanation["resume_score"].is_(None)

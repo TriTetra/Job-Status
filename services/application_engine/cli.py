@@ -1,4 +1,4 @@
-"""
+﻿"""
 Application Engine CLI.
 
 Commands:
@@ -23,8 +23,8 @@ _ROOT = Path(__file__).parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from packages.db.connection import db
-from packages.db.repositories import ApplicationRepository
+from core.db.connection import db
+from core.db.repositories import ApplicationRepository
 
 app = typer.Typer(help="Track job applications through the hiring pipeline.")
 console = Console()

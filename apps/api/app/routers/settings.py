@@ -1,4 +1,4 @@
-"""Settings router — scoring weights and user preferences."""
+﻿"""Settings router — scoring weights and user preferences."""
 
 from typing import Any, Dict, List, Optional
 
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
-from packages.db.repositories import UserSettingsRepository
+from core.db.repositories import UserSettingsRepository
 
 router = APIRouter()
 

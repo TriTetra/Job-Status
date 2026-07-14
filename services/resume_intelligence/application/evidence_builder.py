@@ -1,4 +1,4 @@
-"""
+﻿"""
 Evidence Builder — transforms resume parser output into Evidence Graph rows.
 
 Generic and plugin-based: accepts any ResumeParserPlugin implementation.
@@ -15,10 +15,10 @@ _ROOT = Path(__file__).parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from packages.config import load_plugin_config
-from packages.db.connection import db
-from packages.db.repositories import EvidenceRepository
-from packages.knowledge import SkillLoader
+from core.config import load_plugin_config
+from core.db.connection import db
+from core.db.repositories import EvidenceRepository
+from core.knowledge import SkillLoader
 from plugins.plugin_interface import ResumeData, ResumeParserPlugin
 
 

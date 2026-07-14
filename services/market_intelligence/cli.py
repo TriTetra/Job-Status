@@ -1,4 +1,4 @@
-"""CLI for Market Intelligence."""
+﻿"""CLI for Market Intelligence."""
 
 import sys
 from datetime import datetime
@@ -17,8 +17,8 @@ except ImportError:
 
 import typer
 
-from packages.db.connection import db
-from packages.db.repositories import MarketSignalRepository
+from core.db.connection import db
+from core.db.repositories import MarketSignalRepository
 from plugins.market_signals.hackernews.signal_extractor import HNSignalExtractor
 from plugins.market_signals.techcrunch.signal_extractor import TechCrunchSignalExtractor
 

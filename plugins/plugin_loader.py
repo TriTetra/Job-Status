@@ -1,8 +1,8 @@
-"""Plugin loader — factory for resume parser and job source plugins."""
+﻿"""Plugin loader — factory for resume parser and job source plugins."""
 
 from typing import Any, Dict
 
-from packages.config import load_plugin_config
+from core.config import load_plugin_config
 from plugins.plugin_interface import JobSourcePlugin, ResumeParserPlugin
 
 

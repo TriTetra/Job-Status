@@ -1,4 +1,4 @@
-"""
+﻿"""
 Hiring-Agent plugin — wraps services/hiring-agent/score.py.
 
 All paths, CSV column names, and confidence weights come from
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from plugins.plugin_interface import ResumeData, ResumeParserPlugin
-from packages.config import load_plugin_config
+from core.config import load_plugin_config
 
 _ROOT = Path(__file__).parents[3]  # project root
 

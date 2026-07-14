@@ -1,53 +1,34 @@
-# Dokümantasyon İndeksi
+﻿# CareerOS — Dökümantasyon
 
-Bu klasördeki her doküman dört kategoriden birine giriyor: kurulum (`setup/`),
-günlük kullanım (`usage/`), başvuru takibi (`tracking/`) ve iş arama stratejisi
-(`strategy/`). Mimariye dair tek başvuru kaynağı [SYSTEM_SUMMARY.md](SYSTEM_SUMMARY.md).
+## v1 (Phase 1-2-3 — Tamamlandı)
 
-## Nereden başlamalı?
+| Belge | Açıklama |
+|-------|----------|
+| [VISION](v1/VISION.md) | Ürün vizyonu ve hedefler |
+| [ARCHITECTURE](v1/ARCHITECTURE.md) | Mimari tasarım |
+| [DIRECTORY_MAP](v1/DIRECTORY_MAP.md) | Güncel dizin haritası + faz etiketleri |
+| [CODEBASE_OVERVIEW](v1/CODEBASE_OVERVIEW.md) | Genel bakış |
+| [SYSTEM_SUMMARY](v1/SYSTEM_SUMMARY.md) | Sistem özeti |
 
-1. Sistemi ilk kez kuruyorsan: [setup/QUICK_START.md](setup/QUICK_START.md)
-2. İlk tarama bitti, ne yapacağını öğrenmek istiyorsan: [usage/APPLY_NOW.md](usage/APPLY_NOW.md)
-3. Mimariyi/tüm akışı anlamak istiyorsan: [SYSTEM_SUMMARY.md](SYSTEM_SUMMARY.md)
+### Faz Raporları
 
-## setup/ — Kurulum ve otomasyon
+| Faz | Rapor |
+|-----|-------|
+| Phase 1 — Foundation | [PHASE_1_REPORT](v1/phases/PHASE_1_REPORT.md) |
+| Phase 2 — Intelligence Core | [PHASE_2_REPORT](v1/phases/PHASE_2_REPORT.md) |
+| Phase 3 — Company & Market | [PHASE_3_REPORT](v1/phases/PHASE_3_REPORT.md) |
 
-| Dosya | İçerik |
-|---|---|
-| [QUICK_START.md](setup/QUICK_START.md) | İlk taramayı çalıştırma, sonuçları okuma, 5 dakikalık kurulum |
-| [WINDOWS_SCHEDULER_GUIDE.md](setup/WINDOWS_SCHEDULER_GUIDE.md) | `run_full_scan.py`'yi Windows Task Scheduler ile her 3 günde bir otomatik çalıştırma |
-| [GITHUB_GUIDE.md](setup/GITHUB_GUIDE.md) | Repoyu GitHub'a push etme, başvuru takibini GitHub Issues/Projects ile yapma |
+### Geliştirme Belgeleri
 
-## usage/ — Günlük kullanım
+| Belge | Açıklama |
+|-------|----------|
+| [DATABASE_AUDIT](v1/development/DATABASE_AUDIT.md) | DB tablo ve migration analizi |
+| [MIGRATION_REPORT](v1/development/MIGRATION_REPORT.md) | Kod migrasyon geçmişi |
 
-| Dosya | İçerik |
-|---|---|
-| [USAGE.md](usage/USAGE.md) | Career OS'un ne eklediği, kullanım seçenekleri (CLI/Python), sorun giderme |
-| [APPLY_NOW.md](usage/APPLY_NOW.md) | `apply_strategy.py` çalıştırıldıktan sonra üretilen dosyaların nasıl okunacağı |
+## Kurulum ve Kullanım
 
-## tracking/ — Başvuru takibi (canlı veri)
-
-| Dosya | İçerik |
-|---|---|
-| [JOB_APPLICATIONS.md](tracking/JOB_APPLICATIONS.md) | Tek tek başvuru kayıtları — elle güncellenen ana tracker |
-| [APPLICATION_TRACKER.md](tracking/APPLICATION_TRACKER.md) | 8 haftalık sprint için haftalık hedef/metrik şablonu |
-
-Bu ikisi şablon/canlı veri olduğu için diğer kategorilerden farklı: "nasıl
-çalışır" değil, "şu anki durum ne" sorusuna cevap veriyor.
-
-## strategy/ — İş arama stratejisi
-
-| Dosya | İçerik |
-|---|---|
-| [2_MONTH_ACTION_PLAN.md](strategy/2_MONTH_ACTION_PLAN.md) | 8 haftalık, çok kanallı (başvuru + cold email + LinkedIn) iş arama planı |
-
-Bu doküman araçla ilgili değil — iş arama sürecinin kendisiyle ilgili.
-
-## Kök dizinde kalanlar
-
-`docs/` dışında, repo kökünde sadece iki doküman var:
-
-- [../README.md](../README.md) — projenin genel girişi, iki sistemin (ApplyPilot + Career OS) nasıl bağlandığı
-- [../CHANGELOG.md](../CHANGELOG.md) — her taramanın kayıt defteri
-
-Kod mimarisi için: [../career_os/README.md](../career_os/README.md)
+| Belge | Açıklama |
+|-------|----------|
+| [QUICK_START](setup/QUICK_START.md) | Hızlı başlangıç |
+| [GITHUB_GUIDE](setup/GITHUB_GUIDE.md) | GitHub entegrasyonu |
+| [USAGE](usage/USAGE.md) | Kullanım kılavuzu |

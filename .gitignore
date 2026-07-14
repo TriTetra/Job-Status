@@ -114,3 +114,16 @@ applypilot_package_*/
 .idea/
 *.suo
 *.user
+
+venv/
+logs/
+
+# Archive folder (local cleanup, not part of history)
+_archive/
+
+# Personal notes / scratch
+personal/
+
+# Python cache
+*.pyc
+*.pyo

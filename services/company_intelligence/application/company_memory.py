@@ -1,9 +1,9 @@
-"""Per-user application history and advice for each company."""
+﻿"""Per-user application history and advice for each company."""
 
 from typing import Dict, List, Optional
 
-from packages.db.connection import db
-from packages.db.repositories import CompanyMemoryRepository
+from core.db.connection import db
+from core.db.repositories import CompanyMemoryRepository
 
 
 class CompanyMemoryService:

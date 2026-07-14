@@ -1,10 +1,10 @@
-"""User preferences service."""
+﻿"""User preferences service."""
 
 from typing import Dict
 
-from packages.db.connection import db
-from packages.db.repositories import UserSettingsRepository
-from packages.domain import UserPreferences
+from core.db.connection import db
+from core.db.repositories import UserSettingsRepository
+from core.domain import UserPreferences
 
 
 class PreferencesService:

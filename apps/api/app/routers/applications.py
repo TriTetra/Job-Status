@@ -1,4 +1,4 @@
-"""Applications router — CRUD for the application pipeline."""
+﻿"""Applications router — CRUD for the application pipeline."""
 
 from typing import List, Optional
 
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.application import ApplicationCreate, ApplicationResponse, ApplicationUpdate
-from packages.db.repositories import ApplicationRepository
+from core.db.repositories import ApplicationRepository
 
 router = APIRouter()
 

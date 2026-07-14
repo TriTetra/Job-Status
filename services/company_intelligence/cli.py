@@ -1,4 +1,4 @@
-"""CLI for Company Intelligence."""
+﻿"""CLI for Company Intelligence."""
 
 import sys
 from pathlib import Path
@@ -7,8 +7,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import typer
 
-from packages.db.connection import db
-from packages.db.repositories import CompanyRepository
+from core.db.connection import db
+from core.db.repositories import CompanyRepository
 
 from .application.company_enricher import CompanyEnricher
 from .application.company_memory import CompanyMemoryService

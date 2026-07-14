@@ -1,4 +1,4 @@
-"""Companies router."""
+﻿"""Companies router."""
 
 from typing import List, Optional
 
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.company import CompanyMemoryResponse, CompanyResponse
-from packages.db.repositories import CompanyMemoryRepository, CompanyRepository
+from core.db.repositories import CompanyMemoryRepository, CompanyRepository
 
 router = APIRouter()
 

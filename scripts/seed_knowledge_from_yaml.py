@@ -1,4 +1,4 @@
-"""Seed knowledge DB tables from YAML files.
+﻿"""Seed knowledge DB tables from YAML files.
 
 One-time migration. After this, DB is source of truth.
 YAML files remain as version-controlled backup.
@@ -23,13 +23,13 @@ except ImportError:
 
 import yaml
 
-from packages.db.connection import db
-from packages.db.models import Country, SalaryRange, Visa
+from core.db.connection import db
+from core.db.models import Country, SalaryRange, Visa
 
 
 def seed_countries() -> int:
     count = 0
-    countries_dir = Path("knowledge/v1/countries")
+    countries_dir = Path("infra/seeds/v1/countries")
     if not countries_dir.exists():
         print(f"  Directory not found: {countries_dir}")
         return 0
@@ -75,7 +75,7 @@ def seed_countries() -> int:
 
 def seed_visas() -> int:
     count = 0
-    visas_dir = Path("knowledge/v1/visa")
+    visas_dir = Path("infra/seeds/v1/visa")
     if not visas_dir.exists():
         print(f"  Directory not found: {visas_dir}")
         return 0
@@ -120,7 +120,7 @@ def seed_visas() -> int:
 
 def seed_salaries() -> int:
     count = 0
-    salaries_dir = Path("knowledge/v1/salaries")
+    salaries_dir = Path("infra/seeds/v1/salaries")
     if not salaries_dir.exists():
         print(f"  Directory not found: {salaries_dir}")
         return 0

@@ -1,11 +1,11 @@
-"""Extract funding/layoff signals from TechCrunch articles."""
+﻿"""Extract funding/layoff signals from TechCrunch articles."""
 
 import re
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from packages.db.connection import db
-from packages.db.repositories import MarketSignalRepository
+from core.db.connection import db
+from core.db.repositories import MarketSignalRepository
 
 from .rss_client import TechCrunchClient
 

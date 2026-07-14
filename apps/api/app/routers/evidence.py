@@ -1,4 +1,4 @@
-"""Evidence router — skill confidence from GitHub projects."""
+﻿"""Evidence router — skill confidence from GitHub projects."""
 
 from typing import Any, Dict, List
 
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
-from packages.db.repositories import EvidenceRepository
+from core.db.repositories import EvidenceRepository
 
 router = APIRouter()
 

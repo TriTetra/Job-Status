@@ -1,4 +1,4 @@
-"""
+﻿"""
 Target-Aware Resume Generator.
 
 Evidence > Claim in action: generates a resume tailored to a specific
@@ -9,9 +9,9 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from packages.db.connection import db
-from packages.db.repositories import EvidenceRepository
-from prompts import template_loader
+from core.db.connection import db
+from core.db.repositories import EvidenceRepository
+from core.prompts import template_loader
 
 from .llm_client import get_llm_client
 

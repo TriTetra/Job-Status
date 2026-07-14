@@ -1,4 +1,4 @@
-"""Market intelligence router."""
+﻿"""Market intelligence router."""
 
 from typing import List
 
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session
 from ..schemas.market import MarketSignalResponse, MarketSummaryResponse, SkillTrendResponse
-from packages.db.repositories import MarketSignalRepository
+from core.db.repositories import MarketSignalRepository
 
 router = APIRouter()
 
