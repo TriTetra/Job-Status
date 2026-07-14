@@ -130,6 +130,26 @@ def main():
                 sp.commit()
                 saved_count += 1
 
+                # Publish event (fire-and-forget, does not affect DB transaction)
+                from events import event_bus as _bus
+                from events.job_events import JobScored as _JobScored
+                _bus.publish(_JobScored(
+                    job_id=opp.job.url,
+                    url=opp.job.url,
+                    title=opp.job.title,
+                    company=opp.job.company,
+                    career_score=float(opp.career_score),
+                    fit_score=float(opp.fit_score),
+                    acceptance_probability=float(opp.acceptance_probability),
+                    career_value=float(opp.career_value),
+                    market_demand=float(opp.market_demand),
+                    expected_value=float(opp.expected_value),
+                    recommendation=str(opp.recommendation),
+                    skill_gaps=skill_gaps,
+                    explanation=explanation,
+                    source="apply_strategy",
+                ))
+
             except Exception as e:
                 sp.rollback()
                 failed_count += 1
