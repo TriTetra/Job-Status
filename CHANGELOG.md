@@ -21,9 +21,38 @@ Sıralama: en yeniden en eskiye.
 | Refactor | Plugin + Config-Driven Architecture: hardcode sıfır, `config/plugins.yaml`, `ResumeParserPlugin` ABC | ✅ Tamam | 2026-07-14 |
 | Event Bus | Thread-safe pub/sub: `events/`, 18 domain event tipi, `apply_strategy` entegrasyonu | ✅ Tamam | 2026-07-14 |
 | ApplyPilot Plugin | `JobSourcePlugin` ABC, SQLite client/adapter, config-driven extraction, 6/6 test | ✅ Tamam | 2026-07-14 |
+| Single DB | PostgreSQL `jobs` tablosu, `JobRepository`, Alembic migration, 562 job sync | ✅ Tamam | 2026-07-14 |
 | Phase 2C | Target-aware resume generator (job ilanına göre CV sıralaması) | ⏳ Bekliyor | — |
 | Phase 3A | FastAPI servis katmanı: `/score`, `/apply`, `/scan` endpoint'leri | ⏳ Bekliyor | — |
 | Phase 3B | VPS deployment: Docker Compose + PostgreSQL + hiring-agent | ⏳ Bekliyor | — |
+
+---
+
+## [Single DB] — 2026-07-14 — PostgreSQL tek veritabanı ✅
+
+### Problem
+`ApplyPilotPlugin` iş ilanlarını harici bir SQLite dosyasından (`~/.applypilot/applypilot.db`)
+okuyordu. Proje kendi veritabanında sadece URL ve skorları tutuyordu; başlık/şirket/açıklama
+bilgileri PostgreSQL'de yoktu.
+
+### Çözüm
+- **`packages/db/models/job.py`** — yeni `Job` modeli (url PK, title, company, description,
+  required_skills JSONB, salary_min/max, remote, vb.)
+- **`packages/db/repositories/job_repo.py`** — `JobRepository` (`upsert_many`, `get_unscored`,
+  `known_urls`)
+- **Alembic migration** `a1b2c3d4e5f6` — `jobs` tablosu + 6 index (GIN dahil)
+- **`scripts/sync_jobs_from_applypilot.py`** — SQLite → PostgreSQL tek seferlik/tekrarlı sync
+  (`--min-score`, `--hours` flag'leri)
+
+### Sonuç
+```
+python scripts/sync_jobs_from_applypilot.py
+# → 562 job PostgreSQL jobs tablosuna aktarıldı
+# → company known: 261/562, remote: 388/562
+```
+
+SQLite artık sadece ApplyPilot tarafından yazılan harici bir INPUT kaynağı.
+Projenin kendi pipeline'ı tamamen PostgreSQL üzerinde çalışıyor.
 
 ---
 
