@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/newsreader/wght-italic.css";
+
+/* ============================================
+   CareerOS Design System v1.1 — MP072 Palette
+   ============================================ */
+
+:root {
+  --background:        #1B2632;
+  --foreground:        #EEE9DF;
+
+  --surface:           #2C3B4D;
+  --surface-hover:     #35485B;
+  --surface-elevated:  #3A4A5E;
+
+  --text-primary:      #EEE9DF;
+  --text-secondary:    #C9C1B1;
+  --text-muted:        #8D918F;
+
+  --accent:            #FFB162;
+  --accent-hover:      #FFC085;
+  --accent-secondary:  #A35139;
+  --accent-fg:         #1B2632;
+
+  --success:           #7FB685;
+  --warning:           #FFB162;
+  --danger:            #C96A5A;
+  --info:              #6BA5D7;
+
+  --border:            rgba(238, 233, 223, 0.12);
+  --border-strong:     rgba(238, 233, 223, 0.24);
+
+  --ring:              #FFB162;
+
+  --sidebar-width:     260px;
+  --topbar-height:     64px;
+}
+
+@theme inline {
+  --color-background:       var(--background);
+  --color-foreground:       var(--foreground);
+  --color-surface:          var(--surface);
+  --color-surface-hover:    var(--surface-hover);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-text-primary:     var(--text-primary);
+  --color-text-secondary:   var(--text-secondary);
+  --color-text-muted:       var(--text-muted);
+  --color-accent:           var(--accent);
+  --color-accent-hover:     var(--accent-hover);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-fg:        var(--accent-fg);
+  --color-success:          var(--success);
+  --color-warning:          var(--warning);
+  --color-danger:           var(--danger);
+  --color-info:             var(--info);
+  --color-border:           var(--border);
+  --color-border-strong:    var(--border-strong);
+  --color-ring:             var(--ring);
+
+  --font-sans:    "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono Variable", ui-monospace, monospace;
+  --font-editorial: "Newsreader Variable", Georgia, "Times New Roman", serif;
+
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   16px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.3);
+
+  --motion-fast:   150ms;
+  --motion-normal: 250ms;
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Rhythm System v1.0 ─────────────────────── */
+  --rhythm-pause:      48px;
+  --rhythm-thought:    16px;
+  --rhythm-section:    32px;
+  --rhythm-decision:   40px;
+  --rhythm-reflection: 64px;
+  --rhythm-breathing:  96px;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(255, 177, 98, 0.25);
+  color: #EEE9DF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@layer utilities {
+  .rhythm-pause      { margin-bottom: var(--rhythm-pause); }
+  .rhythm-thought    { margin-bottom: var(--rhythm-thought); }
+  .rhythm-section    { margin-bottom: var(--rhythm-section); }
+  .rhythm-decision   { margin-bottom: var(--rhythm-decision); }
+  .rhythm-reflection { margin-bottom: var(--rhythm-reflection); }
+  .rhythm-breathing  { margin-bottom: var(--rhythm-breathing); }
+
+  .animate-fade-in-up {
+    animation: fade-in-up var(--motion-normal, 250ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(238,233,223,0.04) 0%,
+      rgba(238,233,223,0.08) 50%,
+      rgba(238,233,223,0.04) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  .stagger > * {
+    opacity: 0;
+    animation: fade-in-up var(--motion-normal, 250ms) var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+  }
+  .stagger > *:nth-child(1) { animation-delay:   0ms; }
+  .stagger > *:nth-child(2) { animation-delay:  60ms; }
+  .stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger > *:nth-child(6) { animation-delay: 300ms; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-up { animation: none; opacity: 1; transform: none; }
+    .skeleton-shimmer   { animation: none; background: rgba(238,233,223,0.06); }
+    .stagger > *        { animation: none; opacity: 1; }
+  }
+
+  .font-editorial {
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-optical-sizing: auto;
+  }
+
+  .surface {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .surface-elevated {
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  /* Page layout containers */
+  .narrative-container {
+    max-width: 880px;
+    margin-inline: auto;
+  }
+  .wide-container {
+    max-width: 1280px;
+    margin-inline: auto;
+  }
+}

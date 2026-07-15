@@ -9,6 +9,24 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |-------|---------|-------|-------|
+| Country Combobox + Logo | Country dropdown → SearchableCombobox (region grouping, 55 ülke); AplioLogo sm→md; WizardShell header compact | ✅ Tamam | 2026-07-15 |
+| Phase 2 Step 5+6 | Backend IdentityPayload fix (career_level_origin, slug→UUID lookup, custom_role branching) + E2E 4/4 test geçti | ✅ Tamam | 2026-07-15 |
+| Phase 2 Step 3 + 4 | SearchableCombobox hybrid rewrite (debounce, categories, keyboard nav, ARIA, Loader2) + step-identity.tsx updated | ✅ Tamam | 2026-07-15 |
+| Phase 2 Step 2 | Frontend rolesApi client (api/roles.ts) — Role + RoleSearchResult types, 4 method, TS temiz | ✅ Tamam | 2026-07-15 |
+| Phase 2 Step 1 | Roles API: GET /api/roles, /search (scored), /categories, /{slug} — 5/5 test geçti | ✅ Tamam | 2026-07-15 |
+| Roles Seed (Phase 1.5) | 180 canonical tech roles batch-upserted into `roles` table via idempotent seed script | ✅ Tamam | 2026-07-15 |
+| Model Sync | SQLAlchemy model dosyaları UUID-PK migration şemasına güncellendi; CustomRole, RoleAlias modelleri oluşturuldu | ✅ Tamam | 2026-07-15 |
+| Roles & UserRoles (Phase 1) | Career Intelligence Graph migrations (roles, custom_roles, user_roles with XOR constraint, role_aliases) | ✅ Tamam | 2026-07-15 |
+| Phase A.3 Ext | Identity Step Redesign & Scroll-free layout fit (compact spacing, timezone removed) | ✅ Tamam | 2026-07-15 |
+| Bugfix | Auto-provision user on state query (resolves login redirection error) | ✅ Tamam | 2026-07-15 |
+| Phase A.7 | Onboarding BUILDING: Career Graph generation, SVG graph animation with framer-motion, typewriter logs | ✅ Tamam | 2026-07-15 |
+| Phase A.6 | Onboarding Evidence: Resume upload, background extraction job, status polling, real-time typewriter logs | ✅ Tamam | 2026-07-15 |
+| Phase A.5 | Onboarding Goals Step: ChipMultiSelect, SearchableMultiSelect, validation, API integration | ✅ Tamam | 2026-07-15 |
+| Phase A.4 | Backend API (onboarding router + Clerk webhook) + middleware redirect | ✅ Tamam | 2026-07-15 |
+| Phase A.3 | Onboarding wizard shell: WizardShell, StepWelcome, StepIdentity, StepGoals | ✅ Tamam | 2026-07-15 |
+| Phase A.2 | Aplio rebrand (AplioLogo), users DB migration, UserRepository | ✅ Tamam | 2026-07-15 |
+| Phase A.1 | Clerk Auth: middleware, ClerkProvider, sign-in/sign-up pages, UserButton, Aplio brand | ✅ Tamam | 2026-07-15 |
+| Frontend Days 1-5 | Next.js 16 app shell, Briefing page, Inbox, Companies — typography-first design | ✅ Tamam | 2026-07-15 |
 | Phase 0 | Hazırlık: git tag, backup, API key rotation, architecture planning | ✅ Tamam | 2026-07-13 |
 | Phase 1A | PostgreSQL DB layer: 4 tablo, Alembic migrations, repositories | ✅ Tamam | 2026-07-13 |
 | Phase 1B | Career Scores → PostgreSQL; skill extraction fix; threshold fix | ✅ Tamam | 2026-07-14 |
@@ -35,6 +53,418 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Phase 2 Step 5+6] — 2026-07-15 — Backend Verification + E2E Tests ✅
+
+### Yapılan
+
+**IdentityPayload güncellemeler** (`apps/api/app/routers/onboarding.py`):
+- `career_level_origin` field eklendi (`"user" | "system" | "ai_estimated"`, default `"system"`)
+- `current_role_id` max_length: 50 → 200 (uzun slug'lar için)
+
+**save_identity 3-way branching** (UUID / slug / custom_ prefix):
+- **UUID**: doğrudan `users.current_role_id` FK set edilir, `source='canonical'`
+- **Slug** (static fallback IDs): `roles` tablosunda slug lookup → UUID alır, `source='canonical'`
+- **`custom_` prefix**: `custom_roles` tablosuna upsert (idempotent: aynı user+title tekrar kullanılır), `users.current_custom_role_id` set edilir, `source='custom'`
+- `career_level_origin`, `career_level`, `years_in_role` user'a yazılıyor
+- `profile_data`'ya `current_role_title` eklendi
+- `user_roles` INSERT: `custom_role_id` kolonu doğru handle ediliyor
+
+**Frontend `step-identity.tsx`** (Step 4 tamamlandı):
+- `careerLevelOrigin` state eklendi
+- Slider onChange: `origin = "system"` (otomatik öneri)
+- Career level buton onClick: öneriyle aynıysa `"system"`, farklıysa `"user"`
+- `saveIdentity` çağrısına `career_level_origin` eklendi
+- `onboardingApi.saveIdentity` type'ına `career_level_origin?` eklendi
+
+**E2E Test Sonuçları:**
+
+| # | Test | Durum | Not |
+|---|---|---|---|
+| 1 | Canonical role (slug) | ✅ | slug → UUID lookup çalıştı, `current_role_id=UUID, source=canonical` |
+| 2 | Custom role | ✅ | `custom_roles` kaydı oluştu, `current_custom_role_id` set |
+| 3 | Career level origin=user | ✅ | `career_level=mid, career_level_origin=user` (otomatiği override etti) |
+| 4 | Role değişimi history | ✅ | Önceki `is_current=False, ended_at=bugün`, yeni `is_current=True` |
+
+TypeScript: `npx tsc --noEmit` — 0 hata
+
+---
+
+## [Phase 2 Step 3+4] — 2026-07-15 — Hybrid SearchableCombobox + step-identity Güncelleme
+
+### Yapılan
+
+**SearchableCombobox tam yeniden yazım** (`apps/web/components/shared/searchable-combobox.tsx`):
+- `ComboboxOption` interface: `{ id, title, category, aliases?, slug? }` — eski `Option` tipi kaldırıldı
+- `initialOptions` prop: static fallback (anında hydration, backend down olsa bile çalışır)
+- `onSearch` prop: async backend API fonksiyonu (300ms debounced)
+- `clientSideSearch()` fallback: title/aliases/category skorlama, en iyi 10 sonuç
+- Kategori bazlı gruplandırma (sticky header, `role="group"`)
+- Keyboard nav: ↑↓ Enter Esc — flat index tüm grupları kapsar
+- Custom rol kaçış yolu: `allowCustom`, `customLabel` template (`{query}` placeholder)
+- WAI-ARIA: `role="combobox"`, `role="listbox"`, `role="option"`, `aria-expanded`, `aria-selected`
+- Loading state: `Loader2 animate-spin` hem trigger'da hem dropdown'da
+- `useRef<T | undefined>(undefined)` — React 19 tip uyumluluğu
+
+**step-identity.tsx güncelleme** (Step 4):
+- `rolesApi` import edildi `@/features/onboarding`'den
+- `ComboboxOption` import edildi typed
+- `staticRoles`: `ROLES[]` → `ComboboxOption[]` mapping (slug yok, aliases var)
+- `handleRoleSearch`: `rolesApi.search(query, 12)` → `ComboboxOption[]` (useCallback ile)
+- `SearchableCombobox` prop'ları: `options` → `initialOptions` + `onSearch`, `customLabel` eklendi
+
+**TypeScript:** `npx tsc --noEmit` — 0 hata
+
+---
+
+## [Model Sync] — 2026-07-15 — SQLAlchemy Model ↔ Migration Senkronizasyonu 🔧
+
+### Yapılan
+
+**Problem:** Model dosyaları hâlâ `String(50)` PK kullanırken, yeni migration'lar `UUID` PK ile oluşturulmuştu. Bu uyumsuzluk seed script'in import aşamasında çökmesine neden oluyordu.
+
+**Model Güncellemeleri:**
+- **`core/domain/identity/role.py`** — `Role` modeli UUID PK'ya geçirildi. `slug`, `metadata_` (JSONB), `version`, `updated_at` alanları eklendi. Eski `String(50)` PK kaldırıldı.
+- **`core/domain/identity/user_role.py`** — `UserRole` modeli UUID PK'ya geçirildi. `custom_role_id` (UUID FK → `custom_roles.id`) eklendi, XOR constraint dokümente edildi.
+- **`core/domain/identity/user.py`** — `current_role_id` tipi `String(50)` → `Uuid` FK olarak güncellendi. `current_custom_role_id` ve `career_level_origin` alanları eklendi.
+- **[NEW] `core/domain/identity/custom_role.py`** — Migration 002'ye karşılık gelen `CustomRole` modeli oluşturuldu: AI mapping (`mapped_role_id`, `mapping_confidence`, `mapping_source`, `mapping_metadata`).
+- **[NEW] `core/domain/identity/role_alias.py`** — Migration 005'e karşılık gelen `RoleAlias` modeli oluşturuldu: rol unvan değişim geçmişi takibi.
+- **`core/db/models/__init__.py`** — `CustomRole` ve `RoleAlias` import ve `__all__` listesine eklendi.
+
+---
+
+## [Roles Seed — Phase 1.5] — 2026-07-15 — 180 Canonical Tech Roles Seeded 🌱
+
+### Yapılan
+
+**Problem:** `roles` tablosu boştu. Career Intelligence Graph'ın çalışması için canonical rol ontolojisinin yüklenmesi gerekiyordu.
+
+**Seed Script (`scripts/seed_roles_v1.py`):**
+- 180 canonical tech rolü zengin metadata ile tanımlandı (JSONB `aliases` ve `metadata` alanları).
+- Neon Serverless DB'de 180 tekil INSERT'in long-running transaction lock'a yol açması sorunu tespit edildi.
+- `session_scope()` → `create_engine()` + `engine.begin()` ile doğrudan bağlantı yönetimine geçildi.
+- Tekil INSERT döngüsü → **tek batch `INSERT ... ON CONFLICT (slug) DO UPDATE`** statement'ına dönüştürüldü.
+- `CAST(:param AS jsonb)` kullanılarak SQLAlchemy'nin `:param` bind syntax'i ile PostgreSQL `::jsonb` cast'i arasındaki çakışma çözüldü.
+- İdempotent: tekrar çalıştırıldığında mevcut rolleri günceller, yenilerini ekler.
+
+**Kategori Dağılımı (180 Rol):**
+
+| Kategori | Sayı |
+|---|---|
+| Engineering | 69 |
+| AI/ML | 26 |
+| Data | 15 |
+| Management | 14 |
+| Other | 12 |
+| DevOps | 11 |
+| Product | 11 |
+| Design | 9 |
+| QA | 9 |
+| Research | 4 |
+
+**Yardımcı Scriptler:**
+- `scripts/test_db_insert.py` — Bağımsız DB bağlantı ve insert doğrulama.
+- `scripts/verify_roles.py` — Kategori dağılımı ve örnek roller raporlama.
+- `scripts/clear_and_test_db.py` — Idle transaction temizleme ve DB erişim testi.
+
+---
+
+## [Roles & UserRoles — Phase 1] — 2026-07-15 — Migrations Setup 🚀
+
+### Yapılan
+
+**Veritabanı & Alembic Migrations (`core/db/migrations/versions/`):**
+- Önceki birleştirilmiş migration geri alınarak (`downgrade e1f2a3b4c5d6`), 5 adet sıralı ve bağımsız migration dosyası oluşturuldu:
+  - **`001_roles`:** UUID birincil anahtarlı ve GIN indeksli `roles` tablosu oluşturuldu. (PostgreSQL GIN indeks kısıtlaması nedeniyle `metadata` ve `aliases` kolonları `JSONB` olarak tanımlandı).
+  - **`002_custom_roles`:** Kullanıcıların girdiği özel rolleri ve bunların canonical rollere eşleşme oranlarını/kaynaklarını tutan `custom_roles` tablosu oluşturuldu. Yabancı anahtar `users.clerk_id` (`sa.String(128)`) olacak şekilde yapılandırıldı.
+  - **`003_user_roles`:** Kariyer geçmişini tutan `user_roles` tablosu oluşturuldu. Bir kullanıcının aynı anda sadece tek bir güncel rolü olabilmesini (`is_current = true`) sağlayan kısmi benzersiz indeks (partial unique index) ve ya canonical ya da custom rol seçilmesini garanti altına alan **XOR constraint** (`chk_role_xor_custom`) eklendi.
+  - **`004_users_career`:** `users` tablosuna `years_in_role`, `career_level`, `career_level_origin`, ve UUID bazlı `current_role_id` / `current_custom_role_id` kolonları eklendi.
+  - **`005_role_aliases`:** Roller arasındaki unvan değişim ve evrim geçmişini takip eden `role_aliases` tablosu oluşturuldu.
+- Tüm migration zinciri (`e1f2a3b4c5d6` -> `001_roles` -> `002_custom_roles` -> `003_user_roles` -> `004_users_career` -> `005_role_aliases`) veritabanında başarıyla çalıştırıldı (`alembic upgrade head`).
+
+---
+
+## [Roles & UserRoles] — 2026-07-15 — Roles & UserRoles History Implementation 🚀
+
+### Yapılan
+
+**Veritabanı ve Alembic Migration (`core/db/migrations/versions/...`):**
+- `roles` tablosu oluşturuldu: Yetkinlik alanları (`id`, `title`, `category`, `aliases` (JSON), `esco_id`, `soc_code`) tanımlandı.
+- `user_roles` tablosu oluşturuldu: Kullanıcının kariyer geçmişini (tarihsel rol kayıtları) takip etmek amacıyla `user_id` (`users.clerk_id` yabancı anahtarı ile), `role_id` (`roles.id` yabancı anahtarı ile), `started_at`, `ended_at`, `is_current`, `source` kolonları tanımlandı.
+- 80'den fazla canonical tech rolü (Engineering, AI/ML, Data, DevOps, Product, Design, QA, Management, Research) aliases verileriyle birlikte migration aşamasında `roles` tablosuna seed edildi.
+- `users` tablosuna hızlı arama amaçlı `current_role_id`, `years_in_role` ve `career_level` kolonları eklendi.
+
+**Backend Modelleri ve Repositoriler:**
+- `Role` ve `UserRole` SQLAlchemy modelleri `core/domain/identity/` altında tanımlandı ve paket dışa aktarımlarına dahil edildi.
+- `User` modeline yeni kariyer kolonları eklendi.
+- `RoleRepository` oluşturuldu: Roller üzerinde fuzzy arama (`search`) ve kategori bazlı filtreleme metodları implement edildi.
+
+**Backend API & Router (`apps/api/app/routers/roles.py`):**
+- `/api/roles/search?q=...` ve `/api/roles/categories` endpoint'leri yazılarak router FastAPI ana uygulamasına (`main.py`) eklendi.
+- `/api/onboarding/identity` endpoint'i güncellenerek yeni rol ve kıdem seviyesi parametreleri (`current_role_id`, `current_role_title`, `years_in_role`, `career_level`) kabul edilecek şekilde genişletildi. Yeni rol kaydetme işlemi, `user_roles` tablosunda eski aktif rolü kapatıp yeni aktif rolü başlatacak şekilde transactional SQL komutlarına bağlandı.
+
+**Frontend Bileşenleri ve Veri Katmanı:**
+- `apps/web/features/onboarding/data/roles.ts` — 80+ rol listesi ve fuzzy arama fonksiyonu frontend tarafına eklendi.
+- `SearchableCombobox` — Arama kutusunda kategorilere göre ayrılmış, klavye ile gezinme ve listede olmayan özel rol tanımı ("custom role") girmeyi destekleyen autocomplete dropdown bileşeni yazıldı.
+- `step-identity.tsx` — Kimlik formu tamamen yenilendi:
+  - Kullanıcıdan meslek başlığı `SearchableCombobox` ile alınıyor.
+  - "Years in this role" kaydırıcısı (slider) eklendi ve seçilen yıla göre kariyer seviyesi otomatik tavsiye ediliyor (junior, mid, senior, staff, principal).
+  - Kullanıcı tavsiye edilen kariyer seviyesini kart butonlar yardımıyla değiştirebiliyor.
+- `step-goals.tsx` — Yeni `Role` veri yapısı doğrultusunda çoklu rol seçici alanı güncellendi.
+
+---
+
+## [Phase A.3 Extension] — 2026-07-15 — Identity Step Alignment & Redesign 🛠️
+
+### Yapılan
+
+**Layout Güncellemesi (`apps/web/app/(auth)/onboarding/layout.tsx`):**
+- Layout bileşeni `h-screen w-screen flex flex-col overflow-hidden` yapısına geçirilerek ana pencere kaydırma çubukları gizlendi.
+- İçerik alanı `flex-1 overflow-y-auto custom-scrollbar` olarak ayarlandı; böylelikle 1366x768 gibi ortalama dizüstü bilgisayar ekranlarında formun tamamen dikey kaydırma gerektirmeden tam sığması sağlandı, daha küçük ekranlarda ise iç kaydırma çubuğu devreye girecek şekilde responsive hale getirildi.
+
+**Identity Step UI (`apps/web/app/(auth)/onboarding/_components/step-identity.tsx`):**
+- İstemci bileşeni, backend veri şeması (`IdentityPayload`) ile %100 uyumlu şekilde kompakt form spacing kurallarına göre güncellendi:
+  - Form elemanları arası dikey boşluklar daraltıldı (`space-y-4` ve daha sıkı grid aralıkları uygulandı).
+  - Başlık yazı boyutları ve alt boşlukları küçültüldü (`NarrativeText` `xl` ve `sm` boyutlarına çekildi).
+  - Giriş alanlarının dikey padding'i sıkılaştırıldı (`py-2.5` -> `py-2`).
+  - Çalışma izni (Work Authorization) kart boyutları ve açıklama metinleri kısaltılarak dikeyde yer kazanıldı.
+  - Sadece görsel gösterim amaçlı olan ve form kirliliği yaratan **Timezone (Saat Dilimi) alanı arayüzden kaldırıldı** (timezone değeri arka planda otomatik tespit edilerek gönderilmeye devam ediyor).
+  - Toplamda dikey boyutta yaklaşık **270px** yer kazanıldı ve form 1366x768 çözünürlüğe mükemmel şekilde oturdu.
+
+**Sayfa Entegrasyonu (`apps/web/app/(auth)/onboarding/page.tsx`):**
+- `StepIdentity` bileşeni güncellenerek `initialData={status?.profile_data}` ve `onComplete` callback'ini alacak şekilde yapılandırıldı.
+
+---
+
+## [Bugfix] — 2026-07-15 — Auto-Provision User on first API State Query 🛠️
+
+### Yapılan
+
+**Onboarding API (`apps/api/app/routers/onboarding.py`):**
+- `_require_user` helper fonksiyonu güncellenerek, kullanıcının veritabanında bulunmaması durumunda `404 Not Found` hatası döndürmek yerine otomatik olarak bir taslak kullanıcı kaydı oluşturması (`upsert_from_clerk`) sağlandı.
+- Bu sayede, yerel geliştirme (local dev) ortamlarında Clerk webhook'larının (özellikle `user.created` olayının) ulaşıp tetiklenemediği durumlarda, giriş yapan kullanıcıların API durum isteklerinde takılması (ve Next.js middleware katmanının 404 dönen istekler nedeniyle onboarding'e yönlendiremeyip fail-open olarak boş sayfaya geçirmesi) engellendi.
+- İlk kez `/api/onboarding/state` sorgusunu atan yeni bir Clerk kullanıcısı otomatik olarak `NOT_STARTED` durumuyla veri tabanına kaydedilecek ve Next.js middleware'i tarafından `/onboarding?step=IDENTITY` sayfasına sorunsuzca yönlendirilecektir.
+
+**Entegrasyon Testi (`tests/test_onboarding_api.py`):**
+- Test akışı güncellenerek, sıfırdan oluşturulan bir kullanıcının webhook çağrılmadan önce doğrudan `GET /api/onboarding/state` ile sorgulanması durumu ve bu sorgulama sonucu başarılı bir şekilde veritabanına `NOT_STARTED` durumuyla otomatik olarak provizyon edilip onboarding adımlarına devam edebildiği doğrulandı.
+
+---
+
+## [Phase A.7] — 2026-07-15 — Onboarding BUILDING Step Implementation ✅
+
+### Yapılan
+
+**Backend API (`apps/api/app/routers/onboarding.py`):**
+- `/api/onboarding/build-graph` — Özgeçmiş analizi verilerini kullanarak Career Graph derleyen ve `ExtractionJob` başlatan POST endpoint'i eklendi.
+- `/api/onboarding/build-graph/{job_id}/status` — Yürütülen graph oluşturma işinin durumunu ve log akışını dönen GET polling endpoint'i eklendi.
+- `run_graph_building` — Aşamalı Career Graph oluşturma adımlarını simüle eden, yetkinlikleri ve projeleri ilişkilendiren asenkron arka plan görevi eklendi.
+- Derlenen Career Graph veri modeli (`GraphNode`, `GraphEdge`, `CareerGraph`) Pydantic şemalarıyla tanımlandı ve veri tabanında kullanıcının `profile_data` JSONB kolonundaki `career_graph` alanına kaydedilerek state `READY` durumuna geçirildi.
+
+**BUILDING UI (`apps/web/app/(auth)/onboarding/_components/step-building.tsx`):**
+- Graph derleme sürecinin yüzdesini, typewriter log ekranını ve SVG bileşenini koordine eden BUILDING aşama arayüzü yazıldı.
+- İşlem tamamlandığında kullanıcıyı 3 saniye gecikmeyle `/briefing` sayfasına yönlendiren akış entegre edildi.
+
+**Career Graph Animation (`apps/web/app/(auth)/onboarding/_components/career-graph.tsx`):**
+- Çıkarılan yetkinlikleri (skill), projeleri (project) ve şirketleri (company) dairesel bir yerleşimle görselleştiren interaktif SVG bileşeni oluşturuldu.
+- Düğüm (node) ve kenarların (edge) sırayla ve akıcı bir şekilde ekrana gelmesini sağlayan `framer-motion` animasyonları entegre edildi.
+
+**Sayfa Entegrasyonu & API Client:**
+- `apps/web/features/onboarding/api.ts` — `buildGraph` ve `getGraphStatus` metotları eklenerek API istemcisi güncellendi.
+- `apps/web/app/(auth)/onboarding/page.tsx` — `BUILDING` adımında `StepBuilding` bileşeninin render edilmesi sağlandı.
+
+---
+
+## [Phase A.6] — 2026-07-15 — Onboarding Evidence Step Implementation ✅
+
+### Yapılan
+
+**Backend API (`apps/api/app/routers/onboarding.py`):**
+- `/api/onboarding/resume` — PDF formatında özgeçmiş dosyasını kabul eden ve `ExtractionJob` başlatan POST endpoint'i eklendi.
+- `/api/onboarding/resume/{job_id}/status` — Yürütülen extraction işinin durumunu (`pending` | `parsing` | `extracting` | `completed` | `failed`) ve gerçek zamanlı log akışını dönen GET polling endpoint'i eklendi.
+- `run_extraction` — Arka planda `Hiring-Agent` entegrasyonunu ve aşamalı log üretimini simüle eden asyncio tabanlı arka plan görevi (background task) eklendi.
+- Dosya yükleme desteği ve `UploadFile` tip ayrıştırması için `python-multipart` paket bağımlılığı projeye dahil edildi (`requirements.txt` güncellendi).
+- `.env` içerisindeki `DATABASE_URL`'den `channel_binding=require` parametresi kaldırılarak, bazı Windows ortamlarındaki TCP bağlantı kilitlenmesi sorunu giderildi.
+
+**Evidence UI (`apps/web/app/(auth)/onboarding/_components/step-evidence.tsx`):**
+- PDF dosyaları için sürükle-bırak (drag & drop) ve dosya seçici alanı oluşturuldu.
+- Yükleme sonrası başlayan extraction sürecinin ilerleme çubuğu (progress bar) ve dosya bilgisi kartı entegre edildi.
+- Tamamlanma durumunda `skills_extracted`, `companies_found`, `evidence_items` ve `confidence_score` verilerini gösteren özet kartı eklendi.
+- İşlem bittiğinde 1.5 saniye gecikmeyle otomatik olarak bir sonraki adım olan `CONNECTIONS` adımına yönlendirme sağlandı.
+
+**Extraction Log (`apps/web/app/(auth)/onboarding/_components/extraction-log.tsx`):**
+- Gerçek zamanlı logları aşamalı olarak ekrana yansıtan, daktilo efektli (typewriter animation) terminal bileşeni geliştirildi.
+
+**Sayfa Entegrasyonu & API Client:**
+- `apps/web/features/onboarding/api.ts` — `uploadResume` ve `getResumeStatus` metotları eklenerek API istemcisi güncellendi.
+- `apps/web/app/(auth)/onboarding/page.tsx` — `EVIDENCE` adımında `StepEvidence` bileşeninin render edilmesi sağlandı.
+
+---
+
+## [Phase A.5] — 2026-07-15 — Onboarding Goals Step Implementation ✅
+
+### Yapılan
+
+**Onboarding Goals UI (`apps/web/app/(auth)/onboarding/_components/step-goals.tsx`):**
+- Gelişmiş goals seçim formu, linear/conversational stiline göre yeniden tasarlandı.
+- ChipMultiSelect ve SearchableMultiSelect bileşenleri eklenerek, eski comma-separated input yöntemi kaldırıldı.
+- `optimizing_for` alanına max 3 limitli chip seçici eklendi.
+- target roles (`preferred_roles`) ve target countries (`preferred_countries`) için max 5 seçim limitli searchable select eklendi.
+- İsteğe bağlı (optional) salary min, max ve para birimi (`salary_currency`) alanları entegre edildi.
+- Form doğrulama (validation) ve hata yakalama (error handling) durumları eklendi.
+- `onboardingApi.saveGoals` API entegrasyonu tamamlanarak bir sonraki adım olan `EVIDENCE` adımına yönlendirme yapıldı.
+
+**Yeni Bileşenler:**
+- `apps/web/app/(auth)/onboarding/_components/chip-multi-select.tsx` — Çoklu chip seçim arayüzü.
+- `apps/web/app/(auth)/onboarding/_components/searchable-multi-select.tsx` — Arama destekli dropdown çoklu seçim kutusu.
+
+**Veri Sabitleri (`apps/web/features/onboarding/constants.ts`):**
+- `GOALS` (optimizing_for seçenekleri), `ROLES`, `COUNTRIES` ve `CURRENCIES` listeleri onboarding veri modeliyle uyumlu olarak eklendi.
+
+**Sayfa Entegrasyonu (`apps/web/app/(auth)/onboarding/page.tsx`):**
+- `StepGoals` bileşeni `onComplete` callback desteği ile güncellenerek `/onboarding?step=EVIDENCE` yönlendirmesi sağlandı.
+
+**Düzeltmeler & İyileştirmeler:**
+- `apps/web/app/(dashboard)/inbox/page.tsx` — `MOCK_OPPORTUNITIES` array elemanlarının TypeScript tip uyuşmazlığı giderildi (recommendation "SKIP" tipi eklendi).
+- `apps/web/components/shared/label-text.tsx` — `LabelTextProps` arayüzüne style prop desteği eklendi.
+- `apps/web/components/ui/insight-row.tsx` — `typeConfig` tip tanımına `style` prop desteği eklenerek upgraded `lucide-react` uyumluluğu sağlandı.
+- `apps/web/package.json` — TypeScript derleyici hatalarını önlemek için `lucide-react` paketi `^0.470.0` sürümüne güncellendi.
+- Database: Alembic migration (`add_users_table`) çalıştırıldı.
+
+---
+
+## [Phase A.4] — 2026-07-15 — Backend API + Clerk Webhook + Middleware Redirect ✅
+
+### Yapılan
+
+**Backend API (`apps/api/app/routers/onboarding.py`):**
+- `GET /api/onboarding/state` — mevcut state + profile_data + goals + next_step döner
+- `POST /api/onboarding/identity` — IdentityPayload kaydeder, NOT_STARTED/IDENTITY → GOALS'a ilerler
+- `POST /api/onboarding/goals` — GoalsPayload kaydeder, GOALS → EVIDENCE'a ilerler
+- `POST /api/onboarding/advance` — generic state ilerletme (EVIDENCE/CONNECTIONS/BUILDING için)
+- `POST /api/onboarding/complete` — direkt READY'ye geçer
+- `apps/api/app/main.py`'e register edildi (`/api/onboarding` prefix)
+
+**Clerk Webhook (`apps/api/app/routers/webhooks.py`):**
+- `POST /api/webhooks/clerk` — `user.created`, `user.updated`, `user.deleted` handle eder
+- Svix imza doğrulama: HMAC-SHA256, 5 dk timing check; `CLERK_WEBHOOK_SECRET` yoksa dev'de skip eder
+- `upsert_from_clerk()` idempotent — aynı webhook iki kez gelse sorun olmaz
+
+**Middleware Redirect (`apps/web/middleware.ts`):**
+- Her protected route'da `/api/onboarding/state` fetch eder (2 sn timeout)
+- `STATE_TO_URL` map: NOT_STARTED/IDENTITY/GOALS/EVIDENCE/CONNECTIONS/BUILDING → ilgili `/onboarding?step=X`
+- READY → redirect yok, kullanıcı geçer
+- Backend down ise fail-open (kullanıcı bloklanmaz)
+- `/onboarding(.*)` route'u redirect döngüsünden muaf tutuldu
+
+**Frontend Integration:**
+- `features/onboarding/api.ts` — `onboardingApi` object: getState, saveIdentity, saveGoals, advance, complete
+- `app/(auth)/onboarding/page.tsx` — mount'ta gerçek API'dan state çeker; step routing; "Skip for now" butonu
+- `app/(auth)/onboarding/_components/step-goals.tsx` — chip multi-select (max 3), roller/ülkeler, salary range
+- `features/onboarding/types.ts` — `OnboardingStatus` tipi API shape'e güncellendi
+
+**Model Güncellemeleri:**
+- `core/domain/identity/user.py` — `profile_data`, `goals`, `image_url` kolonları eklendi; `OnboardingState.next_state()` static method eklendi
+- `core/db/migrations/versions/20260715_e1f2a3b4c5d6_add_users_table.py` — yeni kolonlar migration'a dahil edildi
+- `core/db/repositories/user_repo.py` — `create_user()`, `patch_profile_data()`, `patch_goals()` eklendi
+- `core/db/repositories/__init__.py` — `UserRepository` export edildi
+
+---
+
+## [Phase A.3] — 2026-07-15 — Onboarding Wizard Shell ✅
+
+### Yapılan
+
+**`features/onboarding/` modülü:**
+- `types.ts` — `OnboardingState` union, `ONBOARDING_STEPS`, `IdentityData`, `GoalsData`, `OnboardingStatus`
+- `constants.ts` — `STEP_META` (label + description), `STEP_ORDER` array
+- `state-machine.ts` — `nextState()`, `stepIndex()`, `isComplete()` pure fonksiyonlar
+- `api.ts` — `getOnboardingStatus()`, `advanceOnboarding()` (placeholder, A.4'te gerçekle değiştirildi)
+- `index.ts` — barrel export
+
+**`app/(auth)/onboarding/` route:**
+- `layout.tsx` — bare centered layout (auth layout ile aynı stil)
+- `_components/wizard-shell.tsx` — amber hairline progress bar (5 adım), step label, wordmark header
+- `_components/step-welcome.tsx` — Clerk'ten first name çeker, "Get started" butonu
+- `_components/step-identity.tsx` — isim/soyisim, current title, years of experience formu
+- `page.tsx` — URL `?step=` parametresiyle step routing, `<Suspense>` wrapper
+
+**Middleware:**
+- `/onboarding(.*)` public route'dan çıkarıldı (Clerk auth gerekli)
+- State-based redirect logic eklendi (A.4'te tamamlandı)
+
+---
+
+## [Phase A.2] — 2026-07-15 — Aplio Rebrand + Users Table ✅
+
+### Yapılan
+
+**AplioLogo Component:**
+- `components/shared/aplio-logo.tsx` — `variant: icon|wordmark`, `size: sm|md|lg`; `/logo-white.png` kullanır
+- `components/shared/index.ts` — `AplioLogo` export edildi
+
+**Rebrand:**
+- `app/layout.tsx` — title: "Aplio — Your career, understood."
+- `components/layout/sidebar.tsx` — amber "C" kutusu kaldırıldı → `AplioLogo`; `useUser()` ile gerçek Clerk adı/initials
+- `components/layout/topbar.tsx` — breadcrumb "CareerOS" → "Aplio"
+- `app/(auth)/sign-in/page.tsx` + `sign-up/page.tsx` — direkt `Image` → `<AplioLogo variant="icon" size="lg" />`
+
+**Briefing Greeting:**
+- `app/(dashboard)/briefing/page.tsx` — `currentUser()` ile Clerk'ten gerçek `firstName` çeker; mock'un hardcoded adını bypass eder
+
+**Users DB (backend):**
+- `core/db/migrations/versions/20260715_e1f2a3b4c5d6_add_users_table.py` — `users` tablosu: clerk_id (PK), email (unique), first/last_name, onboarding_state, profile_data, goals, image_url
+- `core/domain/identity/user.py` — `User` SQLAlchemy model + `OnboardingState` enum (`NOT_STARTED → IDENTITY → GOALS → EVIDENCE → CONNECTIONS → BUILDING → READY`)
+- `core/db/repositories/user_repo.py` — `upsert_from_clerk()`, `create_user()`, `advance_onboarding()`, `patch_profile_data()`, `patch_goals()`
+- `core/db/models/__init__.py` + `core/domain/__init__.py` — `User` ve `OnboardingState` export edildi
+
+---
+
+## [Phase A.1] — 2026-07-15 — Clerk Authentication + Aplio Brand ✅
+
+### Yapılan
+
+**Clerk Auth:**
+- `@clerk/nextjs` kurulumu, `clerk init` ile `CarrerOs` app'ine bağlandı (`app_3GX2U5t5zNWGmujfYoX6vow8wBN`)
+- `middleware.ts` — tüm route'lar protected, public: `/sign-in`, `/sign-up`, `/api/webhooks`
+- `app/layout.tsx` — `ClerkProvider` eklendi
+- `components/layout/topbar.tsx` — placeholder avatar → `UserButton` (gerçek Clerk avatar + dropdown)
+- `.env.local` — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, redirect URL'leri
+
+**Route Reorganizasyonu:**
+- `app/(dashboard)/layout.tsx` — AppShell artık sadece dashboard'da (sidebar + topbar)
+- `app/(auth)/layout.tsx` — sign-in/sign-up için temiz centered layout
+- `app/inbox/` + `app/companies/` → `app/(dashboard)/inbox/` + `app/(dashboard)/companies/`
+- `app/(auth)/sign-in/[[...sign-in]]/page.tsx` — özel Clerk sign-in sayfası
+- `app/(auth)/sign-up/[[...sign-up]]/page.tsx` — özel Clerk sign-up sayfası
+
+**Aplio Brand:**
+- Ürün adı: **Aplio** (CareerOS → Aplio)
+- `public/logo-white.png` + `public/logo-black.png` eklendi
+- Sign-in / sign-up sayfalarında wordmark: Outfit 200 + amber accent çizgi + italic tagline
+
+---
+
+## [Frontend Days 1-5] — 2026-07-15 — Next.js App Shell + Briefing ✅
+
+### Yapılan
+
+**Mimari:**
+- Next.js 16.2 App Router, Tailwind v4, MP072 paleti (`--accent` #FFB162, `--background` #1B2632)
+- `components/shared/` — NarrativeText, NarrativeSection, MetricText, LabelText, Button, FadeInSection
+- `components/patterns/` — DecisionList, SpotlightCard, EvidenceBlock, ProgressBlock
+- `features/briefing/` — types.ts, mock.ts, api.ts (discriminated union `BriefingResult`)
+
+**Briefing Page (typography-first, CareerOS Design Manifesto v1.0):**
+- `app/(dashboard)/briefing/page.tsx` — async server component, `getBriefing()` ile veri çeker
+- Hairline `border-top` divider sistemi (`Movement` component) — kutu yok, sadece tipografi
+- `loading.tsx` (skeleton), `error.tsx` (`unstable_retry`), `_components/` (8 bileşen)
+- Newsreader Variable italic serif kapanış bölümü (`.font-editorial`)
+
+**Diğer Sayfalar:**
+- `app/(dashboard)/inbox/page.tsx` — Opportunities listesi
+- `app/(dashboard)/companies/page.tsx` + `[name]/page.tsx` — Company detail
 
 ---
 

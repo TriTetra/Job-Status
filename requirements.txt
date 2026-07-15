@@ -4,6 +4,7 @@
 fastapi>=0.111
 uvicorn[standard]>=0.29
 pydantic>=2.7
+python-multipart>=0.0.9
 
 # ============================================================
 # apps/cli — Unified Typer CLI (Phase 4D)

@@ -12,6 +12,8 @@ from .market_signal_repo import MarketSignalRepository
 from .country_repo import CountryRepository
 from .visa_repo import VisaRepository
 from .salary_repo import SalaryRangeRepository
+from .user_repo import UserRepository
+from .role_repo import RoleRepository
 
 __all__ = [
     "BaseRepository",
@@ -27,4 +29,6 @@ __all__ = [
     "CountryRepository",
     "VisaRepository",
     "SalaryRangeRepository",
+    "UserRepository",
+    "RoleRepository",
 ]

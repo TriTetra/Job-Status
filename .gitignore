@@ -127,3 +127,6 @@ personal/
 # Python cache
 *.pyc
 *.pyo
+
+# Claude Code local config
+.claude/

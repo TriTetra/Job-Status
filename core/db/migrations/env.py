@@ -8,10 +8,10 @@ from pathlib import Path
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# Make packages/db importable
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Make project root importable
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from models.base import Base  # noqa: E402 — path inserted above
+from core.db.models.base import Base  # noqa: E402
 
 config = context.config
 

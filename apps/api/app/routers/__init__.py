@@ -1,5 +1,5 @@
 """API routers."""
 
-from . import applications, companies, evidence, jobs, market, resume, settings
+from . import applications, companies, evidence, jobs, market, onboarding, resume, settings, webhooks
 
-__all__ = ["jobs", "companies", "applications", "resume", "market", "evidence", "settings"]
+__all__ = ["jobs", "companies", "applications", "resume", "market", "evidence", "settings", "onboarding", "webhooks"]

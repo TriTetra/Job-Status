@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import applications, companies, evidence, jobs, market, resume, settings
+from .routers import applications, companies, evidence, jobs, market, onboarding, resume, settings, webhooks, roles
 
 app = FastAPI(
     title="CareerOS API",
@@ -32,6 +32,9 @@ app.include_router(resume.router, prefix="/api/resume", tags=["resume"])
 app.include_router(market.router, prefix="/api/market", tags=["market"])
 app.include_router(evidence.router, prefix="/api/evidence", tags=["evidence"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
+app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
+app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
+app.include_router(roles.router)
 
 
 @app.get("/")
