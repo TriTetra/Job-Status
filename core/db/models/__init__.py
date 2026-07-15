@@ -22,6 +22,11 @@ from .country import Country
 from .visa import Visa
 from .salary_range import SalaryRange
 from .career_preferences import CareerPreferences
+from .resume_document import ResumeDocument
+from .skill import Skill
+from .evidence_item import EvidenceItem
+from .connected_account import ConnectedAccount
+from .career_graph_node import CareerGraphNode
 
 __all__ = [
     "Base",
@@ -48,4 +53,9 @@ __all__ = [
     "Visa",
     "SalaryRange",
     "CareerPreferences",
+    "ResumeDocument",
+    "Skill",
+    "EvidenceItem",
+    "ConnectedAccount",
+    "CareerGraphNode",
 ]
