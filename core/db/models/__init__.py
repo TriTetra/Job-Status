@@ -21,6 +21,7 @@ from .timeline import TimelineSnapshot, TimelineChange
 from .country import Country
 from .visa import Visa
 from .salary_range import SalaryRange
+from .career_preferences import CareerPreferences
 
 __all__ = [
     "Base",
@@ -46,4 +47,5 @@ __all__ = [
     "Country",
     "Visa",
     "SalaryRange",
+    "CareerPreferences",
 ]

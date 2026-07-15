@@ -14,6 +14,7 @@ from .visa_repo import VisaRepository
 from .salary_repo import SalaryRangeRepository
 from .user_repo import UserRepository
 from .role_repo import RoleRepository
+from .career_preferences_repo import CareerPreferencesRepository
 
 __all__ = [
     "BaseRepository",
@@ -31,4 +32,5 @@ __all__ = [
     "SalaryRangeRepository",
     "UserRepository",
     "RoleRepository",
+    "CareerPreferencesRepository",
 ]

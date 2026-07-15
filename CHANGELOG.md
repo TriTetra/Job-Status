@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |-------|---------|-------|-------|
+| Goals Phase 1 — career_preferences DB | Migration (career_prefs_001), CareerPreferences model, CareerPreferencesRepository; `pref_metadata` workaround for SQLAlchemy reserved name | ✅ Tamam | 2026-07-16 |
 | Country Combobox + Logo | Country dropdown → SearchableCombobox (region grouping, 55 ülke); AplioLogo sm→md; WizardShell header compact | ✅ Tamam | 2026-07-15 |
 | Phase 2 Step 5+6 | Backend IdentityPayload fix (career_level_origin, slug→UUID lookup, custom_role branching) + E2E 4/4 test geçti | ✅ Tamam | 2026-07-15 |
 | Phase 2 Step 3 + 4 | SearchableCombobox hybrid rewrite (debounce, categories, keyboard nav, ARIA, Loader2) + step-identity.tsx updated | ✅ Tamam | 2026-07-15 |
