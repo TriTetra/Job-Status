@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |-------|---------|-------|-------|
+| Evidence Intelligence Phase 2 — Resume Pipeline | PDF→LLM→skills pipeline: PDFParser (PyMuPDF), ResumeExtractor (OpenRouter), SkillMatcher (fuzzy+alias), process_resume(); mock run_extraction replaced with real pipeline; 14 evidence items from test PDF (11/12 canonical match) | ✅ Tamam | 2026-07-16 |
 | Evidence Intelligence Phase 1 — DB Foundation | 5 tables (resume_documents, skills, evidence_items, connected_accounts, career_graph_nodes), 5 SQLAlchemy models, Alembic migration (evidence_intel_001), seed script — 87 canonical skills inserted | ✅ Tamam | 2026-07-16 |
 | Goals Phase 3b — UI Polish | step-goals.tsx: emoji kaldirildi, kategori grouping kaldirildi, identity ile ayni layout dili (space-y-3, py-1.5, uppercase labels, Check-only chips) | ✅ Tamam | 2026-07-16 |
 | Goals Phase 3 — Frontend Refactor | step-goals.tsx rewrite (GOAL_CATEGORIES, WORK_ARRANGEMENTS, ISO country codes, progressive salary, API roles); constants.ts ISO codes; api.ts saveGoals updated; types.ts OnboardingStatus preferences field; TS clean | ✅ Tamam | 2026-07-16 |

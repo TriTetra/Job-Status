@@ -366,71 +366,71 @@ async def upload_resume(
         content = await file.read()
         f.write(content)
     
-    # Start background extraction
-    background_tasks.add_task(run_extraction, job_id, file_path, user_id, session)
-    
+    # Start background extraction (new session — request session may close before BG task runs)
+    background_tasks.add_task(run_extraction, job_id, file_path, user_id)
+
     return {"job_id": job_id, "status": "pending"}
 
 
-async def run_extraction(job_id: str, file_path: str, user_id: str, session: Session):
-    """Background task: run Hiring-Agent extraction."""
+def run_extraction(job_id: str, file_path: str, user_id: str):
+    """Background task: real PDF → LLM → evidence items pipeline."""
+    from core.db.connection import db as _db
+    from core.db.models.resume_document import ResumeDocument
+    from ..evidence.resume_pipeline import process_resume
+
     job = extraction_jobs[job_id]
-    
+
+    def log(msg: str):
+        job.add_log(msg)
+
     try:
-        job.status = "parsing"
-        job.progress = 10
-        job.add_log("📄 Parsing PDF structure...")
-        await asyncio.sleep(1)
-        
-        job.progress = 25
-        job.add_log("✓ Extracted 4 pages")
-        await asyncio.sleep(0.8)
-        
-        job.status = "extracting"
-        job.progress = 40
-        job.add_log("🔍 Analyzing work experience...")
-        await asyncio.sleep(1.2)
-        
-        job.progress = 55
-        job.add_log("✓ Found 3 companies")
-        job.add_log("✓ Extracted 12 skills")
-        await asyncio.sleep(0.8)
-        
-        job.status = "extracting"
-        job.progress = 70
-        job.add_log("🎯 Matching skills to Career Graph...")
-        await asyncio.sleep(1)
-        
-        job.progress = 85
-        job.add_log("✓ Calculated confidence scores")
-        job.add_log("✓ Identified 8 evidence items")
-        await asyncio.sleep(0.8)
-        
-        job.progress = 95
-        job.add_log("📊 Building initial Career Graph...")
-        await asyncio.sleep(1)
-        
-        # Simulate extraction result
-        job.result = {
-            "skills_extracted": 12,
-            "companies_found": 3,
-            "evidence_items": 8,
-            "confidence_score": 0.87
-        }
-        
-        job.progress = 100
-        job.status = "completed"
-        job.add_log("✓ Career Graph ready")
-        
-        # Update user state in database
-        repo = UserRepository(session)
-        repo.set_onboarding_state(user_id, OnboardingState.CONNECTIONS)
-        repo.patch_profile_data(user_id, {"resume_path": file_path})
-        
-    except Exception as e:
+        with _db.session_scope() as bg_session:
+            # Create ResumeDocument record
+            resume_doc = ResumeDocument(
+                user_id=user_id,
+                filename=job.filename,
+                storage_key=file_path,
+                parse_status="pending",
+            )
+            bg_session.add(resume_doc)
+            bg_session.commit()
+            bg_session.refresh(resume_doc)
+
+            job.status = "parsing"
+            job.progress = 15
+
+            # Run the pipeline (sync — runs in FastAPI thread pool via BackgroundTasks)
+            summary = process_resume(resume_doc, bg_session, log=log)
+
+            job.progress = 90
+            job.add_log("Updating profile state...")
+
+            # Advance onboarding state
+            repo = UserRepository(bg_session)
+            repo.set_onboarding_state(user_id, OnboardingState.CONNECTIONS)
+            repo.patch_profile_data(user_id, {
+                "resume_path": file_path,
+                "resume_doc_id": resume_doc.id,
+            })
+
+            job.result = {
+                "skills_extracted": summary["skills_count"],
+                "experience_count": summary["experience_count"],
+                "projects_count": summary["projects_count"],
+                "evidence_items": (
+                    summary["skills_count"]
+                    + summary["experience_count"]
+                    + summary["projects_count"]
+                ),
+            }
+            job.progress = 100
+            job.status = "completed"
+            job.add_log("Extraction complete — Career Graph ready")
+
+    except Exception as exc:
         job.status = "failed"
-        job.error = str(e)
-        job.add_log(f"✗ Extraction failed: {e}", type="error")
+        job.error = str(exc)
+        job.add_log(f"Extraction failed: {exc}", type="error")
 
 
 @router.get("/resume/{job_id}/status")
