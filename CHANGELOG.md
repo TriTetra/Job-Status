@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |-------|---------|-------|-------|
+| Goals Phase 2 — Preferences API | GET /api/preferences, PATCH /api/preferences; save_goals updated to use career_preferences table; OnboardingStateOut includes preferences; 7/7 tests passed | ✅ Tamam | 2026-07-16 |
 | Goals Phase 1 — career_preferences DB | Migration (career_prefs_001), CareerPreferences model, CareerPreferencesRepository; `pref_metadata` workaround for SQLAlchemy reserved name | ✅ Tamam | 2026-07-16 |
 | Country Combobox + Logo | Country dropdown → SearchableCombobox (region grouping, 55 ülke); AplioLogo sm→md; WizardShell header compact | ✅ Tamam | 2026-07-15 |
 | Phase 2 Step 5+6 | Backend IdentityPayload fix (career_level_origin, slug→UUID lookup, custom_role branching) + E2E 4/4 test geçti | ✅ Tamam | 2026-07-15 |

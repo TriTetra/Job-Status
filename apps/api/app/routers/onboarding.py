@@ -83,18 +83,21 @@ class IdentityPayload(BaseModel):
 
 
 class GoalsPayload(BaseModel):
-    optimizing_for: list[str] = Field(..., max_length=3)
-    preferred_roles: list[str] = Field(..., max_length=5)
-    preferred_countries: list[str] = Field(..., max_length=5)
+    goal_ids: list[str] = Field(..., min_length=1, max_length=5)
+    preferred_role_ids: list[str] = Field(..., min_length=1, max_length=5)
+    preferred_country_codes: list[str] = Field(..., min_length=1, max_length=5)
+    work_arrangements: list[str] = Field(default_factory=list, max_length=3)
     salary_min: Optional[int] = Field(None, ge=0)
     salary_max: Optional[int] = Field(None, ge=0)
     salary_currency: Optional[str] = Field(None, max_length=3)
+    salary_period: str = Field("year", pattern="^(year|month)$")
+    salary_negotiable: bool = Field(True)
 
 
 class OnboardingStateOut(BaseModel):
     state: str
     profile_data: dict
-    goals: dict
+    preferences: Optional[dict] = None
     next_step: Optional[str]
 
 
@@ -120,12 +123,34 @@ def get_onboarding_state(
     user_id: str = Depends(get_user_id),
     session: Session = Depends(get_db_session),
 ):
+    from core.db.repositories.career_preferences_repo import CareerPreferencesRepository
+
     repo = UserRepository(session)
     user = _require_user(repo, user_id)
+
+    prefs_repo = CareerPreferencesRepository(session)
+    prefs = prefs_repo.get_by_user_id(user_id)
+
+    preferences = None
+    if prefs:
+        preferences = {
+            "goal_ids": prefs.goal_ids or [],
+            "preferred_role_ids": prefs.preferred_role_ids or [],
+            "preferred_country_codes": prefs.preferred_country_codes or [],
+            "work_arrangements": prefs.work_arrangements or [],
+            "salary": {
+                "min": prefs.salary_min,
+                "max": prefs.salary_max,
+                "currency": prefs.salary_currency,
+                "period": prefs.salary_period,
+                "negotiable": prefs.salary_negotiable,
+            } if (prefs.salary_min is not None or prefs.salary_max is not None) else None,
+        }
+
     return OnboardingStateOut(
         state=user.onboarding_state,
         profile_data=user.profile_data or {},
-        goals=user.goals or {},
+        preferences=preferences,
         next_step=OnboardingState.next_state(user.onboarding_state),
     )
 
@@ -257,20 +282,35 @@ def save_goals(
     user_id: str = Depends(get_user_id),
     session: Session = Depends(get_db_session),
 ):
+    from core.db.repositories.career_preferences_repo import CareerPreferencesRepository
+
+    if data.salary_min is not None and data.salary_max is not None:
+        if data.salary_min > data.salary_max:
+            raise HTTPException(
+                status_code=400,
+                detail="salary_min cannot be greater than salary_max",
+            )
+
+    prefs_repo = CareerPreferencesRepository(session)
+    prefs_repo.upsert(
+        user_id=user_id,
+        goal_ids=data.goal_ids,
+        preferred_role_ids=data.preferred_role_ids,
+        preferred_country_codes=data.preferred_country_codes,
+        work_arrangements=data.work_arrangements,
+        salary_min=data.salary_min,
+        salary_max=data.salary_max,
+        salary_currency=data.salary_currency,
+        salary_period=data.salary_period,
+        salary_negotiable=data.salary_negotiable,
+    )
+
     repo = UserRepository(session)
     user = _require_user(repo, user_id)
-
-    user.goals = {
-        "optimizing_for": data.optimizing_for,
-        "preferred_roles": data.preferred_roles,
-        "preferred_countries": data.preferred_countries,
-        "salary_min": data.salary_min,
-        "salary_max": data.salary_max,
-        "salary_currency": data.salary_currency,
-    }
     if user.onboarding_state == OnboardingState.GOALS.value:
         user.onboarding_state = OnboardingState.EVIDENCE.value
 
+    session.commit()
     return {"state": user.onboarding_state, "message": "Goals saved"}
 
 

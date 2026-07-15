@@ -24,7 +24,7 @@ class CareerPreferences(Base):
     salary_period = Column(String(10), server_default='year')
     salary_negotiable = Column(Boolean, server_default='true')
 
-    pref_metadata = Column('metadata', JSONB, server_default='{}')
+    pref_metadata = Column(JSONB, server_default='{}')
 
     created_at = Column(DateTime(timezone=True), server_default='now()')
     updated_at = Column(DateTime(timezone=True), server_default='now()', onupdate=datetime.utcnow)
