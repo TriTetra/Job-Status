@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |-------|---------|-------|-------|
+| Goals Phase 3b — UI Polish | step-goals.tsx: emoji kaldirildi, kategori grouping kaldirildi, identity ile ayni layout dili (space-y-3, py-1.5, uppercase labels, Check-only chips) | ✅ Tamam | 2026-07-16 |
 | Goals Phase 3 — Frontend Refactor | step-goals.tsx rewrite (GOAL_CATEGORIES, WORK_ARRANGEMENTS, ISO country codes, progressive salary, API roles); constants.ts ISO codes; api.ts saveGoals updated; types.ts OnboardingStatus preferences field; TS clean | ✅ Tamam | 2026-07-16 |
 | Goals Phase 2 — Preferences API | GET /api/preferences, PATCH /api/preferences; save_goals updated to use career_preferences table; OnboardingStateOut includes preferences; 7/7 tests passed | ✅ Tamam | 2026-07-16 |
 | Goals Phase 1 — career_preferences DB | Migration (career_prefs_001), CareerPreferences model, CareerPreferencesRepository; `pref_metadata` workaround for SQLAlchemy reserved name | ✅ Tamam | 2026-07-16 |
