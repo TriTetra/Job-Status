@@ -39,6 +39,18 @@ export interface OnboardingData {
 export interface OnboardingStatus {
   state: OnboardingState;
   profile_data: Record<string, unknown>;
-  goals: Record<string, unknown>;
+  preferences?: {
+    goal_ids?: string[];
+    preferred_role_ids?: string[];
+    preferred_country_codes?: string[];
+    work_arrangements?: string[];
+    salary?: {
+      min?: number;
+      max?: number;
+      currency?: string;
+      period?: string;
+      negotiable?: boolean;
+    };
+  };
   next_step: OnboardingState | null;
 }

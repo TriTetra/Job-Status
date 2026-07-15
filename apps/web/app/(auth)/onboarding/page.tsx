@@ -54,8 +54,6 @@ function OnboardingContent() {
     return null;
   }
 
-  const goalsData = status?.goals;
-
   return (
     <WizardShell currentState={step as OnboardingState}>
       {step === "IDENTITY" && (
@@ -66,7 +64,7 @@ function OnboardingContent() {
       )}
       {step === "GOALS" && (
         <StepGoals
-          initialData={status?.goals}
+          initialData={status?.preferences ?? undefined}
           onComplete={() => router.push("/onboarding?step=EVIDENCE")}
         />
       )}

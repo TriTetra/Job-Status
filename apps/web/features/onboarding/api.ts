@@ -38,12 +38,15 @@ export const onboardingApi = {
   },
 
   saveGoals(data: {
-    optimizing_for: string[];
-    preferred_roles: string[];
-    preferred_countries: string[];
+    goal_ids: string[];
+    preferred_role_ids: string[];
+    preferred_country_codes: string[];
+    work_arrangements: string[];
     salary_min?: number;
     salary_max?: number;
     salary_currency?: string;
+    salary_period?: string;
+    salary_negotiable?: boolean;
   }): Promise<{ state: string; message: string }> {
     return apiFetch("/api/onboarding/goals", {
       method: "POST",
