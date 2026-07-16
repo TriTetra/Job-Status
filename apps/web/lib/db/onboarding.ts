@@ -1,9 +1,9 @@
 import { neon } from "@neondatabase/serverless";
 
-// Connects via HTTPS/WebSocket on port 443 — works without WARP
+// Direct (non-pooler) endpoint — @neondatabase/serverless uses HTTP on port 443
 const sql = neon(process.env.DATABASE_URL!);
 
-const STATE_TO_URL: Record<string, string> = {
+export const STATE_TO_URL: Record<string, string> = {
   NOT_STARTED: "/onboarding?step=IDENTITY",
   IDENTITY:    "/onboarding?step=IDENTITY",
   GOALS:       "/onboarding?step=GOALS",
@@ -12,11 +12,10 @@ const STATE_TO_URL: Record<string, string> = {
   BUILDING:    "/onboarding?step=BUILDING",
 };
 
-export { STATE_TO_URL };
-
 export async function getOnboardingState(clerkId: string): Promise<string> {
   const rows = await sql`
     SELECT onboarding_state FROM users WHERE clerk_id = ${clerkId}
   `;
+  console.log("[onboarding] state query result:", rows[0] ?? "no row");
   return (rows[0]?.onboarding_state as string | undefined) ?? "NOT_STARTED";
 }

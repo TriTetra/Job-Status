@@ -8,13 +8,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const { userId } = await auth();
 
   if (userId) {
+    let state = "NOT_STARTED";
     try {
-      const state = await getOnboardingState(userId);
-      if (state !== "READY") {
-        redirect(STATE_TO_URL[state] ?? "/onboarding?step=IDENTITY");
-      }
-    } catch {
-      // DB unreachable — fail open, don't block the dashboard
+      state = await getOnboardingState(userId);
+    } catch (err) {
+      console.error("[dashboard] onboarding state fetch failed:", err);
+      // DB unreachable — assume not onboarded, send to onboarding
+    }
+    if (state !== "READY") {
+      redirect(STATE_TO_URL[state] ?? "/onboarding?step=IDENTITY");
     }
   }
 
