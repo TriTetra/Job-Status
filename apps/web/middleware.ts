@@ -34,8 +34,7 @@ export default clerkMiddleware(async (auth, req) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     const res = await fetch(`${apiUrl}/api/onboarding/state`, {
       headers: { "x-user-id": userId },
-      // Short timeout so a down backend doesn't stall every request
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(5000),
     });
 
     if (res.ok) {
