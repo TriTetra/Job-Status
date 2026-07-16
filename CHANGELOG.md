@@ -9,6 +9,14 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |-------|---------|-------|-------|
+| Onboarding UI Bug Fixes & State Recovery | StepEvidence mount state recovery check to retrieve resume_doc_id from onboarding state on load, preventing loss of upload status after GitHub OAuth redirects | ✅ Tamam | 2026-07-16 |
+| Onboarding E2E Validation | E2E integration test script (test_onboarding_e2e_wizard.py); full wizard verification (Identity -> Goals -> Evidence CV/GitHub/Portfolio -> Building -> READY state transitions); DB integrity check (Evidence items, prefs, graph nodes count) | ✅ Tamam | 2026-07-16 |
+| Phase 6 — Portfolio Crawler | BeautifulSoup portfolio website crawler (portfolio_crawler.py); keyword technology heuristics; POST /portfolio/crawl, GET /portfolio/status, DELETE /portfolio routes; client API & ExtractionResult UI URL connect input form | ✅ Tamam | 2026-07-16 |
+| Phase 7 — Multi-Source Evidence Aggregation | Backend aggregation engine (confidence_aggregator.py); SOURCE_WEIGHTS mapping (GitHub 0.5, Portfolio 0.3, Resume 0.2); GET /skills/aggregated API route; getAggregatedSkills onboarding client method; ExtractionResult UI rewrite with source logos & badges | ✅ Tamam | 2026-07-16 |
+| Phase 4 — GitHub OAuth & Repo Analyzer | GITHUB_CLIENT_ID credentials; cryptography Fernet encryption for access tokens; OAuth endpoint registration; oauth.py authorize/callback/status/disconnect routes; GitHubAnalyzer API client; create_github_evidence; ExtractionResult UI buttons & sync stats | ✅ Tamam | 2026-07-16 |
+| Phase 5 — Career Graph Integration | Real-time CareerGraph generation from DB evidence items; clearance of old nodes; creation of DB CareerGraphNodes (skills, projects, experiences); dynamic edge construction via technology matching; /career-graph API & client update; TS checks | ✅ Tamam | 2026-07-16 |
+| Evidence Intelligence Phase 3 — Evidence Review UI | GET /items, DELETE /items/{id} endpoints; FastAPI routing order collision fix; onboardingApi client update; ExtractionResult review component; step-evidence.tsx integration; TS fixes | ✅ Tamam | 2026-07-16 |
+| Evidence Step UI — Layout Consistency | step-evidence.tsx tam yeniden yazıldı: space-y-3, identity/goals ile aynı label/chip/button stili; 3 state (upload/processing/done); done state'te Sources chips (CV ✓, + GitHub, + Portfolio inline expand) + Skills chips + Continue butonu; ExtractionResult wizard'dan çıkarıldı | ✅ Tamam | 2026-07-16 |
 | Evidence Intelligence Phase 2 — Resume Pipeline | PDF→LLM→skills pipeline: PDFParser (PyMuPDF), ResumeExtractor (OpenRouter), SkillMatcher (fuzzy+alias), process_resume(); mock run_extraction replaced with real pipeline; 14 evidence items from test PDF (11/12 canonical match) | ✅ Tamam | 2026-07-16 |
 | Evidence Intelligence Phase 1 — DB Foundation | 5 tables (resume_documents, skills, evidence_items, connected_accounts, career_graph_nodes), 5 SQLAlchemy models, Alembic migration (evidence_intel_001), seed script — 87 canonical skills inserted | ✅ Tamam | 2026-07-16 |
 | Goals Phase 3b — UI Polish | step-goals.tsx: emoji kaldirildi, kategori grouping kaldirildi, identity ile ayni layout dili (space-y-3, py-1.5, uppercase labels, Check-only chips) | ✅ Tamam | 2026-07-16 |
@@ -121,7 +129,174 @@ TypeScript: `npx tsc --noEmit` — 0 hata
 - `handleRoleSearch`: `rolesApi.search(query, 12)` → `ComboboxOption[]` (useCallback ile)
 - `SearchableCombobox` prop'ları: `options` → `initialOptions` + `onSearch`, `customLabel` eklendi
 
-**TypeScript:** `npx tsc --noEmit` — 0 hata
+## [Onboarding UI Bug Fixes & State Recovery] — 2026-07-16 — OAuth State Recovery 🚀
+
+### Yapılan
+
+**OAuth State Kurtarma Bug Fix (`step-evidence.tsx`):**
+- **Sorun**: Kullanıcı resume yükledikten sonra "Add GitHub" deyip OAuth yönlendirmesine gittiğinde, geri dönüşte React local state'i sıfırlandığı için taranan özgeçmiş verileri kayboluyor ve arayüz resume yükleme kutusuna geri dönüyordu.
+- **Çözüm**: `StepEvidence` bileşeninin mount aşamasına veritabanı kontrolü eklendi (`onboardingApi.getState()`). Eğer kullanıcı daha önce resume yüklediyse DB'den gelen `resume_doc_id` tespit edilerek otomatik olarak `completed` durumuna geçilmesi (yüklü durumun korunması) sağlandı.
+
+**Doğrulama**:
+- TypeScript derleme denetimi (`npx tsc --noEmit`) 0 hatayla tamamlandı.
+
+---
+
+## [Onboarding E2E Validation] — 2026-07-16 — Full Wizard Integration Verification 🧙‍♂️
+
+### Yapılan
+
+**E2E Entegrasyon Test Betiği (`tests/test_onboarding_e2e_wizard.py`):**
+- Identity, Goals, Evidence (CV Upload + GitHub Account Setup + Portfolio Connect) ve Building state geçişlerini sırasıyla tetikleyerek doğrulayan test betiği eklendi.
+- **Mock PDF Üretimi**: fitz (PyMuPDF) kütüphanesi kullanılarak programlama dilleri, deneyimler ve projeler içeren mock bir CV PDF'i dinamik olarak oluşturuldu.
+- **Veritabanı Durum (State) Kontrolleri**:
+  - `connected_accounts` tablosunda mock GitHub entegrasyonu doğrulandı.
+  - `evidence_items` tablosunda eklenen CV verilerinden 15 adet yetenek, deneyim ve proje kanıtı çıktığı doğrulandı.
+  - `career_graph_nodes` tablosunda dinamik olarak 15 düğümlü (nodes) Career Graph oluşturulduğu ve bağlantıların (edges) kurulduğu doğrulandı.
+  - `career_preferences` tablosundaki hedeflerin (goals) ve rollerin (roles) doğru formatta kaydedildiği doğrulandı.
+- **Onboarding Durum Geçişi**: Kullanıcının onboarding durumunun en sonda hatasız bir şekilde `READY` aşamasına ulaştığı kanıtlandı.
+
+**Doğrulama**:
+- `test_onboarding_e2e_wizard.py` testi uvicorn sunucusu üzerinden başarıyla çalıştırıldı ve `[OK] E2E WIZARD TEST PASSED!` çıktısı elde edildi.
+
+---
+
+## [Phase 6 — Portfolio Crawler] — 2026-07-16 — BeautifulSoup Portfolio Scraper & Evidence Extraction 🌐
+
+### Yapılan
+
+**Portfolio Web Tarayıcısı (`apps/api/app/core/evidence/portfolio_crawler.py`):**
+- Verilen herhangi bir portfolyo URL'ini HTTP ile çekip BeautifulSoup4 ile ayrıştıran `PortfolioCrawler` modülü eklendi.
+- **Teknoloji Keyword Eşleştirme**: İçerisinde 30'dan fazla yaygın yazılım dilini, framework'ü ve veritabanı ismini barındıran regex/string anahtar kelime motoru entegre edildi.
+- **Proje Çıkarımı (Heuristics)**: HTML içerisinde projelere, vaka çalışmalarına veya geçmiş işlere ait olabilecek bölümleri (`portfolio`, `project`, `case-study`) tespit edip proje ismi ve açıklamalarını ayıklayan algoritma tasarlandı.
+
+**Backend API Rotaları (`apps/api/app/routers/evidence.py`):**
+- **POST `/api/evidence/portfolio/crawl`**: Portfolyo URL'ini `connected_accounts` tablosuna yazar, web sitesini tarar ve ayıklanan yetenek/projeleri `portfolio` kaynağıyla veritabanına idempotently kaydeder.
+- **GET `/api/evidence/portfolio/status`**: Kullanıcının bağlı portfolyo sitesini ve son senkronizasyon zaman damgasını döndürür.
+- **DELETE `/api/evidence/portfolio`**: Portfolyo bağlantısını siler ve portfolio kaynaklı tüm verileri temizler.
+- Rota çakışmalarını önlemek için parametrik `/{skill}` rotasının üzerinde tanımlandı.
+
+**Frontend API & UI Güncellemeleri:**
+- `onboardingApi` istemcisine `crawlPortfolio`, `getPortfolioStatus` ve `disconnectPortfolio` metotları entegre edildi.
+- **`extraction-result.tsx`**:
+  - Arayüze "Portfolio" URL giriş formu, crawl yüklenme animasyonu, bağlı portfolyo bağlantısı ve "Remove" butonu eklendi.
+  - Portfolyo başarıyla tarandığında listeyi anında yenileyerek yeni yetenek ve projeleri gösterir.
+  - Yeteneklerin kaynak badges alanına `portfolio` rozeti ve özel `Globe` ikonu eklendi.
+
+**Doğrulama**:
+- Mock HTML portfolio test betiği (`test_portfolio_crawler.py`) ile crawler metin tarama, proje yakalama, DB'ye yazma ve status/disconnect rotaları uçtan uca test edildi ve başarıyla geçti (`[OK] All Portfolio Crawler and router tests passed successfully!`).
+- Frontend TypeScript derlemesi (`npx tsc --noEmit`) 0 hatayla tamamlandı.
+
+---
+
+## [Phase 7 — Multi-Source Evidence Aggregation] — 2026-07-16 — Multi-Source Aggregation & Weighted Scoring 📊
+
+### Yapılan
+
+**Backend Aggregation Motoru (`apps/api/app/core/evidence/confidence_aggregator.py`):**
+- Kullanıcının tüm evidence_item'larını çekip `type == "skill"` olanları gruplayan ve her yetenek için ağırlıklı güven puanı hesaplayan yeni motor eklendi.
+- **SOURCE_WEIGHTS**: GitHub (0.5), Portfolio (0.3), Resume (0.2) olacak şekilde kaynak ağırlıkları belirlendi.
+- Ağırlıklı matematiksel formül: `weighted_sum / total_weight` hesaplamasıyla güven skoru harmonizasyonu yapıldı.
+- Her yetenek için kaynak dökümü (`type`, `confidence`, `count`) hazırlandı.
+
+**Backend API Endpoint (`apps/api/app/routers/evidence.py`):**
+- **GET `/api/evidence/skills/aggregated`**: Ağırlıklı puanlara göre azalan sırada sıralanmış birleştirilmiş yetenek listesini döndürür.
+- Rota çakışmalarını önlemek için parametrik `/{skill}` rotasının üzerinde tanımlandı.
+
+**Frontend API & UI Güncellemeleri:**
+- `onboardingApi` istemcisine `getAggregatedSkills()` metodu eklendi.
+- **`extraction-result.tsx`**:
+  - `skills` verileri `getAggregatedSkills` üzerinden, projeler ve iş deneyimleri ise `getEvidenceItems` üzerinden `Promise.all` ile paralel fetch edilecek şekilde güncellendi.
+  - Her yeteneğin altında yer alan kaynaklara ait rozetler (`Resume (1)`, `GitHub (2)` vb.) ve bunlara özel kaynak ikonları (Lucide Github, FileText vb.) görselleştirildi.
+  - Arayüz yerel state filtresi sayesinde yetenek silme tıklandığında anında kaldırılma simülasyonu eklendi.
+
+**Doğrulama**:
+- Mock veri test betiği (`test_multi_source_aggregation.py`) ile overlapping resume/github kanıtları eklendi, `/skills/aggregated` endpoint'i üzerinden matematiksel hesaplamanın doğruluğu (%93.6 confidence) başarıyla test edildi.
+- Frontend tip denetimleri (`npx tsc --noEmit`) 0 hatayla tamamlandı.
+
+---
+
+## [Phase 4 — GitHub OAuth & Repo Analyzer] — 2026-07-16 — GitHub Integration & Token Encryption 🐙
+
+### Yapılan
+
+**Çevre Değişkenleri ve Token Güvenliği (`.env` & `token_encryption.py`):**
+- GitHub OAuth App Credentials (`GITHUB_CLIENT_ID` ve `GITHUB_CLIENT_SECRET`) `.env` dosyasına eklendi.
+- Fernet simetrik şifreleme algoritması kullanan `token_encryption.py` yardımcı modülü oluşturuldu. Kullanıcıların üçüncü taraf erişim anahtarları veritabanında (`access_token` kolonu) şifrelenmiş olarak saklanır.
+- Token şifreleme anahtarı (`TOKEN_ENCRYPTION_KEY`) üretilerek `.env` dosyasına eklendi.
+
+**OAuth Rotaları (`apps/api/app/routers/oauth.py`):**
+- **GET `/api/oauth/github/authorize`**: CSRF (state token) korumasıyla OAuth akışını başlatır ve kullanıcıyı GitHub izin ekranına yönlendirir.
+- **GET `/api/oauth/github/callback`**: Yetkilendirme kodu ile erişim anahtarını takas eder, kullanıcı bilgilerini çeker, token'ı şifreleyerek `connected_accounts` tablosuna yazar ve frontend onboarding sayfasına yönlendirir.
+- **GET `/api/oauth/github/status`**: Kullanıcının GitHub bağlantı durumunu, kullanıcı adını, profil resmi ve repo sayısı gibi metaverileri döndürür.
+- **DELETE `/api/oauth/github`**: Kullanıcının GitHub entegrasyon bağlantısını siler.
+- **POST `/api/oauth/github/sync`**: Bağlı hesaba ait repoları analiz edip yetenek kanıtı çıkarım sürecini başlatır.
+- Rotalar `apps/api/app/main.py` içerisine gateway seviyesinde kaydedildi.
+
+**GitHub API & Kanıt Çıkarımı (`github_analyzer.py` & `github_evidence.py`):**
+- **`GitHubAnalyzer`**: GitHub REST API üzerinden kullanıcının son güncellenen 20 reposunu, kod dili dağılımlarını (byte cinsinden) ve stars/size istatistiklerini çeker.
+- **`create_github_evidence`**:
+  - Repoları `project` tipinde evidence verisi olarak veritabanına kaydeder.
+  - Repolarda kullanılan programlama dillerini fuzzy eşleştirme ontolojisiyle canonical yeteneklere bağlar ve dile ait byte oranı, yıldız ve commit sayılarına göre dinamik güven skoru hesaplayarak `skill` tipinde kanıt olarak kaydeder.
+  - Çakışmaları önlemek için her senkronizasyonda eski GitHub kanıtlarını temizler (idempotency).
+
+**Frontend API & UI Entegrasyonu:**
+- `onboardingApi` client'ına `getGithubStatus`, `syncGithub` ve `disconnectGithub` metotları eklendi.
+- **`extraction-result.tsx`**:
+  - GitHub bağlantı durumunu kontrol eder ve bağlıysa kullanıcı adı, avatar ve eşitleme durumu bildirim panelini gösterir.
+  - İlk bağlantıda repoları otomatik analiz eder, verileri veritabanından yeniden çekerek resume ve GitHub yeteneklerini tek listede birleştirir.
+  - Kullanıcıya repoları el ile tekrar eşitleme (resync) veya GitHub bağlantısını kesme (disconnect) özellikleri sunar.
+
+**Doğrulama**:
+- Mock entegrasyon testi (`test_github_sync.py`) üzerinden status, veritabanı yazma ve confidence skoru hesaplama süreçleri test edildi ve başarıyla geçti (`[OK] GitHub Sync Database Logic OK!`).
+- TypeScript derlemesi (`npx tsc --noEmit`) 0 hatayla tamamlandı.
+
+---
+
+## [Phase 5 — Career Graph Integration] — 2026-07-16 — Real-time Graph Generation 🎨
+
+### Yapılan
+
+**Backend Endpoint'leri ve Arka Plan Görevleri (`apps/api/app/routers/onboarding.py`):**
+- **Dynamic Career Graph Generation**: `run_graph_building` arka plan görevi mock veri yerine veritabanındaki gerçek `EvidenceItem` verilerini okuyacak şekilde yeniden yazıldı.
+- **`career_graph_nodes` DB Senkronizasyonu**:
+  - Grafik oluşturma tetiklendiğinde kullanıcının eski grafik düğümleri (`CareerGraphNode`) temizlenir.
+  - Veritabanından çekilen yetenekler (`skill`), projeler (`project`) ve iş deneyimleri (`experience`) ayrı ayrı `CareerGraphNode` modeliyle veritabanına yazılır.
+- **Dynamic Edge (Bağlantı) Keşfi**:
+  - Proje veya deneyimlerin `technologies` verileri, kullanıcının sahip olduğu yetenek listesiyle eşleştirilir.
+  - Eşleşen teknolojiler için otomatik olarak `GraphEdge` (grafik kenarı) oluşturularak düğümler birbirine bağlanır. Bu sayede frontend'de animasyonlu bağlantı çizgileri korunur.
+- **GET `/api/onboarding/career-graph`**:
+  - Kullanıcının önbelleğe alınmış ve oluşturulmuş olan kariyer grafiğini (`nodes`, `edges` ve `stats` verilerini) döndüren yeni API rotası.
+
+**Frontend Değişiklikleri (`apps/web/features/onboarding/api.ts`):**
+- `getCareerGraph()` metodu onboarding API istemcisine (`apiFetch` yardımcısıyla) eklendi.
+
+**Doğrulama**:
+- `test_onboarding_api.py` betiğinde Goals payload tipleri düzeltildi.
+- E2E testi taze başlatılan backend üzerinde başarıyla çalıştırıldı: PDF yükleme, extraction polling, ve veritabanı verilerinden dinamik grafik oluşturma işlemleri hatasız tamamlandı.
+- TypeScript derleme testi (`npx tsc --noEmit`) 0 hatayla başarıyla tamamlandı.
+
+---
+
+## [Evidence Intelligence Phase 3 — Evidence Review UI] — 2026-07-16 — Review UI 🚀
+
+### Yapılan
+
+**Backend Endpoint'leri (`apps/api/app/routers/evidence.py`):**
+- **GET `/api/evidence/items`**: Kullanıcının veritabanındaki tüm `EvidenceItem` verilerini listeler, `evidence_data.type` bilgisine göre gruplandırır (skills, projects, experiences vb.) ve azalan güven skoruna (confidence score) göre sıralar.
+- **DELETE `/api/evidence/items/{item_id}`**: Kullanıcının hatalı yetenek tespitlerini listeden kaldırmasını (false positive filtering) sağlayan veritabanı silme rotası.
+- **FastAPI Rota Sıralaması Düzeltmesi**: `/items` ve `/items/{item_id}` rotaları, FastAPI'nin rota eşleşme önceliği çakışması (FastAPI path template collision) nedeniyle param parametresi `/{skill}` tarafından yutuluyordu. Bu rotalar `/{skill}` rotasının yukarısına taşınarak çözüldü.
+
+**Frontend Değişiklikleri (`apps/web/features/onboarding/api.ts`):**
+- `getEvidenceItems(source?)` ve `deleteEvidenceItem(itemId)` metotları API istemcisine (`onboardingApi`) eklendi.
+
+**ExtractionResult Review UI Bileşeni (`apps/web/app/(auth)/onboarding/_components/extraction-result.tsx`):**
+- Özgeçmiş analizinin sonuçlarını, güven çubukları (confidence progress bar) ile gösteren review bileşeni oluşturuldu.
+- `NarrativeSize` tip uyuşmazlıkları (`size="md"` ve `size="xs"` gibi tanımlı olmayan prop değerleri) giderildi.
+- Kullanıcıya yanlış analiz edilmiş yetenekleri silme ve onboarding'e devam etme yeteneği verildi.
+
+**Onboarding Entegrasyonu (`apps/web/app/(auth)/onboarding/_components/step-evidence.tsx`):**
+- Özgeçmiş yüklemesi tamamlandığında, `step-evidence.tsx` artık doğrudan bir sonraki onboarding aşamasına yönlendirme yapmaz; bunun yerine `ExtractionResult` Review UI bileşenini ekrana getirerek kullanıcının verileri gözden geçirmesini sağlar.
 
 ---
 

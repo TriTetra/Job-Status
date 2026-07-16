@@ -1,216 +1,365 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { FileText, Github, Globe, Check } from "lucide-react";
 import { onboardingApi } from "@/features/onboarding/api";
 import { NarrativeText } from "@/components/shared/narrative-text";
-import { Button } from "@/components/shared/button";
-import { ExtractionLog } from "./extraction-log";
 
 interface StepEvidenceProps {
   onComplete: () => void;
 }
 
+type Phase = "upload" | "processing" | "done";
+
 export function StepEvidence({ onComplete }: StepEvidenceProps) {
-  const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [status, setStatus] = useState<any>(null);
+  const [phase, setPhase]           = useState<Phase>("upload");
+  const [filename, setFilename]     = useState("");
+  const [progress, setProgress]     = useState(0);
+  const [logLine, setLogLine]       = useState("");
+  const [skills, setSkills]         = useState<string[]>([]);
+  const [showAll, setShowAll]       = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+
+  // Portfolio
+  const [portfolioOpen, setPortfolioOpen]       = useState(false);
+  const [portfolioUrl, setPortfolioUrl]         = useState("");
+  const [portfolioConnected, setPortfolioConnected] = useState(false);
+  const [crawling, setCrawling]                 = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Poll job status
+  // Already uploaded in a prior session → skip to done
   useEffect(() => {
-    if (!jobId) return;
+    onboardingApi.getState().then((s) => {
+      if (s.profile_data?.resume_doc_id) fetchSkillsAndDone();
+    }).catch(() => {});
+  }, []);
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await onboardingApi.getResumeStatus(jobId);
-        setStatus(response);
+  const fetchSkillsAndDone = useCallback(() => {
+    onboardingApi.getAggregatedSkills()
+      .then((d) => {
+        setSkills(d.skills.map((s: any) => s.skill_name));
+        setPhase("done");
+      })
+      .catch(() => setPhase("done"));
+  }, []);
 
-        if (response.status === "completed") {
-          clearInterval(pollInterval);
-          setTimeout(() => onComplete(), 1500);
-        } else if (response.status === "failed") {
-          clearInterval(pollInterval);
-          setError(response.error || "Extraction failed");
-        }
-      } catch (err) {
-        clearInterval(pollInterval);
-        setError("Failed to check status");
-      }
-    }, 1000);
-
-    return () => clearInterval(pollInterval);
-  }, [jobId, onComplete]);
-
-  const handleFileSelect = useCallback(async (selectedFile: File) => {
-    if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
       setError("Only PDF files are accepted");
       return;
     }
-
     setError(null);
-    setFile(selectedFile);
+    setFilename(file.name);
+    setPhase("processing");
+    setProgress(5);
+    setLogLine("Uploading…");
 
+    let jobId: string;
     try {
-      const response = await onboardingApi.uploadResume(selectedFile);
-      setJobId(response.job_id);
-    } catch (err) {
-      setError("Failed to upload resume");
+      const res = await onboardingApi.uploadResume(file);
+      jobId = res.job_id;
+    } catch {
+      setError("Upload failed. Please try again.");
+      setPhase("upload");
+      return;
     }
-  }, []);
+
+    const poller = setInterval(async () => {
+      try {
+        const status = await onboardingApi.getResumeStatus(jobId);
+        setProgress(status.progress ?? 50);
+        if (status.logs?.length) {
+          const msg = status.logs[status.logs.length - 1].message ?? "";
+          setLogLine(msg.replace(/[\u{1F300}-\u{1FFFF}]/gu, "").trim());
+        }
+        if (status.status === "completed") {
+          clearInterval(poller);
+          setProgress(100);
+          fetchSkillsAndDone();
+        } else if (status.status === "failed") {
+          clearInterval(poller);
+          setError(status.error ?? "Extraction failed");
+          setPhase("upload");
+        }
+      } catch {
+        clearInterval(poller);
+        setError("Connection lost. Please try again.");
+        setPhase("upload");
+      }
+    }, 1000);
+  }, [fetchSkillsAndDone]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) handleFileSelect(droppedFile);
-  }, [handleFileSelect]);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  }, [handleFile]);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
+  const handleCrawl = async () => {
+    if (!portfolioUrl) return;
+    setCrawling(true);
+    try {
+      await onboardingApi.crawlPortfolio(portfolioUrl);
+      setPortfolioConnected(true);
+      setPortfolioOpen(false);
+      fetchSkillsAndDone(); // refresh skills
+    } catch {
+      // silently fail — user can try again
+    } finally {
+      setCrawling(false);
+    }
+  };
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
+  // ── Shared label style ────────────────────────────────────────────────────
+  const labelCls = "block text-[11px] font-semibold tracking-wider uppercase mb-1.5 text-[var(--text-muted)]";
 
-  return (
-    <div className="space-y-12">
-      {/* Narrative Opening */}
-      <div>
-        <NarrativeText size="2xl" weight="semibold" className="mb-2">
-          Show us your work.
-        </NarrativeText>
-        <NarrativeText size="base" className="text-[var(--text-secondary)]">
-          Upload your resume and we'll extract evidence of your skills.
-        </NarrativeText>
-      </div>
+  // ── Shared chip toggle style ───────────────────────────────────────────────
+  const chipActive = {
+    borderColor: "var(--accent)",
+    background: "rgba(255,177,98,0.05)",
+    color: "var(--accent)",
+  } as const;
+  const chipIdle = {
+    borderColor: "var(--border)",
+    background: "var(--surface)",
+    color: "var(--text-secondary)",
+  } as const;
 
-      {/* Upload Zone */}
-      {!jobId && (
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => fileInputRef.current?.click()}
-          className={`
-            relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
-            transition-all duration-200
-            ${isDragging 
-              ? "border-[var(--accent)] bg-[rgba(255,177,98,0.05)]" 
-              : "border-[var(--border)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)]"
-            }
-          `}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf"
-            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-            className="hidden"
-          />
-
-          <Upload className="h-12 w-12 mx-auto mb-4 text-[var(--text-muted)]" strokeWidth={1.5} />
-          <NarrativeText size="lg" weight="medium" className="mb-2">
-            {isDragging ? "Drop your resume here" : "Drag & drop your resume"}
-          </NarrativeText>
-          <NarrativeText size="sm" className="text-[var(--text-muted)]">
-            or click to browse (PDF only)
-          </NarrativeText>
+  // ─── Upload ───────────────────────────────────────────────────────────────
+  if (phase === "upload") {
+    return (
+      <div className="space-y-3">
+        <div>
+          <NarrativeText size="xl" weight="semibold">Show us your work.</NarrativeText>
+          <p className="text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+            Upload your CV and we'll map your skills automatically.
+          </p>
         </div>
-      )}
 
-      {/* Extraction Progress */}
-      {jobId && status && (
-        <div className="space-y-6">
-          {/* File Info */}
-          <div className="flex items-center gap-3 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
-            <FileText className="h-5 w-5 text-[var(--accent)]" strokeWidth={1.5} />
-            <div className="flex-1 min-w-0">
-              <NarrativeText size="sm" weight="medium" className="truncate">
-                {file?.name}
-              </NarrativeText>
-              <NarrativeText size="sm" className="text-[var(--text-muted)]">
-                {status.status === "completed" ? "Extraction complete" : `Processing... ${status.progress}%`}
-              </NarrativeText>
-            </div>
-            {status.status === "completed" && (
-              <CheckCircle2 className="h-5 w-5 text-[var(--success)]" strokeWidth={2} />
-            )}
-            {status.status === "failed" && (
-              <AlertCircle className="h-5 w-5 text-[var(--danger)]" strokeWidth={2} />
-            )}
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="h-1 bg-[var(--surface-hover)] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[var(--accent)] transition-all duration-500 ease-out"
-                style={{ width: `${status.progress}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Extraction Log */}
-          <ExtractionLog logs={status.logs} />
-
-          {/* Result Summary */}
-          {status.status === "completed" && status.result && (
-            <div className="p-4 bg-[rgba(127,182,133,0.1)] border border-[rgba(127,182,133,0.2)] rounded-lg space-y-2">
-              <NarrativeText size="sm" weight="semibold" className="text-[var(--success)]">
-                Career Graph ready
-              </NarrativeText>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-[var(--text-muted)]">Skills:</span>{" "}
-                  <span className="font-mono font-medium">{status.result.skills_extracted}</span>
-                </div>
-                <div>
-                  <span className="text-[var(--text-muted)]">Companies:</span>{" "}
-                  <span className="font-mono font-medium">{status.result.companies_found}</span>
-                </div>
-                <div>
-                  <span className="text-[var(--text-muted)]">Evidence:</span>{" "}
-                  <span className="font-mono font-medium">{status.result.evidence_items}</span>
-                </div>
-                <div>
-                  <span className="text-[var(--text-muted)]">Confidence:</span>{" "}
-                  <span className="font-mono font-medium">{Math.round(status.result.confidence_score * 100)}%</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="p-4 bg-[rgba(235,94,85,0.1)] border border-[rgba(235,94,85,0.2)] rounded-lg">
-          <NarrativeText size="sm" className="text-[var(--danger)]">
+        {error && (
+          <div
+            className="px-3 py-2 rounded-lg border text-xs"
+            style={{ background: "rgba(235,94,85,0.08)", borderColor: "rgba(235,94,85,0.2)", color: "var(--danger)" }}
+          >
             {error}
-          </NarrativeText>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => {
-              setError(null);
-              setFile(null);
-              setJobId(null);
-              setStatus(null);
+          </div>
+        )}
+
+        {/* Upload zone — same vertical rhythm as a field group */}
+        <div>
+          <label className={labelCls}>Resume / CV *</label>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed cursor-pointer py-8 transition-all"
+            style={{
+              borderColor: isDragging ? "var(--accent)" : "var(--border)",
+              background:  isDragging ? "rgba(255,177,98,0.04)" : "var(--surface)",
             }}
           >
-            Try again
-          </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+            />
+            <FileText className="h-7 w-7" strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
+            <div className="text-center">
+              <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                {isDragging ? "Drop here" : "Drag & drop or click to browse"}
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>PDF only · up to 10 MB</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Skip */}
+        <button
+          type="button"
+          onClick={onComplete}
+          className="w-full py-2 px-6 rounded-lg text-sm font-semibold tracking-wide transition-all"
+          style={{ background: "var(--surface-hover)", color: "var(--text-muted)", cursor: "pointer" }}
+        >
+          Skip for now
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Processing ───────────────────────────────────────────────────────────
+  if (phase === "processing") {
+    return (
+      <div className="space-y-3">
+        <div>
+          <NarrativeText size="xl" weight="semibold">Analyzing your CV</NarrativeText>
+          <p className="text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+            Extracting skills, experience, and projects…
+          </p>
+        </div>
+
+        {/* File row — same height as an input */}
+        <div
+          className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        >
+          <FileText className="h-4 w-4 shrink-0" strokeWidth={1.5} style={{ color: "var(--accent)" }} />
+          <span className="text-sm flex-1 truncate" style={{ color: "var(--text-primary)" }}>{filename}</span>
+          <span className="text-xs tabular-nums" style={{ color: "var(--text-muted)" }}>{progress}%</span>
+        </div>
+
+        {/* Thin progress bar — matches wizard step bar style */}
+        <div className="h-0.5 rounded-full overflow-hidden" style={{ background: "var(--surface-hover)" }}>
+          <div
+            className="h-full rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${progress}%`, background: "var(--accent)" }}
+          />
+        </div>
+
+        {logLine && (
+          <p className="text-[12px] truncate" style={{ color: "var(--text-muted)" }}>{logLine}</p>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Done ─────────────────────────────────────────────────────────────────
+  const VISIBLE = 10;
+  const displayedSkills = showAll ? skills : skills.slice(0, VISIBLE);
+  const overflow = skills.length - VISIBLE;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <NarrativeText size="xl" weight="semibold">
+          {skills.length > 0 ? `Found ${skills.length} skills` : "CV analyzed"}
+        </NarrativeText>
+        <p className="text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+          Connect more sources to strengthen your signals.
+        </p>
+      </div>
+
+      {/* Sources */}
+      <div>
+        <label className={labelCls}>Sources</label>
+        <div className="flex flex-wrap gap-1.5">
+          {/* CV — always connected */}
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
+            style={chipActive}
+          >
+            <Check className="h-3 w-3" strokeWidth={2.5} />
+            CV uploaded
+          </span>
+
+          {/* GitHub */}
+          <button
+            type="button"
+            onClick={() => { window.location.href = `${apiBase}/api/oauth/github/authorize`; }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all"
+            style={chipIdle}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+          >
+            <Github className="h-3 w-3" />
+            Add GitHub
+          </button>
+
+          {/* Portfolio */}
+          {portfolioConnected ? (
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
+              style={chipActive}
+            >
+              <Check className="h-3 w-3" strokeWidth={2.5} />
+              Portfolio
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPortfolioOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all"
+              style={portfolioOpen ? chipActive : chipIdle}
+              onMouseEnter={(e) => { if (!portfolioOpen) (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"; }}
+              onMouseLeave={(e) => { if (!portfolioOpen) (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+            >
+              <Globe className="h-3 w-3" />
+              Add Portfolio
+            </button>
+          )}
+        </div>
+
+        {/* Portfolio URL — inline expand */}
+        {portfolioOpen && !portfolioConnected && (
+          <div className="flex gap-2 mt-2">
+            <input
+              type="url"
+              value={portfolioUrl}
+              onChange={(e) => setPortfolioUrl(e.target.value)}
+              placeholder="https://your-portfolio.com"
+              className="flex-1 px-3 py-1.5 rounded-lg border text-sm outline-none transition-colors"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-primary)" }}
+              onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+              onKeyDown={(e) => e.key === "Enter" && handleCrawl()}
+            />
+            <button
+              type="button"
+              onClick={handleCrawl}
+              disabled={!portfolioUrl || crawling}
+              className="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all disabled:opacity-40"
+              style={chipActive}
+            >
+              {crawling ? "…" : "Add"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Skills */}
+      {skills.length > 0 && (
+        <div>
+          <label className={labelCls}>Skills detected</label>
+          <div className="flex flex-wrap gap-1.5">
+            {displayedSkills.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center px-3 py-1.5 rounded-full border text-xs font-medium"
+                style={chipIdle}
+              >
+                {name}
+              </span>
+            ))}
+            {!showAll && overflow > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="inline-flex items-center px-3 py-1.5 rounded-full border text-xs font-medium transition-all"
+                style={{ borderColor: "var(--border)", background: "transparent", color: "var(--text-muted)" }}
+              >
+                +{overflow} more
+              </button>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Continue */}
+      <button
+        type="button"
+        onClick={onComplete}
+        className="w-full py-2 px-6 rounded-lg text-sm font-semibold tracking-wide transition-all"
+        style={{ background: "var(--accent)", color: "var(--accent-fg)", cursor: "pointer" }}
+      >
+        Continue
+      </button>
     </div>
   );
 }
