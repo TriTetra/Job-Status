@@ -14,7 +14,7 @@ export function WizardShell({ currentState, children }: WizardShellProps) {
   const currentIdx = STEP_ORDER.indexOf(currentState as typeof STEP_ORDER[number]);
 
   return (
-    <div className="w-full max-w-xl">
+    <div className="w-full max-w-xl mx-auto">
       {/* Wordmark + step counter in one compact row */}
       <div className="flex items-center justify-between mb-4">
         <AplioLogo variant="wordmark" size="md" />

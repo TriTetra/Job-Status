@@ -2,11 +2,10 @@
 
 import { useState, type FormEvent, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { onboardingApi, COUNTRIES, rolesApi } from "@/features/onboarding";
+import { onboardingApi, COUNTRIES, rolesApi, SENIORITY, type SeniorityId } from "@/features/onboarding";
 import { ROLES } from "@/features/onboarding/data/roles";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { SearchableCombobox, type ComboboxOption } from "@/components/shared/searchable-combobox";
-import { Shield } from "lucide-react";
 
 interface StepIdentityProps {
   initialData?: {
@@ -18,18 +17,19 @@ interface StepIdentityProps {
     career_level?: string;
     country?: string;
     authorization?: string;
+    total_years?: number;
+    languages?: Array<{ code: string; level: string }>;
+    education_level?: string;
   };
   onComplete: () => void;
 }
 
-type CareerLevel = "junior" | "mid" | "senior" | "staff" | "principal";
-
-function suggestCareerLevel(years: number): { level: CareerLevel; confidence: "low" | "medium" | "high" } {
-  if (years < 2) return { level: "junior", confidence: "medium" };
-  if (years < 5) return { level: "mid", confidence: "medium" };
+function suggestCareerLevel(years: number): { level: SeniorityId; confidence: "low" | "medium" | "high" } {
+  if (years < 2)  return { level: "entry",  confidence: "medium" };
+  if (years < 5)  return { level: "mid",    confidence: "medium" };
   if (years < 10) return { level: "senior", confidence: "medium" };
-  if (years < 15) return { level: "staff", confidence: "low" };
-  return { level: "principal", confidence: "low" };
+  if (years < 15) return { level: "lead",   confidence: "low" };
+  return { level: "expert", confidence: "low" };
 }
 
 export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
@@ -40,12 +40,21 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
   const [currentRoleId, setCurrentRoleId] = useState(initialData?.current_role_id || "");
   const [currentRoleTitle, setCurrentRoleTitle] = useState(initialData?.current_role_title || "");
   const [yearsInRole, setYearsInRole] = useState<number>(initialData?.years_in_role ?? 3);
-  const [careerLevel, setCareerLevel] = useState<CareerLevel>(
-    (initialData?.career_level as CareerLevel) || suggestCareerLevel(initialData?.years_in_role ?? 3).level
+  const [careerLevel, setCareerLevel] = useState<SeniorityId>(
+    (initialData?.career_level as SeniorityId) || suggestCareerLevel(initialData?.years_in_role ?? 3).level
   );
   const [careerLevelOrigin, setCareerLevelOrigin] = useState<"user" | "system">("system");
   const [country, setCountry] = useState(initialData?.country || "");
-  const [authorization, setAuthorization] = useState(initialData?.authorization || "authorized");
+
+  const [totalYears, setTotalYears] = useState<number>(
+    initialData?.total_years ?? initialData?.years_in_role ?? 3
+  );
+  const [languages, setLanguages] = useState<Array<{ code: string; level: string }>>(
+    initialData?.languages ?? []
+  );
+  const [educationLevel, setEducationLevel] = useState<string>(initialData?.education_level ?? "");
+
+  const PROFICIENCY = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +91,7 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
   }, [user, firstName, lastName]);
 
 
-  const isValid = firstName.trim().length > 0 && currentRoleId && country.length > 0;
+  const isValid = firstName.trim().length > 0 && currentRoleId && country.length > 0 && languages.length > 0;
 
   const suggestion = suggestCareerLevel(yearsInRole);
 
@@ -103,7 +112,9 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
         career_level: careerLevel,
         career_level_origin: careerLevelOrigin,
         country,
-        authorization,
+        total_years: totalYears,
+        languages,
+        education_level: educationLevel || undefined,
       });
       onComplete();
     } catch (err) {
@@ -171,10 +182,28 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
           initialOptions={staticRoles}
           onSearch={handleRoleSearch}
           value={currentRoleId}
+          valueLabel={currentRoleTitle}
           onChange={(id, title) => { setCurrentRoleId(id); setCurrentRoleTitle(title); }}
           placeholder="Search roles..."
           allowCustom={true}
           customLabel='Use "{query}" as my role'
+        />
+      </div>
+
+      {/* Total experience */}
+      <div>
+        <div className="flex justify-between items-center mb-1">
+          <label className="block text-[11px] font-semibold tracking-wider uppercase text-[var(--text-muted)]">
+            Total experience
+          </label>
+          <span className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--surface-hover)] text-[var(--accent)] border border-[var(--border)]">
+            {totalYears === 30 ? "30+" : `${totalYears}y`}
+          </span>
+        </div>
+        <input
+          type="range" min="0" max="30" step="1" value={totalYears}
+          onChange={(e) => setTotalYears(Number(e.target.value))}
+          className="w-full h-1 bg-[var(--surface-hover)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
         />
       </div>
 
@@ -213,23 +242,43 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
           )}
         </div>
         <div className="flex gap-1.5">
-          {(["junior", "mid", "senior", "staff", "principal"] as const).map((level) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => {
-                setCareerLevel(level);
-                setCareerLevelOrigin(level === suggestCareerLevel(yearsInRole).level ? "system" : "user");
-              }}
-              className={`flex-1 py-1.5 rounded-lg border text-[11px] font-semibold capitalize transition-all ${
-                careerLevel === level
-                  ? "border-[var(--accent)] bg-[rgba(255,177,98,0.05)] text-[var(--accent)]"
-                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
-              }`}
-            >
-              {level}
-            </button>
-          ))}
+          {SENIORITY.map((lv) => {
+            const active = careerLevel === lv.id;
+            return (
+              <button
+                key={lv.id}
+                type="button"
+                onClick={() => {
+                  setCareerLevel(lv.id);
+                  setCareerLevelOrigin(lv.id === suggestCareerLevel(yearsInRole).level ? "system" : "user");
+                }}
+                className="group flex-1 py-1.5 rounded-lg border text-[11px] font-semibold transition-all duration-200"
+                style={{
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "rgba(255,177,98,0.05)" : "var(--surface)",
+                  color: active ? "var(--accent)" : "var(--text-secondary)",
+                  boxShadow: active ? "0 0 0 1px var(--accent), 0 4px 14px -6px rgba(255,177,98,0.5)" : "none",
+                }}
+              >
+                {/* weight dots — the rung reads even without the word */}
+                <span className="flex gap-0.5 justify-center mb-1">
+                  {Array.from({ length: 5 }).map((_, di) => (
+                    <span
+                      key={di}
+                      className="h-1 w-1 rounded-full transition-colors duration-200"
+                      style={{
+                        background:
+                          di < lv.dots
+                            ? active ? "var(--accent)" : "var(--text-muted)"
+                            : "var(--border-strong)",
+                      }}
+                    />
+                  ))}
+                </span>
+                {lv.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -248,31 +297,72 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
         />
       </div>
 
-      {/* Work Authorization */}
+      {/* Languages */}
       <div>
-        <label className="block text-[11px] font-semibold tracking-wider uppercase mb-1 text-[var(--text-muted)]">
-          Work Authorization
+        <label className="block text-[11px] font-semibold tracking-wider uppercase mb-1.5 text-[var(--text-muted)]">
+          Languages spoken *
         </label>
-        <div className="grid grid-cols-2 gap-2">
-          {([
-            { val: "authorized", label: "Authorized", desc: "Citizen, PR, or valid visa" },
-            { val: "sponsorship_required", label: "Needs Visa", desc: "Requires sponsorship" },
-          ] as const).map(({ val, label, desc }) => (
-            <div
-              key={val}
-              onClick={() => setAuthorization(val)}
-              className="flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all duration-200"
-              style={{
-                background: authorization === val ? "rgba(255,177,98,0.05)" : "var(--surface)",
-                borderColor: authorization === val ? "var(--accent)" : "var(--border)",
-              }}
+        <div className="flex flex-wrap gap-1.5">
+          {languages.map((lang, i) => {
+            const lvlIdx = PROFICIENCY.indexOf((lang.level as typeof PROFICIENCY[number]) || "A1");
+            return (
+              <span
+                key={i}
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] text-xs animate-fade-in"
+              >
+                <input
+                  value={lang.code}
+                  onChange={(e) => setLanguages((p) => p.map((l, j) => (j === i ? { ...l, code: e.target.value } : l)))}
+                  className="w-16 bg-transparent outline-none font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                  placeholder="Lang"
+                />
+                <span className="flex items-center gap-1">
+                  {PROFICIENCY.map((lv, di) => (
+                    <button
+                      key={lv} type="button" title={lv}
+                      onClick={() => setLanguages((p) => p.map((l, j) => (j === i ? { ...l, level: lv } : l)))}
+                      className="h-1.5 w-1.5 rounded-full transition-all duration-150 hover:scale-150"
+                      style={{ background: lvlIdx >= di ? "var(--accent)" : "var(--border-strong)" }}
+                    />
+                  ))}
+                </span>
+                <span className="text-[10px] font-mono text-[var(--text-muted)] w-5">{lang.level || "A1"}</span>
+                <button
+                  type="button"
+                  onClick={() => setLanguages((p) => p.filter((_, j) => j !== i))}
+                  className="text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors leading-none"
+                >×</button>
+              </span>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setLanguages((p) => [...p, { code: "English", level: "C1" }])}
+            className="inline-flex items-center px-2.5 py-1.5 rounded-full border border-dashed border-[var(--border)] text-xs text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+          >
+            + Add language
+          </button>
+        </div>
+      </div>
+
+      {/* Education */}
+      <div>
+        <label className="block text-[11px] font-semibold tracking-wider uppercase mb-1.5 text-[var(--text-muted)]">
+          Highest education
+        </label>
+        <div className="flex gap-1.5">
+          {(["none", "bachelor", "master", "phd"] as const).map((lv) => (
+            <button
+              key={lv} type="button"
+              onClick={() => setEducationLevel(lv)}
+              className={`flex-1 py-1.5 rounded-lg border text-[11px] font-semibold capitalize transition-all ${
+                educationLevel === lv
+                  ? "border-[var(--accent)] bg-[rgba(255,177,98,0.05)] text-[var(--accent)]"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
+              }`}
             >
-              <Shield className={`h-3.5 w-3.5 shrink-0 ${authorization === val ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`} />
-              <div>
-                <div className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{label}</div>
-                <div className="text-[10px] leading-snug text-[var(--text-muted)]">{desc}</div>
-              </div>
-            </div>
+              {lv}
+            </button>
           ))}
         </div>
       </div>

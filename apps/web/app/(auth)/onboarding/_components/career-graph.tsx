@@ -3,148 +3,116 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-interface GraphNode {
-  id: string;
-  type: string;
-  label: string;
-  confidence: number;
-  metadata: any;
-}
-
-interface GraphEdge {
-  source: string;
-  target: string;
-  weight: number;
-}
-
-interface CareerGraphProps {
-  data: {
-    nodes: GraphNode[];
-    edges: GraphEdge[];
-    stats: any;
-  };
-}
+interface GraphNode { id: string; type: string; label: string; confidence: number; metadata: any; }
+interface GraphEdge { source: string; target: string; weight: number; }
+interface CareerGraphProps { data: { nodes: GraphNode[]; edges: GraphEdge[]; stats: any; }; }
 
 export function CareerGraph({ data }: CareerGraphProps) {
   const [visibleNodes, setVisibleNodes] = useState<string[]>([]);
   const [visibleEdges, setVisibleEdges] = useState<string[]>([]);
 
-  // Animate nodes appearing sequentially
+  const centerNode: GraphNode = { id: "you", type: "you", label: "You", confidence: 1, metadata: {} };
+  const allNodes = [centerNode, ...data.nodes];
+
+  // You → her skill + mevcut skill→project edges
+  const skillEdges: GraphEdge[] = data.nodes.filter((n) => n.type === "skill").map((n) => ({ source: "you", target: n.id, weight: 1 }));
+  const allEdges = [...skillEdges, ...data.edges];
+
   useEffect(() => {
-    const nodeInterval = setInterval(() => {
+    const t = setInterval(() => {
       setVisibleNodes((prev) => {
-        if (prev.length >= data.nodes.length) {
-          clearInterval(nodeInterval);
-          return prev;
-        }
-        return [...prev, data.nodes[prev.length].id];
+        if (prev.length >= allNodes.length) { clearInterval(t); return prev; }
+        return [...prev, allNodes[prev.length].id];
       });
-    }, 200);
+    }, 160);
+    return () => clearInterval(t);
+  }, [allNodes.length]);
 
-    return () => clearInterval(nodeInterval);
-  }, [data.nodes]);
-
-  // Animate edges after nodes
   useEffect(() => {
-    if (visibleNodes.length === data.nodes.length) {
-      const edgeInterval = setInterval(() => {
+    if (visibleNodes.length >= allNodes.length) {
+      const t = setInterval(() => {
         setVisibleEdges((prev) => {
-          if (prev.length >= data.edges.length) {
-            clearInterval(edgeInterval);
-            return prev;
-          }
-          const edge = data.edges[prev.length];
-          return [...prev, `${edge.source}-${edge.target}`];
+          if (prev.length >= allEdges.length) { clearInterval(t); return prev; }
+          const e = allEdges[prev.length];
+          return [...prev, `${e.source}-${e.target}`];
         });
-      }, 100);
-
-      return () => clearInterval(edgeInterval);
+      }, 70);
+      return () => clearInterval(t);
     }
-  }, [visibleNodes, data.edges, data.nodes.length]);
+  }, [visibleNodes.length, allEdges.length, allNodes.length]);
 
-  // Simple force-directed layout (circular for now)
-  const centerX = 300;
-  const centerY = 200;
-  const radius = 120;
+  // Layout: You merkez · skill iç halka · project/company dış halka
+  const cx = 200, cy = 150;
+  const skills = data.nodes.filter((n) => n.type === "skill");
+  const others = data.nodes.filter((n) => n.type !== "skill");
 
-  const getNodePosition = (index: number) => {
-    const angle = (index / data.nodes.length) * 2 * Math.PI;
-    return {
-      x: centerX + radius * Math.cos(angle),
-      y: centerY + radius * Math.sin(angle),
-    };
+  const pos = (id: string) => {
+    if (id === "you") return { x: cx, y: cy };
+    const node = allNodes.find((n) => n.id === id);
+    if (!node) return { x: cx, y: cy };
+    if (node.type === "skill") {
+      const i = skills.findIndex((s) => s.id === id);
+      const a = (i / Math.max(skills.length, 1)) * 2 * Math.PI - Math.PI / 2;
+      return { x: cx + 78 * Math.cos(a), y: cy + 78 * Math.sin(a) };
+    }
+    const i = others.findIndex((o) => o.id === id);
+    const a = (i / Math.max(others.length, 1)) * 2 * Math.PI - Math.PI / 2;
+    return { x: cx + 135 * Math.cos(a), y: cy + 135 * Math.sin(a) };
   };
 
-  const getNodeColor = (type: string) => {
-    switch (type) {
-      case "skill":
-        return "var(--accent)"; // accent
-      case "project":
-        return "var(--success)"; // success
-      case "company":
-        return "var(--info)"; // info
-      default:
-        return "var(--text-muted)"; // muted
-    }
-  };
+  const radius = (n: GraphNode) =>
+    n.type === "you" ? 13 : n.type === "skill" ? 5 + n.confidence * 6 : n.type === "achievement" ? 7 : 5;
+
+  const color = (t: string) =>
+    t === "you" ? "var(--text-primary)"
+    : t === "skill" ? "var(--accent)"
+    : t === "achievement" ? "var(--warning, #e6a817)"
+    : t === "project" ? "var(--success)"
+    : "var(--info, #6BA5D7)";
 
   return (
-    <svg viewBox="0 0 600 400" className="w-full h-auto">
-      {/* Edges */}
-      {data.edges.map((edge, i) => {
-        const sourceIndex = data.nodes.findIndex((n) => n.id === edge.source);
-        const targetIndex = data.nodes.findIndex((n) => n.id === edge.target);
-        if (sourceIndex === -1 || targetIndex === -1) return null;
-
-        const sourcePos = getNodePosition(sourceIndex);
-        const targetPos = getNodePosition(targetIndex);
-        const edgeId = `${edge.source}-${edge.target}`;
-        const isVisible = visibleEdges.includes(edgeId);
-
+    <svg viewBox="0 0 400 300" className="w-full h-auto">
+      {allEdges.map((e) => {
+        const s = pos(e.source), t = pos(e.target);
+        const eid = `${e.source}-${e.target}`;
+        const vis = visibleEdges.includes(eid);
         return (
-          <motion.line
-            key={edgeId}
-            x1={sourcePos.x}
-            y1={sourcePos.y}
-            x2={targetPos.x}
-            y2={targetPos.y}
-            stroke="var(--border)"
-            strokeWidth={1}
+          <motion.line key={eid} x1={s.x} y1={s.y} x2={t.x} y2={t.y}
+            stroke="var(--border)" strokeWidth={1}
             initial={{ pathLength: 0, opacity: 0 }}
-            animate={isVisible ? { pathLength: 1, opacity: 0.3 } : {}}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          />
+            animate={vis ? { pathLength: 1, opacity: 0.35 } : {}}
+            transition={{ duration: 0.4, ease: "easeOut" }} />
         );
       })}
 
-      {/* Nodes */}
-      {data.nodes.map((node, i) => {
-        const pos = getNodePosition(i);
-        const isVisible = visibleNodes.includes(node.id);
-        const nodeRadius = node.type === "skill" ? 8 : 6;
-
+      {allNodes.map((node) => {
+        const p = pos(node.id);
+        const vis = visibleNodes.includes(node.id);
+        const r = radius(node);
         return (
-          <motion.g
-            key={node.id}
+          <motion.g key={node.id}
             initial={{ scale: 0, opacity: 0 }}
-            animate={isVisible ? { scale: 1, opacity: 1 } : {}}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-          >
-            <circle
-              cx={pos.x}
-              cy={pos.y}
-              r={nodeRadius}
-              fill={getNodeColor(node.type)}
-            />
-            <text
-              x={pos.x}
-              y={pos.y + nodeRadius + 12}
-              textAnchor="middle"
-              className="text-xs fill-current text-[var(--text-secondary)]"
-              style={{ fontSize: "10px" }}
-            >
-              {node.label}
-            </text>
+            animate={vis ? { scale: 1, opacity: 1 } : {}}
+            transition={{ duration: 0.3, ease: "easeOut" }}>
+            {node.type === "you" && (
+              <motion.circle cx={p.x} cy={p.y} r={r} fill="none" stroke="var(--accent)" strokeWidth={1.5}
+                animate={{ r: [r, r + 9, r], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} />
+            )}
+            {node.type === "achievement" && (
+              <motion.circle
+                cx={p.x} cy={p.y} r={r} fill="none"
+                stroke="var(--warning, #e6a817)" strokeWidth={1}
+                animate={{ r: [r, r + 6, r], opacity: [0.45, 0, 0.45] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+              />
+            )}
+            <circle cx={p.x} cy={p.y} r={r} fill={color(node.type)} />
+            {(node.type === "you" || node.type === "skill" || node.type === "achievement") && (
+              <text x={p.x} y={p.y + r + 10} textAnchor="middle" style={{ fontSize: "8.5px" }} className="fill-current text-[var(--text-secondary)]">
+                {node.label}
+              </text>
+            )}
           </motion.g>
         );
       })}

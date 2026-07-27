@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { onboardingApi } from "@/features/onboarding/api";
+import { onboardingApi, STEP_ORDER } from "@/features/onboarding";
 import { NarrativeText } from "@/components/shared/narrative-text";
+import { AplioLogo } from "@/components/shared/aplio-logo";
 import { CareerGraph } from "./career-graph";
 import { ExtractionLog } from "./extraction-log";
 
@@ -17,100 +18,114 @@ export function StepBuilding({ onComplete }: StepBuildingProps) {
   const [status, setStatus] = useState<any>(null);
   const [graphData, setGraphData] = useState<any>(null);
 
-  // Start graph building on mount
   useEffect(() => {
-    const startBuilding = async () => {
-      try {
-        const response = await onboardingApi.buildGraph();
-        setJobId(response.job_id);
-      } catch (error) {
-        console.error("Failed to start graph building:", error);
-      }
-    };
-    startBuilding();
+    onboardingApi.buildGraph().then((r) => setJobId(r.job_id)).catch(console.error);
   }, []);
 
-  // Poll job status
   useEffect(() => {
     if (!jobId) return;
-
-    const pollInterval = setInterval(async () => {
+    const t = setInterval(async () => {
       try {
-        const response = await onboardingApi.getGraphStatus(jobId);
-        setStatus(response);
-
-        if (response.status === "completed") {
-          clearInterval(pollInterval);
-          setGraphData(response.result);
-          
-          // Wait for animation to complete, then redirect
-          setTimeout(() => {
-            onComplete();
-          }, 3000);
-        } else if (response.status === "failed") {
-          clearInterval(pollInterval);
-          console.error("Graph building failed:", response.error);
+        const r = await onboardingApi.getGraphStatus(jobId);
+        setStatus(r);
+        if (r.status === "completed") {
+          clearInterval(t);
+          setGraphData(r.result);
+          setTimeout(() => onComplete(), 3500);
+        } else if (r.status === "failed") {
+          clearInterval(t);
+          console.error("Graph failed:", r.error);
         }
-      } catch (error) {
-        clearInterval(pollInterval);
-        console.error("Failed to poll status:", error);
+      } catch (e) {
+        clearInterval(t);
+        console.error(e);
       }
     }, 800);
-
-    return () => clearInterval(pollInterval);
+    return () => clearInterval(t);
   }, [jobId, onComplete]);
 
+  const stepIdx = STEP_ORDER.indexOf("BUILDING" as any);
+
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-12 space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <NarrativeText size="2xl" weight="semibold" className="mb-2">
-          Building your Career Graph.
-        </NarrativeText>
-        {status && (
-          <NarrativeText size="sm" className="text-[var(--text-secondary)]">
-            {status.progress}% complete
-          </NarrativeText>
+    <div className="w-full">
+      {/* Üst bar — WizardShell ile aynı dil */}
+      <div className="flex items-center justify-between mb-8">
+        <AplioLogo variant="wordmark" size="md" />
+        {stepIdx >= 0 && (
+          <p className="text-[11px] font-medium tracking-widest uppercase text-[var(--text-muted)]">
+            Step {stepIdx + 1} / {STEP_ORDER.length}
+          </p>
         )}
       </div>
 
-      {/* Career Graph Visualization */}
-      {graphData && (
-        <div className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
-          <CareerGraph data={graphData} />
-        </div>
-      )}
-
-      {/* Progress Bar */}
-      {status && (
-        <div className="w-full max-w-md">
-          <div className="h-1 bg-[var(--surface-hover)] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[var(--accent)] transition-all duration-700 ease-out"
-              style={{ width: `${status.progress}%` }}
-            />
+      {/* Split: sol süreç · sağ sonuç */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        {/* ── Sol: progress + log + stats ── */}
+        <div className="space-y-4">
+          <div>
+            <NarrativeText size="xl" weight="semibold">Building your Career Graph.</NarrativeText>
+            {status && (
+              <p className="text-[13px] mt-0.5 text-[var(--text-muted)]">{status.progress}% complete</p>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Extraction Log */}
-      {status && (
-        <div className="w-full max-w-md">
-          <ExtractionLog logs={status.logs} />
-        </div>
-      )}
+          {status && (
+            <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--surface-hover)" }}>
+              <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${status.progress}%`, background: "var(--accent)" }} />
+            </div>
+          )}
 
-      {/* Final Message */}
-      {status?.status === "completed" && (
-        <div className="text-center animate-fade-in space-y-1">
-          <NarrativeText size="lg" className="text-[var(--success)]" weight="semibold">
-            Your Career Graph is ready.
-          </NarrativeText>
-          <NarrativeText size="sm" className="text-[var(--text-muted)]">
-            Redirecting to your first briefing...
-          </NarrativeText>
+          {status && <ExtractionLog logs={status.logs} />}
+
+          {status?.status === "completed" && graphData?.stats && (
+            <div className="flex gap-8 pt-2">
+              <div>
+                <div className="text-xl font-semibold" style={{ color: "var(--accent)" }}>{graphData.stats.skills_count}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Skills</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold" style={{ color: "var(--success)" }}>{graphData.stats.projects_count}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Projects</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold" style={{ color: "var(--warning, #e6a817)" }}>
+                  {graphData.stats.achievements_count ?? 0}
+                </div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Honors</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+                  {Math.round((graphData.stats.confidence_score || 0) * 100)}%
+                </div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Confidence</div>
+              </div>
+            </div>
+          )}
+
+          {status?.status === "completed" && (
+            <div className="animate-fade-in">
+              <NarrativeText size="base" weight="semibold" className="text-[var(--success)]">
+                Your Career Graph is ready.
+              </NarrativeText>
+              <p className="text-[12px] text-[var(--text-muted)]">Redirecting to your first briefing…</p>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* ── Sağ: Career Graph (büyük) ── */}
+        <div className="flex items-center justify-center">
+          {graphData ? (
+            <div className="w-full rounded-xl border border-[var(--border)] p-4" style={{ background: "var(--surface)" }}>
+              <CareerGraph data={graphData} />
+            </div>
+          ) : (
+            <div className="w-full aspect-[4/3] rounded-xl border border-dashed border-[var(--border)] flex flex-col items-center justify-center gap-3" style={{ background: "var(--surface)" }}>
+              <div className="animate-spin h-7 w-7 border-2 border-[var(--accent)] border-t-transparent rounded-full" />
+              <p className="text-xs text-[var(--text-muted)]">Compiling your evidence…</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -20,6 +20,7 @@ interface SearchableComboboxProps {
   /** Currently selected value (id) */
   value: string;
   /** Callback when selection changes */
+  valueLabel?: string;          // ← YENİ EKLE
   onChange: (id: string, title: string) => void;
   placeholder?: string;
   emptyMessage?: string;
@@ -47,6 +48,7 @@ export function SearchableCombobox({
   initialOptions = [],
   onSearch,
   value,
+  valueLabel,
   onChange,
   placeholder = "Search...",
   emptyMessage = "No matches found",
@@ -67,6 +69,11 @@ export function SearchableCombobox({
   const selectedOption =
     initialOptions.find((o) => o.id === value) ||
     results.find((o) => o.id === value);
+
+  // Option listede bulunamasa bile label'ı göster.
+  const displayLabel = value
+    ? (selectedOption?.title ?? valueLabel ?? "")
+    : "";
 
   // ─── Search ──────────────────────────────────────────────────
 
@@ -222,7 +229,7 @@ export function SearchableCombobox({
         <input
           ref={inputRef}
           type="text"
-          value={isOpen ? query : (selectedOption?.title ?? "")}
+          value={isOpen ? query : displayLabel}
           onChange={(e) => {
             setQuery(e.target.value);
             if (!isOpen) setIsOpen(true);

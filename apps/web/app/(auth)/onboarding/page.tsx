@@ -10,6 +10,7 @@ import { StepIdentity } from "./_components/step-identity";
 import { StepGoals } from "./_components/step-goals";
 import { StepEvidence } from "./_components/step-evidence";
 import { StepBuilding } from "./_components/step-building";
+import { StepConnections } from "./_components/step-connections";
 import type { OnboardingState } from "@/features/onboarding";
 
 function OnboardingContent() {
@@ -42,7 +43,7 @@ function OnboardingContent() {
   // Welcome screen (no step param)
   if (step === "WELCOME" || step === "NOT_STARTED") {
     return (
-      <div className="w-full max-w-xl">
+      <div className="w-full max-w-xl mx-auto">
         <StepWelcome />
       </div>
     );
@@ -54,6 +55,21 @@ function OnboardingContent() {
     return null;
   }
 
+  // BUILDING — full-screen split layout
+  if (step === "BUILDING") {
+    return <StepBuilding onComplete={() => router.push("/briefing")} />;
+  }
+
+  // GOALS — editorial two-column (wide layout, like BUILDING)
+  if (step === "GOALS") {
+    return (
+      <StepGoals
+        initialData={status?.preferences ?? undefined}
+        onComplete={() => router.push("/onboarding?step=EVIDENCE")}
+      />
+    );
+  }
+
   return (
     <WizardShell currentState={step as OnboardingState}>
       {step === "IDENTITY" && (
@@ -62,45 +78,18 @@ function OnboardingContent() {
           onComplete={() => router.push("/onboarding?step=GOALS")}
         />
       )}
-      {step === "GOALS" && (
-        <StepGoals
-          initialData={status?.preferences ?? undefined}
-          onComplete={() => router.push("/onboarding?step=EVIDENCE")}
-        />
-      )}
       {step === "EVIDENCE" && (
         <StepEvidence
           onComplete={() => router.push("/onboarding?step=CONNECTIONS")}
         />
       )}
-      {step === "BUILDING" && (
-        <StepBuilding
-          onComplete={() => router.push("/briefing")}
-        />
-      )}
       {step === "CONNECTIONS" && (
-        <div className="text-center py-16 space-y-4">
-          <p className="text-lg font-light" style={{ color: "var(--text-primary)" }}>
-            Connections step
-          </p>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Coming soon — we&apos;re building this now.
-          </p>
-          <button
-            onClick={async () => {
-              const next = await onboardingApi.advance();
-              if (next.state === "READY") {
-                router.push("/briefing");
-              } else {
-                router.push(`/onboarding?step=${next.state}`);
-              }
-            }}
-            className="mt-4 px-6 py-2.5 rounded-lg text-sm font-medium"
-            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-          >
-            Skip for now
-          </button>
-        </div>
+        <StepConnections
+          onComplete={async () => {
+            await onboardingApi.advance();   // CONNECTIONS → BUILDING (state machine tutarlılığı)
+            router.push("/onboarding?step=BUILDING");
+          }}
+        />
       )}
     </WizardShell>
   );

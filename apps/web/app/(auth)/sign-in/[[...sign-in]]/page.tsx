@@ -1,11 +1,9 @@
 import { SignIn } from "@clerk/nextjs";
-import { AplioLogo } from "@/components/shared/aplio-logo";
 
 export default function SignInPage() {
   return (
     <div className="w-full max-w-md">
       <div className="flex flex-col items-center mb-10">
-        <AplioLogo variant="icon" size="lg" className="mb-5" />
         <div
           className="text-[42px] tracking-[0.14em] font-extralight leading-none mb-3"
           style={{

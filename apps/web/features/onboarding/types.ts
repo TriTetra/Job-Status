@@ -7,33 +7,7 @@ export type OnboardingState =
   | "BUILDING"
   | "READY";
 
-export const ONBOARDING_STEPS: OnboardingState[] = [
-  "IDENTITY",
-  "GOALS",
-  "EVIDENCE",
-  "CONNECTIONS",
-  "BUILDING",
-];
 
-export interface IdentityData {
-  firstName: string;
-  lastName: string;
-  currentTitle: string;
-  yearsOfExperience: number;
-}
-
-export interface GoalsData {
-  targetRoles: string[];
-  targetIndustries: string[];
-  desiredSalaryMin?: number;
-  desiredSalaryMax?: number;
-  openToRemote: boolean;
-}
-
-export interface OnboardingData {
-  identity?: IdentityData;
-  goals?: GoalsData;
-}
 
 /** Shape returned by GET /api/onboarding/state */
 export interface OnboardingStatus {
@@ -44,6 +18,10 @@ export interface OnboardingStatus {
     preferred_role_ids?: string[];
     preferred_country_codes?: string[];
     work_arrangements?: string[];
+    requires_sponsorship?: boolean;
+    contract_types?: string[];
+    availability?: string | null;
+    target_seniority?: string | null;
     salary?: {
       min?: number;
       max?: number;

@@ -10,10 +10,10 @@ export default function OnboardingLayout({ children }: { children: ReactNode }) 
       className="h-screen w-screen flex flex-col overflow-hidden"
       style={{ background: "var(--background)" }}
     >
-      {/* Scrollable content area — edge case'ler için */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="min-h-full flex items-center justify-center px-4 py-3">
-          <div className="w-full max-w-xl">{children}</div>
+        {/* flex-col + child my-auto = safe vertical centering (taşarsa üstten başlar, logo kesilmez) */}
+        <div className="min-h-full flex flex-col items-center px-4 py-6">
+          <div className="w-full max-w-5xl my-auto">{children}</div>
         </div>
       </div>
     </div>

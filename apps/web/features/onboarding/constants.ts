@@ -36,72 +36,6 @@ export const STEP_ORDER: Exclude<OnboardingState, "NOT_STARTED" | "READY">[] = [
   "BUILDING",
 ];
 
-// ─── Goals ────────────────────────────────────────────────────────────────────
-
-export interface GoalOption {
-  id: string;
-  label: string;
-  icon: string;
-}
-
-export interface GoalCategory {
-  name: string;
-  maxSelections: number;
-  goals: GoalOption[];
-}
-
-export const GOAL_CATEGORIES: GoalCategory[] = [
-  {
-    name: "Career Growth",
-    maxSelections: 2,
-    goals: [
-      { id: "technical_depth", label: "Technical Depth", icon: "🔬" },
-      { id: "leadership", label: "Leadership", icon: "👑" },
-      { id: "management", label: "Management", icon: "📊" },
-      { id: "research", label: "Research", icon: "🔭" },
-    ],
-  },
-  {
-    name: "Work Style",
-    maxSelections: 2,
-    goals: [
-      { id: "remote_first", label: "Remote First", icon: "🌍" },
-      { id: "flexibility", label: "Flexibility", icon: "🕐" },
-      { id: "balance", label: "Work-life Balance", icon: "⚖️" },
-    ],
-  },
-  {
-    name: "Company Preference",
-    maxSelections: 2,
-    goals: [
-      { id: "startup", label: "Startup", icon: "🚀" },
-      { id: "enterprise", label: "Enterprise", icon: "🏢" },
-      { id: "big_tech", label: "Big Tech", icon: "⭐" },
-      { id: "mission", label: "Mission Driven", icon: "🌱" },
-    ],
-  },
-  {
-    name: "Compensation",
-    maxSelections: 1,
-    goals: [
-      { id: "high_salary", label: "High Salary", icon: "💰" },
-      { id: "equity", label: "Equity", icon: "📈" },
-      { id: "benefits", label: "Benefits", icon: "🎁" },
-    ],
-  },
-  {
-    name: "Impact",
-    maxSelections: 2,
-    goals: [
-      { id: "open_source", label: "Open Source", icon: "💻" },
-      { id: "innovation", label: "Innovation", icon: "⚡" },
-      { id: "social_impact", label: "Social Impact", icon: "🌍" },
-    ],
-  },
-];
-
-export const TOTAL_GOALS_LIMIT = 5;
-
 // ─── Work Arrangements ────────────────────────────────────────────────────────
 
 export const WORK_ARRANGEMENTS = [
@@ -185,13 +119,16 @@ export const COUNTRIES: Country[] = [
 
 export const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "CHF", "SEK", "TRY", "SGD", "AUD"] as const;
 
-// ─── Legacy (step-identity.tsx still uses these) ──────────────────────────────
+// ─── Seniority ladder (profession-neutral) ────────────────────────────────────
+// One source of truth — Identity and Goals both read this, so the axis can
+// never drift between screens again. `dots` is the visual weight of the rung:
+// a clinician, a lawyer and an engineer all read "3 of 5 filled" the same way.
+export const SENIORITY = [
+  { id: "entry",  label: "Entry",  dots: 1 },
+  { id: "mid",    label: "Mid",    dots: 2 },
+  { id: "senior", label: "Senior", dots: 3 },
+  { id: "lead",   label: "Lead",   dots: 4 },
+  { id: "expert", label: "Expert", dots: 5 },
+] as const;
 
-export const GOALS = [
-  { id: "salary", label: "Maximizing Salary" },
-  { id: "remote", label: "Remote Flexibility" },
-  { id: "growth", label: "Career Growth" },
-  { id: "balance", label: "Work-life Balance" },
-  { id: "prestige", label: "Company Prestige" },
-  { id: "learning", label: "Learning Opportunities" },
-];
+export type SeniorityId = (typeof SENIORITY)[number]["id"];

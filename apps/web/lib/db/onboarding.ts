@@ -1,7 +1,6 @@
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 
-// Direct (non-pooler) endpoint — @neondatabase/serverless uses HTTP on port 443
-const sql = neon(process.env.DATABASE_URL!);
+const sql = postgres(process.env.DATABASE_URL!);
 
 export const STATE_TO_URL: Record<string, string> = {
   NOT_STARTED: "/onboarding?step=IDENTITY",
