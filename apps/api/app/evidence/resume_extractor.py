@@ -3,9 +3,10 @@
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, Optional
 
 import requests
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,32 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = os.environ.get("DEFAULT_MODEL", "openai/gpt-4o-mini")
 
 SYSTEM_PROMPT = "You are a precise resume parser. Return only valid JSON, no markdown."
+
+
+class ExtractedAchievement(BaseModel):
+    """High-value, externally-validated evidence that is NOT a job or project.
+
+    type ∈ volunteering | award | publication | patent | sport | opensource | exhibition | grant | press | teaching | license
+    These are the signals most systems silently drop — we treat them as
+    first-class evidence because a medal or a Nature paper outweighs a claim.
+    """
+    type: str = Field(
+        default="award",
+        pattern="^(volunteering|award|publication|patent|sport|opensource|exhibition|grant|press|teaching|license)$",
+    )
+    title: str
+    detail: str = ""
+    year: Optional[str] = None
+
+
+class StructuredResume(BaseModel):
+    skills: list[dict] = Field(default_factory=list)
+    experience: list[dict] = Field(default_factory=list)
+    projects: list[dict] = Field(default_factory=list)
+    education: list[dict] = Field(default_factory=list)
+    certifications: list[str] = Field(default_factory=list)
+    achievements: list[ExtractedAchievement] = Field(default_factory=list)
+
 
 EXTRACT_PROMPT = """\
 Parse the resume text below and return a JSON object with this exact shape:
@@ -30,23 +57,53 @@ Parse the resume text below and return a JSON object with this exact shape:
   "education": [
     {{"institution": "...", "degree": "...", "field": "...", "year": "..."}}
   ],
-  "certifications": ["..."]
+  "certifications": ["..."],
+  "achievements": [
+    {{
+      "type": "volunteering | award | publication | patent | sport | opensource | exhibition | grant | press | teaching | license",
+      "title": "string",
+      "detail": "string (issuer, journal, team, repo — whatever proves it)",
+      "year": "string (optional)"
+    }}
+  ]
 }}
 
-Confidence rules for skills:
-- 0.90–1.0  → in dedicated Skills section OR used across 3+ projects/jobs
-- 0.70–0.89 → named in project/job description
-- 0.50–0.69 → mentioned once in passing
-
-Extract every technology, framework, language, and tool mentioned.
-Return empty arrays [] for sections not present.
+Rules:
+1. Confidence for skills:
+   - 0.90–1.0  → in dedicated Skills section OR used across 3+ projects/jobs
+   - 0.70–0.89 → named in project/job description
+   - 0.50–0.69 → mentioned once in passing
+2. Extract every technology, framework, language, and tool mentioned.
+3. Return empty arrays [] for sections not present.
+4. Use only the exact field names shown above.
+5. For achievements.type use exactly one of:
+   volunteering | award | publication | patent | sport | opensource | exhibition | grant | press | teaching | license
+6. Extract volunteering, awards, honors, publications, patents, sports
+   achievements (medals, national/international team), and open-source
+   maintainer / committer roles as "achievements". These are HIGH-VALUE
+   evidence — never fold them into experience, never skip them.
+7. For each achievement, put the proving detail (journal name, awarding body,
+   team, repository URL/name) in "detail". Confidence is high because they
+   are externally validated.
+8. The achievement "type" must be one of: volunteering, award, publication,
+   patent, sport, opensource, exhibition, grant, press, teaching, license.
+   Map a gallery / biennale / salon show → exhibition; a fellowship or
+   research funding → grant; an interview or feature article → press; a
+   course taught or thesis supervised → teaching; a professional license to
+   practice (bar admission, medical board, CPA, pilot license) → license.
+   A license is authority to practice, not a certificate — never fold it
+   into certifications.
 
 Resume:
 {text}"""
 
 
-def extract_resume(text: str) -> dict[str, Any]:
-    """Call OpenRouter to extract structured data from resume text."""
+def extract_resume(text: str) -> StructuredResume:
+    """Call OpenRouter to extract structured data from resume text.
+
+    Returns a StructuredResume with validated achievements.
+    Falls back gracefully if the LLM omits the achievements key.
+    """
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY not set")
@@ -60,7 +117,7 @@ def extract_resume(text: str) -> dict[str, Any]:
             {"role": "user",   "content": prompt},
         ],
         "temperature": 0.1,
-        "max_tokens": 3000,
+        "max_tokens": 3500,
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -79,11 +136,30 @@ def extract_resume(text: str) -> dict[str, Any]:
         if content.startswith("json"):
             content = content[4:]
 
-    data = json.loads(content)
+    raw: dict[str, Any] = json.loads(content)
+
+    # Normalise achievement entries: accept both "category" and "type" keys
+    # (some models return "category" despite the prompt saying "type")
+    for ach in raw.get("achievements", []):
+        if "category" in ach and "type" not in ach:
+            ach["type"] = ach.pop("category")
+        if "description" in ach and "detail" not in ach:
+            ach["detail"] = ach.pop("description")
+        # Clamp to allowed values
+        ALLOWED = {
+            "volunteering", "award", "publication", "patent", "sport",
+            "opensource", "exhibition", "grant", "press", "teaching", "license"
+        }
+        if ach.get("type") not in ALLOWED:
+            ach["type"] = "award"
+
+    structured = StructuredResume.model_validate(raw)
+
     logger.info(
-        "Extracted %d skills, %d experiences, %d projects",
-        len(data.get("skills", [])),
-        len(data.get("experience", [])),
-        len(data.get("projects", [])),
+        "Extracted %d skills, %d experiences, %d projects, %d achievements",
+        len(structured.skills),
+        len(structured.experience),
+        len(structured.projects),
+        len(structured.achievements),
     )
-    return data
+    return structured

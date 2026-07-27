@@ -15,6 +15,21 @@ logger = logging.getLogger(__name__)
 
 LogFn = Callable[[str], None]
 
+# Externally-validated evidence carries higher confidence than self-reported skills.
+ACHIEVEMENT_CONFIDENCE: dict[str, float] = {
+    "patent":       0.94,
+    "license":      0.94,
+    "publication":  0.93,
+    "grant":        0.93,
+    "award":        0.92,
+    "sport":        0.90,
+    "opensource":   0.89,
+    "exhibition":   0.88,
+    "press":        0.87,
+    "teaching":     0.86,
+    "volunteering": 0.85,
+}
+
 
 def process_resume(
     resume_doc: ResumeDocument,
@@ -44,18 +59,20 @@ def process_resume(
 
         log("Running LLM skill extraction...")
         structured = extract_resume(text)
-        resume_doc.parse_result = structured
+        resume_doc.parse_result = structured.model_dump()
 
-        skills_raw   = structured.get("skills", [])
-        experience   = structured.get("experience", [])
-        projects     = structured.get("projects", [])
-        education    = structured.get("education", [])
-        certs        = structured.get("certifications", [])
+        skills_raw   = structured.skills
+        experience   = structured.experience
+        projects     = structured.projects
+        education    = structured.education
+        certs        = structured.certifications
+        achievements = structured.achievements
 
         log(
             f"Found {len(skills_raw)} skills, "
             f"{len(experience)} positions, "
-            f"{len(projects)} projects"
+            f"{len(projects)} projects, "
+            f"{len(achievements)} achievements"
         )
 
         # ── 3. Match & create skill evidence items ────────────────────────────
@@ -121,7 +138,29 @@ def process_resume(
                 resume_document_id=resume_doc.id,
             ))
 
-        # ── 6. Finalize ───────────────────────────────────────────────────────
+        # ── 6. Achievements — the proof most parsers lose (medals, papers, patents…)
+        for ach in achievements:
+            if not ach.title:
+                continue
+            db.add(EvidenceItem(
+                user_id=resume_doc.user_id,
+                skill_name=ach.title,
+                source="resume",
+                source_ref=str(resume_doc.id),
+                confidence_score=ACHIEVEMENT_CONFIDENCE.get(ach.type, 0.88),
+                evidence_data={
+                    "type": ach.type,
+                    "title": ach.title,
+                    "detail": ach.detail,
+                    "year": ach.year,
+                },
+                resume_document_id=resume_doc.id,
+            ))
+
+        if achievements:
+            log(f"🏆 Captured {len(achievements)} achievements (awards, papers, medals, OSS)")
+
+        # ── 7. Finalize ───────────────────────────────────────────────────────
         resume_doc.parse_status = "completed"
         db.commit()
 
@@ -132,6 +171,13 @@ def process_resume(
             "projects_count": len(projects),
             "education_count": len(education),
             "certifications_count": len(certs),
+            "achievements_count": len(achievements),
+            "evidence_items": (
+                created
+                + len(experience)
+                + len(projects)
+                + len(achievements)
+            ),
         }
         log(f"Saved {created} skill evidence items")
         logger.info("Resume pipeline complete: %s", summary)

@@ -32,6 +32,7 @@ class PreferencesOut(BaseModel):
     preferred_role_ids: list[str] = []
     preferred_country_codes: list[str] = []
     work_arrangements: list[str] = []
+    requires_sponsorship: Optional[bool] = None
     salary: Optional[SalaryOut] = None
     pref_metadata: dict = {}
     created_at: Optional[str] = None
@@ -45,6 +46,7 @@ class PreferencesPatch(BaseModel):
     preferred_role_ids: Optional[list[str]] = None
     preferred_country_codes: Optional[list[str]] = None
     work_arrangements: Optional[list[str]] = None
+    requires_sponsorship: Optional[bool] = None
     salary_min: Optional[int] = Field(None, ge=0)
     salary_max: Optional[int] = Field(None, ge=0)
     salary_currency: Optional[str] = Field(None, max_length=3)
@@ -70,6 +72,7 @@ def _to_response(prefs) -> PreferencesOut:
         preferred_role_ids=prefs.preferred_role_ids or [] if prefs else [],
         preferred_country_codes=prefs.preferred_country_codes or [] if prefs else [],
         work_arrangements=prefs.work_arrangements or [] if prefs else [],
+        requires_sponsorship=prefs.requires_sponsorship if prefs else None,
         salary=salary,
         pref_metadata=prefs.pref_metadata or {} if prefs else {},
         created_at=prefs.created_at.isoformat() if prefs and prefs.created_at else None,
@@ -111,6 +114,8 @@ def patch_preferences(
         prefs.preferred_country_codes = data.preferred_country_codes
     if data.work_arrangements is not None:
         prefs.work_arrangements = data.work_arrangements
+    if data.requires_sponsorship is not None:
+        prefs.requires_sponsorship = data.requires_sponsorship
     if data.salary_min is not None:
         prefs.salary_min = data.salary_min
     if data.salary_max is not None:

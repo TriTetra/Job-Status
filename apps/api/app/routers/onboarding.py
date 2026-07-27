@@ -76,10 +76,12 @@ class IdentityPayload(BaseModel):
     current_role_id: str = Field(..., min_length=1, max_length=200)
     current_role_title: str = Field(..., min_length=1, max_length=150)
     years_in_role: float = Field(..., ge=0, le=50)
-    career_level: Optional[str] = Field(None, pattern="^(junior|mid|senior|staff|principal)$")
+    career_level: Optional[str] = Field(None, pattern="^(entry|mid|senior|lead|expert)$")
     career_level_origin: str = Field("system", pattern="^(user|system|ai_estimated)$")
     country: str = Field(..., min_length=1, max_length=100)
-    authorization: str = Field(..., min_length=1, max_length=100)
+    total_years: Optional[float] = Field(None, ge=0, le=50)
+    languages: list[dict] = Field(default_factory=list)        # [{"code":"English","level":"C1"}]
+    education_level: Optional[str] = Field(None, pattern="^(none|bachelor|master|phd)$")
 
 
 class GoalsPayload(BaseModel):
@@ -87,11 +89,15 @@ class GoalsPayload(BaseModel):
     preferred_role_ids: list[str] = Field(..., min_length=1, max_length=5)
     preferred_country_codes: list[str] = Field(..., min_length=1, max_length=5)
     work_arrangements: list[str] = Field(default_factory=list, max_length=3)
+    requires_sponsorship: Optional[bool] = Field(None)
     salary_min: Optional[int] = Field(None, ge=0)
     salary_max: Optional[int] = Field(None, ge=0)
     salary_currency: Optional[str] = Field(None, max_length=3)
-    salary_period: str = Field("year", pattern="^(year|month)$")
+    salary_period: str = Field("year", pattern="^(year|month|hour|day|project)$")
     salary_negotiable: bool = Field(True)
+    contract_types: list[str] = Field(default_factory=list, max_length=4)
+    availability: Optional[str] = Field(None, pattern="^(immediately|2_weeks|1_month|3_months_plus)$")
+    target_seniority: Optional[str] = Field(None, pattern="^(entry|mid|senior|lead|expert)$")
 
 
 class OnboardingStateOut(BaseModel):
@@ -138,6 +144,10 @@ def get_onboarding_state(
             "preferred_role_ids": prefs.preferred_role_ids or [],
             "preferred_country_codes": prefs.preferred_country_codes or [],
             "work_arrangements": prefs.work_arrangements or [],
+            "requires_sponsorship": prefs.requires_sponsorship,
+            "contract_types": prefs.contract_types or [],
+            "availability": prefs.availability,
+            "target_seniority": prefs.target_seniority,
             "salary": {
                 "min": prefs.salary_min,
                 "max": prefs.salary_max,
@@ -237,8 +247,10 @@ def save_identity(
         "first_name": data.first_name,
         "last_name": data.last_name,
         "country": data.country,
-        "authorization": data.authorization,
         "current_role_title": data.current_role_title,
+        "total_years": data.total_years,
+        "languages": data.languages,
+        "education_level": data.education_level,
     }
 
     # End previous current role in history
@@ -298,6 +310,10 @@ def save_goals(
         preferred_role_ids=data.preferred_role_ids,
         preferred_country_codes=data.preferred_country_codes,
         work_arrangements=data.work_arrangements,
+        requires_sponsorship=data.requires_sponsorship,
+        contract_types=data.contract_types,
+        availability=data.availability,
+        target_seniority=data.target_seniority,
         salary_min=data.salary_min,
         salary_max=data.salary_max,
         salary_currency=data.salary_currency,
@@ -364,6 +380,8 @@ async def upload_resume(
     file_path = f"personal/resume_{job_id}.pdf"
     with open(file_path, "wb") as f:
         content = await file.read()
+        if len(content) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="PDF too large — max 25 MB")
         f.write(content)
     
     # Start background extraction (new session — request session may close before BG task runs)
@@ -441,11 +459,11 @@ async def get_extraction_status(
     """Poll extraction job status."""
     if job_id not in extraction_jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = extraction_jobs[job_id]
     if job.user_id != user_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
-    
+
     return job.to_dict()
 
 
@@ -455,161 +473,224 @@ async def build_career_graph(
     user_id: str = Depends(get_user_id),
     session: Session = Depends(get_db_session),
 ):
-    """Build Career Graph from extracted resume data."""
+    """Build Career Graph from extracted evidence items."""
     repo = UserRepository(session)
     user = repo.get_by_clerk_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
-    resume_path = user.profile_data.get("resume_path")
-    if not resume_path:
-        raise HTTPException(status_code=400, detail="No resume uploaded")
-    
+
+    # Check if user has evidence items
+    from core.db.models.evidence_item import EvidenceItem
+    evidence_count = session.query(EvidenceItem).filter(
+        EvidenceItem.user_id == user_id
+    ).count()
+
+    if evidence_count == 0:
+        raise HTTPException(status_code=400, detail="No evidence items found. Upload resume first.")
+
     # Generate job ID
     job_id = str(uuid.uuid4())
     extraction_jobs[job_id] = ExtractionJob(job_id, user_id, "career_graph")
-    
+
     # Start background graph building
-    background_tasks.add_task(run_graph_building, job_id, user_id, resume_path, session)
-    
+    background_tasks.add_task(run_graph_building, job_id, user_id)
+
     return {"job_id": job_id, "status": "pending"}
 
 
-async def run_graph_building(job_id: str, user_id: str, resume_path: str, session: Session):
-    """Background task: build Career Graph from resume."""
+def run_graph_building(job_id: str, user_id: str):
+    """Background task: build Career Graph from actual database evidence items.
+
+    Opens its own DB session — the request session may be closed by the time
+    this runs. Sync function → FastAPI executes it in the thread pool,
+    mirroring run_extraction (no event-loop blocking).
+    """
+    import time
+    from core.db.connection import db as _db
+    from core.db.models.evidence_item import EvidenceItem
+    from core.db.models.career_graph_node import CareerGraphNode
+
     job = extraction_jobs[job_id]
-    
+
     try:
-        # Stage 1: Parse resume (real Hiring-Agent call)
-        job.status = "parsing"
-        job.progress = 10
-        job.add_log("📄 Parsing resume structure...", "info")
-        await asyncio.sleep(1.5)
-        
-        # Mock extracted data (production'da real data)
-        extracted_data = {
-            "skills": [
-                {"name": "Python", "confidence": 0.92, "evidence": 6},
-                {"name": "Machine Learning", "confidence": 0.87, "evidence": 4},
-                {"name": "Computer Vision", "confidence": 0.85, "evidence": 3},
-                {"name": "PyTorch", "confidence": 0.82, "evidence": 3},
-                {"name": "TensorFlow", "confidence": 0.78, "evidence": 2},
-                {"name": "Docker", "confidence": 0.75, "evidence": 2},
-                {"name": "AWS", "confidence": 0.72, "evidence": 2},
-                {"name": "PostgreSQL", "confidence": 0.70, "evidence": 2},
-            ],
-            "projects": [
-                {"name": "Project-Drone-Vision", "skills": ["Python", "Computer Vision", "PyTorch"], "stars": 38},
-                {"name": "IMMUNO-TCR", "skills": ["Python", "Machine Learning", "PyTorch"], "stars": 12},
-                {"name": "evolutionary-tsp", "skills": ["Python", "Machine Learning"], "stars": 2},
-            ],
-            "companies": [
-                {"name": "Current Company", "role": "ML Engineer", "duration": "2 years"},
-                {"name": "Previous Company", "role": "Backend Engineer", "duration": "1.5 years"},
-            ],
-            "experience_years": 3.5,
-            "total_projects": 23,
-            "total_commits": 1847,
-        }
-        
-        job.progress = 25
-        job.add_log("✓ Extracted 74 skills", "success")
-        await asyncio.sleep(0.8)
-        
-        # Stage 2: Build graph nodes
-        job.status = "extracting"
-        job.progress = 40
-        job.add_log("🔍 Analyzing work experience...", "info")
-        await asyncio.sleep(1.2)
-        
-        nodes = []
-        edges = []
-        
-        # Add skill nodes
-        for skill in extracted_data["skills"]:
-            nodes.append(GraphNode(
-                id=f"skill_{skill['name']}",
-                type="skill",
-                label=skill["name"],
-                confidence=skill["confidence"],
-                metadata={"evidence_count": skill["evidence"]}
-            ))
-        
-        job.progress = 55
-        job.add_log(f"✓ Found {len(extracted_data['projects'])} projects", "success")
-        await asyncio.sleep(0.8)
-        
-        # Add project nodes + edges
-        for project in extracted_data["projects"]:
-            project_id = f"project_{project['name']}"
-            nodes.append(GraphNode(
-                id=project_id,
-                type="project",
-                label=project["name"],
-                metadata={"stars": project["stars"]}
-            ))
-            
-            # Connect project to skills
-            for skill_name in project["skills"]:
-                edges.append(GraphEdge(
-                    source=project_id,
-                    target=f"skill_{skill_name}",
-                    weight=0.8
+        with _db.session_scope() as session:
+            # Stage 1: Fetch evidence items
+            job.status = "parsing"
+            job.progress = 15
+            job.add_log("📄 Fetching evidence items from database...", "info")
+            time.sleep(1.0)
+
+            evidence_items = session.query(EvidenceItem).filter(
+                EvidenceItem.user_id == user_id
+            ).all()
+
+            if not evidence_items:
+                raise ValueError("No evidence items found. Please upload your resume first.")
+
+            skills = [e for e in evidence_items if (e.evidence_data or {}).get("type", "skill") == "skill"]
+            selected_projects = [e for e in evidence_items if (e.evidence_data or {}).get("type") == "project"]
+            selected_experiences = [e for e in evidence_items if (e.evidence_data or {}).get("type") == "experience"]
+            achievements = [
+                e for e in evidence_items
+                if (e.evidence_data or {}).get("type") in (
+                    "volunteering", "award", "publication", "patent", "sport",
+                    "opensource", "exhibition", "grant", "press", "teaching", "license",
+                )
+            ]
+
+            job.progress = 35
+            job.add_log(
+                f"✓ Found {len(skills)} skills, {len(selected_projects)} projects, "
+                f"{len(selected_experiences)} experiences, {len(achievements)} achievements",
+                "success",
+            )
+            time.sleep(0.8)
+
+            # Stage 2: Clear existing career graph nodes
+            job.status = "extracting"
+            job.progress = 50
+            job.add_log("🔄 Clearing existing Career Graph...", "info")
+            session.query(CareerGraphNode).filter(CareerGraphNode.user_id == user_id).delete()
+            session.commit()
+            time.sleep(0.5)
+
+            # Stage 3: Build nodes + edges
+            job.status = "matching"
+            job.progress = 70
+            job.add_log("▸ Creating Career Graph nodes...", "info")
+
+            nodes = []
+            edges = []
+
+            # Skill nodes — dedupe by name, aggregate multi-source confidence
+            skill_agg: dict[str, dict] = {}
+            for skill in skills:
+                name = skill.skill_name
+                if name not in skill_agg:
+                    skill_agg[name] = {"confidences": [], "sources": set(), "skill_id": skill.skill_id}
+                skill_agg[name]["confidences"].append(skill.confidence_score)
+                skill_agg[name]["sources"].add(skill.source)
+                if skill.skill_id and not skill_agg[name]["skill_id"]:
+                    skill_agg[name]["skill_id"] = skill.skill_id
+
+            for name, agg in skill_agg.items():
+                node_id = f"skill_{name}"
+                avg_conf = round(sum(agg["confidences"]) / len(agg["confidences"]), 3)
+                nodes.append(GraphNode(
+                    id=node_id, type="skill", label=name,
+                    confidence=avg_conf,
+                    metadata={"evidence_count": len(agg["confidences"]), "sources": sorted(agg["sources"])}
                 ))
-        
-        job.progress = 70
-        job.add_log("✓ Calculated confidence scores", "success")
-        job.add_log(f"✓ Identified {len(extracted_data['skills'])} evidence items", "success")
-        await asyncio.sleep(1)
-        
-        # Stage 3: Match jobs
-        job.status = "matching"
-        job.progress = 85
-        job.add_log("🎯 Matching 2,341 jobs...", "info")
-        await asyncio.sleep(1.2)
-        
-        # Mock job matching stats
-        matched_jobs = 2341
-        strong_matches = 156
-        job.add_log(f"✓ Found {strong_matches} strong matches", "success")
-        await asyncio.sleep(0.8)
-        
-        # Stage 4: Market analysis
-        job.progress = 95
-        job.add_log("📊 Market analysis complete", "success")
-        job.add_log("✓ Salary benchmark ready", "success")
-        await asyncio.sleep(0.8)
-        
-        # Stage 5: Build graph
-        job.add_log("▸ Building Career Graph...", "info")
-        await asyncio.sleep(1)
-        
-        # Final graph
-        graph = CareerGraph(
-            nodes=nodes,
-            edges=edges,
-            stats={
-                "skills_count": len(extracted_data["skills"]),
-                "projects_count": len(extracted_data["projects"]),
-                "companies_count": len(extracted_data["companies"]),
-                "experience_years": extracted_data["experience_years"],
-                "total_commits": extracted_data["total_commits"],
-                "matched_jobs": matched_jobs,
-                "strong_matches": strong_matches,
-                "confidence_score": 0.87,
-            }
-        )
-        
-        job.result = graph.dict()
-        job.progress = 100
-        job.status = "completed"
-        job.add_log("✓ Career Graph ready", "success")
-        
-        # Update user state
-        repo = UserRepository(session)
-        repo.set_onboarding_state(user_id, OnboardingState.READY)
-        repo.patch_profile_data(user_id, {"career_graph": graph.dict()})
-        
+                session.add(CareerGraphNode(
+                    user_id=user_id, node_type="skill", label=name,
+                    canonical_id=str(agg["skill_id"]) if agg["skill_id"] else None,
+                    confidence=avg_conf,
+                    node_metadata={"sources": sorted(agg["sources"]), "evidence_count": len(agg["confidences"])}
+                ))
+
+            skills_by_name = {name.lower(): name for name in skill_agg}
+
+            # Project nodes + edges
+            for proj in selected_projects:
+                proj_id = f"project_{proj.id}"
+                techs = (proj.evidence_data or {}).get("technologies", [])
+                nodes.append(GraphNode(
+                    id=proj_id, type="project", label=proj.skill_name,
+                    confidence=proj.confidence_score, metadata={"technologies": techs}
+                ))
+                session.add(CareerGraphNode(
+                    user_id=user_id, node_type="project", label=proj.skill_name,
+                    confidence=proj.confidence_score,
+                    node_metadata={
+                        "source_type": proj.source,
+                        "technologies": techs,
+                        "description": (proj.evidence_data or {}).get("description", "")
+                    }
+                ))
+                for tech in techs:
+                    canonical = skills_by_name.get(tech.lower())
+                    if canonical:
+                        edges.append(GraphEdge(source=proj_id, target=f"skill_{canonical}", weight=0.8))
+
+            # Experience (company) nodes + edges
+            for exp in selected_experiences:
+                exp_id = f"experience_{exp.id}"
+                techs = (exp.evidence_data or {}).get("technologies", [])
+                nodes.append(GraphNode(
+                    id=exp_id, type="company", label=exp.skill_name,
+                    confidence=exp.confidence_score,
+                    metadata={"company": (exp.evidence_data or {}).get("company", "")}
+                ))
+                session.add(CareerGraphNode(
+                    user_id=user_id, node_type="experience", label=exp.skill_name,
+                    confidence=exp.confidence_score,
+                    node_metadata={
+                        "source_type": exp.source,
+                        "company": (exp.evidence_data or {}).get("company", ""),
+                        "role": (exp.evidence_data or {}).get("role", ""),
+                        "duration": (exp.evidence_data or {}).get("duration", ""),
+                        "technologies": techs
+                    }
+                ))
+                for tech in techs:
+                    canonical = skills_by_name.get(tech.lower())
+                    if canonical:
+                        edges.append(GraphEdge(source=exp_id, target=f"skill_{canonical}", weight=0.8))
+
+            # Achievement nodes — gold, externally-validated proof
+            for ach in achievements:
+                ach_id = f"achievement_{ach.id}"
+                kind = (ach.evidence_data or {}).get("type", "award")
+                nodes.append(GraphNode(
+                    id=ach_id, type="achievement", label=ach.skill_name,
+                    confidence=ach.confidence_score,
+                    metadata={"kind": kind, "year": (ach.evidence_data or {}).get("year")},
+                ))
+                session.add(CareerGraphNode(
+                    user_id=user_id, node_type="achievement", label=ach.skill_name,
+                    confidence=ach.confidence_score,
+                    node_metadata={
+                        "kind": kind,
+                        "detail": (ach.evidence_data or {}).get("detail", ""),
+                        "year": (ach.evidence_data or {}).get("year"),
+                    },
+                ))
+
+            job.progress = 85
+            job.add_log(f"✓ Positioned {len(nodes)} nodes and {len(edges)} connections", "success")
+            time.sleep(0.8)
+
+            job.progress = 95
+            job.add_log("📊 Finalizing Career Graph...", "success")
+
+            # Stats — sadece GERÇEK hesaplananlar. matched_jobs/strong_matches
+            # job matching geldiğinde (C aşaması), experience_years/total_commits
+            # gerçek kaynaklardan beslenince eklenecek.
+            graph = CareerGraph(
+                nodes=nodes,
+                edges=edges,
+                stats={
+                    "skills_count": len(skill_agg),
+                    "projects_count": len(selected_projects),
+                    "companies_count": len(selected_experiences),
+                    "achievements_count": len(achievements),
+                    "edges_count": len(edges),
+                    "confidence_score": round(sum(n.confidence for n in nodes) / len(nodes), 3) if nodes else 0.0,
+                }
+            )
+
+            session.commit()
+
+            job.result = graph.dict()
+            job.progress = 100
+            job.status = "completed"
+            job.add_log("✓ Career Graph ready", "success")
+
+            repo = UserRepository(session)
+            repo.set_onboarding_state(user_id, OnboardingState.READY)
+            repo.patch_profile_data(user_id, {"career_graph": graph.dict()})
+            session.commit()
+
     except Exception as e:
         job.status = "failed"
         job.error = str(e)
@@ -624,9 +705,22 @@ async def get_graph_building_status(
     """Poll graph building job status."""
     if job_id not in extraction_jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = extraction_jobs[job_id]
     if job.user_id != user_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
-    
+
     return job.to_dict()
+
+
+@router.get("/career-graph")
+def get_career_graph(
+    user_id: str = Depends(get_user_id),
+    session: Session = Depends(get_db_session),
+):
+    """Get user's Career Graph nodes and edges."""
+    repo = UserRepository(session)
+    user = _require_user(repo, user_id)
+    return user.profile_data.get("career_graph") or {"nodes": [], "edges": [], "stats": {}}
+
+
