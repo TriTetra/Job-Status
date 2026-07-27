@@ -39,9 +39,10 @@ def main():
 
     print("\nUpdating onboarding goals...")
     goals_payload = {
-        "optimizing_for": ["remote", "better_salary"],
-        "preferred_roles": ["Backend Engineer", "ML Engineer"],
-        "preferred_countries": ["Germany", "Netherlands"],
+        "goal_ids": ["remote", "better_salary"],
+        "preferred_role_ids": ["backend_engineer", "ml_engineer"],
+        "preferred_country_codes": ["DE", "NL"],
+        "work_arrangements": ["remote", "hybrid"],
         "salary_min": 80000,
         "salary_max": 120000,
         "salary_currency": "EUR"
@@ -56,14 +57,31 @@ def main():
     print(f"State response: {r.json()}")
 
     # ─── Resume upload & extraction test ───
-    print("\nCreating mock PDF resume file...")
+    print("\nCreating valid PDF resume file using PyMuPDF (fitz)...")
     import os
+    import fitz
     os.makedirs("personal", exist_ok=True)
     mock_pdf_path = "personal/mock_resume.pdf"
-    with open(mock_pdf_path, "wb") as f:
-        f.write(b"%PDF-1.4 Mock PDF Content")
+    
+    # Create valid PDF layout
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text(
+        (50, 50),
+        "Abdullokh Abdukodirov\n"
+        "Senior Backend Engineer\n\n"
+        "Skills: Python, Go, FastAPI, React, SQL, PostgreSQL, Docker, Git\n\n"
+        "Experience:\n"
+        "Google - Backend Engineer (2020-2023)\n"
+        "- Designed and optimized backend services\n"
+        "- Scaled database systems\n"
+        "Facebook - Software Engineer (2018-2020)\n"
+        "- Developed microservices using Python and Go\n"
+    )
+    doc.save(mock_pdf_path)
+    doc.close()
 
-    print("\nUploading mock PDF resume...")
+    print("\nUploading PDF resume...")
     with open(mock_pdf_path, "rb") as f:
         r = requests.post(
             f"{base_url}/api/onboarding/resume",
