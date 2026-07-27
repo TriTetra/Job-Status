@@ -27,6 +27,7 @@ from .skill import Skill
 from .evidence_item import EvidenceItem
 from .connected_account import ConnectedAccount
 from .career_graph_node import CareerGraphNode
+from .goal import Goal
 
 __all__ = [
     "Base",

@@ -23,6 +23,10 @@ class CareerPreferences(Base):
     salary_currency = Column(String(3), nullable=True)
     salary_period = Column(String(10), server_default='year')
     salary_negotiable = Column(Boolean, server_default='true')
+    requires_sponsorship = Column(Boolean, nullable=True)
+    contract_types = Column(JSONB, server_default='[]')      # ["full_time","contract"]
+    availability = Column(String(30), nullable=True)         # immediately|2_weeks|1_month|3_months_plus
+    target_seniority = Column(String(20), nullable=True)     # junior|mid|senior|staff|principal
 
     pref_metadata = Column(JSONB, server_default='{}')
 
