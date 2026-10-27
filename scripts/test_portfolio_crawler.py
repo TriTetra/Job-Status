@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.db.connection import db
 from core.db.models.evidence_item import EvidenceItem
-from core.db.models.connected_account import ConnectedAccount
 import urllib.request
 import urllib.error
 

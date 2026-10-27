@@ -1,6 +1,6 @@
 """Resume domain events."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from .event_types import Event

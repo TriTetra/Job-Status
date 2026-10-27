@@ -1,7 +1,7 @@
 """Market signal repository — queries for trends and summaries."""
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import sqlalchemy as sa
 from sqlalchemy import func

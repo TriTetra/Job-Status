@@ -1,11 +1,10 @@
 """Onboarding API — state machine + profile data persistence."""
 
-from typing import Optional, List, Dict
+from typing import Optional, List
 import uuid
-import asyncio
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 

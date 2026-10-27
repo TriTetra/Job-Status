@@ -176,7 +176,7 @@ def github_callback(
 
     # Redirect back to frontend with success
     return RedirectResponse(
-        url=f"http://localhost:3000/onboarding?step=EVIDENCE&github=connected"
+        url="http://localhost:3000/onboarding?step=EVIDENCE&github=connected"
     )
 
 

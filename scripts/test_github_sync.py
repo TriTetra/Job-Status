@@ -8,11 +8,10 @@ endpoint to ensure evidence items are successfully generated in the database.
 import sys
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import text, create_engine
+from sqlalchemy import create_engine
 import urllib.request
 import urllib.error
 

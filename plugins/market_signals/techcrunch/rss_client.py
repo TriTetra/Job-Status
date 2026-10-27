@@ -1,6 +1,6 @@
 """TechCrunch RSS feed reader."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict, List
 
 import feedparser

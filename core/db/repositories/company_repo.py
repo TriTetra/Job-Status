@@ -1,10 +1,9 @@
 """Company and CompanyMemory repositories."""
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
 
 from ..models import Company, CompanyMemory
 from .base import BaseRepository

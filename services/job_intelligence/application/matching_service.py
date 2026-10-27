@@ -4,7 +4,7 @@ SemanticMatcher loads a 420MB embedding model — imported lazily so tests and
 lightweight callers don't pay that cost unless they actually call match().
 """
 
-from typing import List, Optional
+from typing import List
 
 from core.domain import Job, MatchResult, UserProfile
 

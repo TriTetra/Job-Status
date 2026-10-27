@@ -1,6 +1,5 @@
 """Config loaders for CareerOS packages."""
 
-import sys
 from functools import lru_cache
 from pathlib import Path
 

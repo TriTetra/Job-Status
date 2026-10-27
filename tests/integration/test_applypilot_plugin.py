@@ -8,7 +8,7 @@ Usage:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[1]))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from plugins.plugin_loader import list_available_job_sources, load_job_source_plugin
 
@@ -34,7 +34,7 @@ def test_load_plugin():
     print(f"  name: {meta['name']}  version: {meta['version']}")
     print(f"  db_path: {meta['db_path']}")
     print(f"  job_count: {meta['job_count']}")
-    print(f"  PASS")
+    print("  PASS")
 
 
 def test_scan():
@@ -46,7 +46,7 @@ def test_scan():
     assert "title" in jobs[0]
     print(f"  Found {len(jobs)} jobs")
     print(f"  Sample: {jobs[0].get('title','?')[:60]}")
-    print(f"  PASS")
+    print("  PASS")
 
 
 def test_normalize():
@@ -73,7 +73,7 @@ def test_normalize():
     print(f"  years:    {job['required_years']}")
     print(f"  size:     {job['company_size']}")
     print(f"  fit:      {job['fit_score']}")
-    print(f"  PASS")
+    print("  PASS")
 
 
 def test_scan_and_normalize():
@@ -87,7 +87,7 @@ def test_scan_and_normalize():
     for j in jobs[:3]:
         score = f"{j['fit_score']:.0f}" if j["fit_score"] else "?"
         print(f"  [{score}] {j['title'][:40]} @ {j['company']}")
-    print(f"  PASS")
+    print("  PASS")
 
 
 def test_company_extraction():
@@ -102,7 +102,7 @@ def test_company_extraction():
     print(f"  Known: {known}/{len(sample)} ({pct:.1f}%)")
     print(f"  Unknown: {len(sample) - known}/{len(sample)}")
     assert pct >= 30, f"Extraction rate too low: {pct:.1f}%"
-    print(f"  PASS")
+    print("  PASS")
 
 
 def main():

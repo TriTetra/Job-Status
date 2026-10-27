@@ -3,10 +3,10 @@ ROI-optimized skill gap analysis.
 """
 
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict
 from collections import Counter
 
-from core.domain import Skill, SkillLevel, UserProfile, Job
+from core.domain import SkillLevel, UserProfile, Job
 from career_os.core.skill_graph import SkillGraph
 
 

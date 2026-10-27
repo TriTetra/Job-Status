@@ -4,7 +4,7 @@ Every profession gets its own proof sources. Custom roles are mapped at query
 time (see get_evidence_sources) via title keywords → inferred category.
 """
 import json
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from core.db.connection import db
 
 # ─── All platforms (new platform = one row here; no code change) ──────────────

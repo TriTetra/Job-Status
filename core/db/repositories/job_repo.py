@@ -1,6 +1,5 @@
 """Job repository — upsert and query for raw job listings."""
 
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select

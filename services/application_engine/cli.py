@@ -238,7 +238,7 @@ def stale(
         table.add_row(*row)
 
     console.print(table)
-    console.print(f"\nTip: run [bold]update --status ghosted[/bold] for these.")
+    console.print("\nTip: run [bold]update --status ghosted[/bold] for these.")
 
 
 @app.command("migrate-from-markdown")

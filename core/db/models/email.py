@@ -1,10 +1,15 @@
 """Email model — cold email + follow-up tracking."""
 
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from .application import Application
 
 
 class Email(Base, TimestampMixin):

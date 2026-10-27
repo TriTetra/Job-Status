@@ -3,7 +3,7 @@ Skill taxonomy and transfer learning graph.
 """
 
 import networkx as nx
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Tuple
 from core.domain.identity.skill import Skill
 
 

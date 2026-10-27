@@ -164,7 +164,6 @@ def main():
     
     # Poll extraction
     print("  Polling extraction status...")
-    extraction_result = None
     for _ in range(60):  # Max 60 seconds
         r = requests.get(
             f"{API_BASE}/api/onboarding/resume/{job_id}/status",
@@ -176,7 +175,6 @@ def main():
         progress = status_data.get("progress", 0)
         
         if status == "completed":
-            extraction_result = status_data.get("result")
             print(f"  [OK] CV extraction complete (progress: {progress}%)")
             break
         elif status == "failed":

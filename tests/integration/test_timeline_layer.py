@@ -4,7 +4,7 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 try:
     from dotenv import load_dotenv
@@ -111,7 +111,7 @@ def test_trending_entities():
         tl.track_snapshot("skill", eid, {"job_count": new})
 
     trending = tl.get_trending_entities("skill", "job_count", days=14, limit=3, direction="up")
-    print(f"  Top trending up:")
+    print("  Top trending up:")
     for t in trending:
         print(f"    {t['entity_id']}: {t['old_value']:.0f} -> {t['new_value']:.0f} ({t['change_pct']:+.1f}%)")
 

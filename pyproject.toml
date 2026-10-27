@@ -1,0 +1,37 @@
+[project]
+name = "careeros"
+version = "0.1.0"
+description = "Self-hosted career intelligence stack"
+requires-python = ">=3.11"
+
+# ── pytest ────────────────────────────────────────────────────────────────
+# Default run = fast, offline tests (tests/unit + tests/smoke).
+# Live tests (DB / network / LLM) live in tests/integration and only run with:
+#   pytest -m integration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "apps/api"]
+addopts = "-ra --strict-markers -m 'not integration'"
+timeout = 120
+markers = [
+    "integration: needs a live database, network or LLM (run with -m integration)",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# ── ruff ──────────────────────────────────────────────────────────────────
+# Start narrow: only rules that catch real breakage (syntax errors, undefined
+# names, unused imports/variables). Widen the rule set as modules get cleaned.
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = [
+    "_archive",
+    "venv",
+    "services/hiring-agent",  # vendored third-party tool
+    "core/db/migrations/versions",
+]
+
+[tool.ruff.lint]
+select = ["E9", "F"]

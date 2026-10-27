@@ -1,6 +1,6 @@
 ﻿"""Settings router — scoring weights and user preferences."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel

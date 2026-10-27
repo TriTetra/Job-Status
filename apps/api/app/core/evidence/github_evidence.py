@@ -93,7 +93,6 @@ def create_github_evidence(
     
     for repo in repos:
         languages = repo.get("languages", {})
-        total_bytes = sum(languages.values())
         
         # Create project evidence
         if repo.get("name"):

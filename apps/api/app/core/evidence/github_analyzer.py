@@ -1,7 +1,6 @@
 """GitHub API client for repository analysis."""
 
 import requests
-from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)

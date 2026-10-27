@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from core.db.connection import db
 from core.db.repositories import MarketSignalRepository

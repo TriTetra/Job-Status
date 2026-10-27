@@ -1,6 +1,5 @@
 ﻿"""Company Memory — wrapper around the existing company_memory DB table."""
 
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import sqlalchemy as sa

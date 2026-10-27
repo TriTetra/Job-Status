@@ -60,7 +60,7 @@ def show(company_name: str):
     typer.echo(f"  Visa:       {company.sponsors_visa}")
     typer.echo(f"  Remote:     {company.remote_friendly}")
     typer.echo(f"\n  Tech Stack: {', '.join(company.tech_stack or [])}")
-    typer.echo(f"\n  Interview Rounds:")
+    typer.echo("\n  Interview Rounds:")
     for r in (company.interview_rounds or []):
         typer.echo(f"    Round {r.get('round')}: {r.get('type')} ({r.get('duration_min')} min)")
     typer.echo(f"\n  Culture: {', '.join(company.culture_signals or [])}")

@@ -10,12 +10,12 @@ Makes real GitHub API calls. Needs GITHUB_TOKEN in environment.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 # Load .env so GITHUB_TOKEN / OPENROUTER_API_KEY are available
 try:
     from dotenv import load_dotenv
-    _root = Path(__file__).parent.parent
+    _root = Path(__file__).parents[2]
     for _env in [_root / ".env", _root / "services" / "hiring-agent" / ".env"]:
         if _env.exists():
             load_dotenv(_env)

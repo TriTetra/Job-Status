@@ -2,8 +2,7 @@
 Semantic job matching with multi-aspect scoring.
 """
 
-import numpy as np
-from typing import List, Dict, Optional
+from typing import List
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 

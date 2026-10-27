@@ -1,11 +1,16 @@
 """Application tracking model — full pipeline state machine."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
+
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from .email import Email
 
 
 class Application(Base, TimestampMixin):
