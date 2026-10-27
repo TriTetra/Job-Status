@@ -7,7 +7,7 @@ marker to be removed.
 
 import pytest
 
-from plugins.market_signals.hackernews.who_is_hiring_parser import WhoIsHiringParser
+from careeros.market.sources.hackernews.who_is_hiring_parser import WhoIsHiringParser
 
 
 @pytest.fixture

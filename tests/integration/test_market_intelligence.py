@@ -2,17 +2,11 @@
 
 import sys
 from datetime import datetime
-from pathlib import Path
 
 
-try:
-    from dotenv import load_dotenv
-    for _env in [Path(".env"), Path("services/hiring-agent/.env")]:
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
+from careeros.shared.config import load_env
+
+load_env()
 
 
 def _find_thread(client):
@@ -28,7 +22,7 @@ def _find_thread(client):
 
 def test_hn_client():
     print("\n[TEST 1] HN Algolia Client")
-    from plugins.market_signals.hackernews.client import HackerNewsClient
+    from careeros.market.sources.hackernews.client import HackerNewsClient
 
     client = HackerNewsClient()
     thread = _find_thread(client)
@@ -45,8 +39,8 @@ def test_hn_client():
 
 def test_who_is_hiring_parser():
     print("\n[TEST 2] Who is Hiring Parser")
-    from plugins.market_signals.hackernews.client import HackerNewsClient
-    from plugins.market_signals.hackernews.who_is_hiring_parser import WhoIsHiringParser
+    from careeros.market.sources.hackernews.client import HackerNewsClient
+    from careeros.market.sources.hackernews.who_is_hiring_parser import WhoIsHiringParser
 
     client = HackerNewsClient()
     parser = WhoIsHiringParser()
@@ -72,9 +66,9 @@ def test_who_is_hiring_parser():
 
 def test_hn_signal_extraction():
     print("\n[TEST 3] HN Signal Extraction (DB write)")
-    from plugins.market_signals.hackernews.signal_extractor import HNSignalExtractor
-    from core.db.connection import db
-    from core.db.repositories import MarketSignalRepository
+    from careeros.market.sources.hackernews.signal_extractor import HNSignalExtractor
+    from careeros.db.connection import db
+    from careeros.market.repositories.market_signal_repo import MarketSignalRepository
 
     now = datetime.utcnow()
     extractor = HNSignalExtractor()
@@ -100,7 +94,7 @@ def test_hn_signal_extraction():
 
 def test_techcrunch_extraction():
     print("\n[TEST 4] TechCrunch Extraction")
-    from plugins.market_signals.techcrunch.signal_extractor import TechCrunchSignalExtractor
+    from careeros.market.sources.techcrunch.signal_extractor import TechCrunchSignalExtractor
 
     extractor = TechCrunchSignalExtractor()
     count = extractor.extract_signals(hours=168)
@@ -111,8 +105,8 @@ def test_techcrunch_extraction():
 
 def test_skill_trend():
     print("\n[TEST 5] Skill Trend")
-    from core.db.connection import db
-    from core.db.repositories import MarketSignalRepository
+    from careeros.db.connection import db
+    from careeros.market.repositories.market_signal_repo import MarketSignalRepository
 
     with db.session_scope() as session:
         repo = MarketSignalRepository(session)
@@ -126,8 +120,8 @@ def test_skill_trend():
 
 def test_market_summary():
     print("\n[TEST 6] Market Summary")
-    from core.db.connection import db
-    from core.db.repositories import MarketSignalRepository
+    from careeros.db.connection import db
+    from careeros.market.repositories.market_signal_repo import MarketSignalRepository
 
     with db.session_scope() as session:
         repo = MarketSignalRepository(session)

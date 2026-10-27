@@ -2,7 +2,7 @@
 
 import pytest
 
-from services.job_intelligence.application.decision_builder import (
+from careeros.jobs.decision_builder import (
     build_criteria,
     build_decision,
     build_next_action,

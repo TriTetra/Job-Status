@@ -7,7 +7,7 @@ from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
 logger = logging.getLogger(__name__)
 
-from shared.config import get_settings
+from careeros.shared.config import get_settings
 
 class ClerkAuthenticator:
     _jwks_keys = {}

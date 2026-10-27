@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from starlette.requests import Request
 
 from apps.api.app.dependencies import get_db_session, get_user_id
-from shared.config import get_settings
+from careeros.shared.config import get_settings
 
 E2E_BYPASS_ENV = "CAREEROS_E2E_AUTH_BYPASS"
 

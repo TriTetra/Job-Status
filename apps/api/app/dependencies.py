@@ -5,8 +5,8 @@ from typing import Generator, Optional
 
 from fastapi import Header, HTTPException, Request
 
-from core.db.connection import db
-from shared.config import get_settings
+from careeros.db.connection import db
+from careeros.shared.config import get_settings
 from .core.auth.clerk_auth import ClerkAuthenticator
 
 logger = logging.getLogger(__name__)

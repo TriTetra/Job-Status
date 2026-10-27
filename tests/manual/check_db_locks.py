@@ -1,5 +1,5 @@
 
-from core.db.connection import db
+from careeros.db.connection import db
 from sqlalchemy import text
 
 def main():

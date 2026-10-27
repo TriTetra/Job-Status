@@ -1,6 +1,6 @@
 """E2E DB verification for all test users."""
 from sqlalchemy import text
-from core.db.connection import db
+from careeros.db.connection import db
 
 session = db.get_session()
 

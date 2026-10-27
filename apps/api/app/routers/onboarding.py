@@ -1,14 +1,14 @@
-"""Onboarding API — HTTP layer over services.onboarding."""
+"""Onboarding API — HTTP layer over careeros.onboarding."""
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from core.db.repositories.user_repo import UserRepository
-from services.evidence.items import count_for_user
-from services.onboarding import onboarding_jobs, profile
-from services.onboarding.career_graph import run_graph_building
-from services.onboarding.resume_upload import MAX_PDF_BYTES, UploadRejected, run_extraction, store_resume_pdf
-from shared.background import JobForbidden, JobNotFound
+from careeros.identity.repositories.user_repo import UserRepository
+from careeros.evidence.items import count_for_user
+from careeros.onboarding import onboarding_jobs, profile
+from careeros.onboarding.career_graph import run_graph_building
+from careeros.onboarding.resume_upload import MAX_PDF_BYTES, UploadRejected, run_extraction, store_resume_pdf
+from careeros.shared.background import JobForbidden, JobNotFound
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.onboarding import GoalsPayload, IdentityPayload, OnboardingStateOut

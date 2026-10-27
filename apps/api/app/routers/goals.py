@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from services.onboarding.goals_catalog import goal_catalog
+from careeros.onboarding.goals_catalog import goal_catalog
 
 from ..dependencies import get_db_session, get_user_id
 

@@ -1,6 +1,6 @@
 """Verify role history for back-to-back role changes."""
 from sqlalchemy import text
-from core.db.connection import db
+from careeros.db.connection import db
 
 session = db.get_session()
 rows = session.execute(text(

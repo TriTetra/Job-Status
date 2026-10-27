@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 6 — Feature Packages | core/ services/ plugins/ shared/ → one package `careeros/` with one folder per feature (identity, onboarding, evidence, jobs, applications, companies, market, resume, knowledge) + shared + db; 152 files moved with history, 411 imports rewritten by AST; 2 new architecture rules | ✅ Tamam | 2026-10-28 |
 | Refactor Step 5b — Thin Routers (evidence, oauth, market, goals, roles) | All API routers now HTTP-only (enforced by an architecture test); role context unified; GitHub OAuth in a service (no leaked GitHub errors, WEB_APP_URL setting); market refresh on JobStore (atomic single-flight); token cipher moved to shared | ✅ Tamam | 2026-10-28 |
 | Refactor Step 5 — Thin Routers (onboarding, jobs) | onboarding router 726 → 115 lines, jobs 390 → 102; logic in services/onboarding and job_intelligence (opportunities, scan); one shared/background JobStore replaces 2 ad-hoc job dicts; upload size checked before write | ✅ Tamam | 2026-10-28 |
 | Refactor Step 4 — Unified Evidence | One evidence store (`evidence_items`) and one module (`services/evidence/`); GitHub analysis 3 → 1 (with tests/docs/releases signals), resume parsing 2 → 1; vendored hiring-agent + PyGithub enricher + legacy evidence code removed; resume generator reads evidence_items (fixes cross-user cache leak) | ✅ Tamam | 2026-10-28 |
@@ -86,6 +87,52 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 6] — 2026-10-28 — Feature Packages (`careeros/`) ✅
+
+### Yeni yapı
+```
+careeros/
+  shared/        config, llm, logging, background, crypto
+  db/            base, connection, models.py (registry), repository.py, migrations/, legacy/
+  identity/      models/ repositories/ domain/ + current_role, roles, github_account, profile/preferences services
+  onboarding/    models/ + profile, career_graph, goals_catalog, resume_upload
+  evidence/      models/ + skills, aggregation, github, portfolio, resume, resume_llm, sources, items
+  jobs/          models/ repositories/ domain/ scoring/ sources/ + scan, opportunities, decision_builder, scoring_service
+  applications/  models/ repositories/ + cli
+  companies/     models/ repositories/ + enricher, memory, knowledge, cli
+  market/        models/ repositories/ sources/ (hackernews, techcrunch, skill_registry) + refresh, cli
+  resume/        prompts/ templates/ + resume_generator, cli
+  knowledge/     models/ repositories/ (countries, visas, salaries) + skill_loader
+```
+`core/`, `services/`, `plugins/`, `shared/` are gone. `apps/` (api, cli, web) is unchanged apart from imports.
+
+### Nasıl yapıldı
+- Scripted move: an explicit old→new map for every tracked file (asserted complete), **152 files moved with `git mv`** (history preserved), 18 re-export-only `__init__.py` removed.
+- **411 import statements rewritten with the AST** across apps, careeros, scripts and tests: relative imports resolved to absolute; imports from re-export packages (`core.db.repositories`, `core.domain`, `services.*.__init__` …) split into imports from the defining module. Dry run reviewed before applying; every rewritten file compile-checked.
+- Location-dependent fixes: `careeros/shared/config.py` `ROOT` (one level deeper); resume templates loaded relative to the module (was relative to the process cwd) and resume output under `ROOT/personal`; `alembic.ini` → `careeros/db/alembic.ini`.
+- `careeros/db/connection.py` and Alembic `env.py` import `careeros.db.models` (registry) explicitly — this used to happen as a side effect of `from .models import Base`, and FK targets / relationships need every model registered. Verified: 30 tables on `Base.metadata`.
+- `careeros/db/__init__.py` no longer re-exports models/repositories (avoids import cycles); legacy `evidence` and `timeline` tables live in `careeros/db/legacy/`.
+- Plugin "framework" folded into its features: job sources → `careeros/jobs/sources/` (`base.py`, `loader.py`, `applypilot/`), market signal sources → `careeros/market/sources/`.
+- `pyproject.toml` packages `careeros*` + `apps*` (re-run `pip install -e .`); README architecture + layout rewritten; integration tests load env via `careeros.shared.config.load_env` (no more python-dotenv / hiring-agent fallback).
+
+### Mimari kurallar (tests/smoke/test_architecture.py)
+Updated to the new layout and extended — mutation-checked with a probe file (3 planted violations → 3 failures):
+- **New rule 8**: `careeros` never imports `apps` (dependencies point inward).
+- Rule 5 now covers every `domain/` package and also forbids importing feature `models`.
+- Rules 1/2 exempt exactly `careeros/shared/config.py` / `careeros/shared/llm.py`.
+
+### Doğrulama
+- `pytest`: 319 passed, 3 xfailed (import-all smoke now covers every careeros module) · `ruff`: temiz
+- `career-os --help`: 8 command groups · `alembic -c careeros/db/alembic.ini heads`: OK · cold imports from a neutral cwd: API, CLI, model registry, connection, scoring service
+- Integration tests still collect (38). Not run against live DB/LLM.
+
+### Dikkat
+- Re-run `pip install -e .` in every venv (top-level package changed to `careeros`).
+- Alembic: `alembic -c careeros/db/alembic.ini upgrade head`.
+- API start command unchanged: `uvicorn apps.api.app.main:app`.
 
 ---
 

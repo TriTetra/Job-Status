@@ -7,13 +7,10 @@ Run: python scripts/backfill_decisions.py
 from datetime import datetime
 
 
-from core.db.connection import db
-from core.db.models.career_score import CareerScore
-from core.db.repositories.career_preferences_repo import CareerPreferencesRepository
-from services.job_intelligence.application.decision_builder import (
-    build_decision,
-    template_reasoning,
-)
+from careeros.db.connection import db
+from careeros.jobs.models.career_score import CareerScore
+from careeros.identity.repositories.career_preferences_repo import CareerPreferencesRepository
+from careeros.jobs.decision_builder import build_decision, template_reasoning
 
 
 def _prefs_for(session, user_id: str) -> dict:
@@ -65,7 +62,7 @@ def main():
 
 
 if __name__ == "__main__":
-    from shared.logging import configure_logging
+    from careeros.shared.logging import configure_logging
 
     configure_logging()
     main()

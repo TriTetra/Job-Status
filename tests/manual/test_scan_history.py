@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import Integer, cast, func, select
 
-from core.db.connection import db
-from core.db.repositories import ScanHistoryRepository
+from careeros.db.connection import db
+from careeros.jobs.repositories.scan_history_repo import ScanHistoryRepository
 
 
 def main():

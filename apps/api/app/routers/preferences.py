@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
-from core.db.repositories.career_preferences_repo import CareerPreferencesRepository
+from careeros.identity.repositories.career_preferences_repo import CareerPreferencesRepository
 
 router = APIRouter(prefix="/api/preferences", tags=["preferences"])
 

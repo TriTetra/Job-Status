@@ -17,7 +17,7 @@ def generate_resume(
     """Generate a target-aware resume."""
     try:
         from pathlib import Path
-        from services.resume_intelligence.application.resume_generator import generate_resume as _gen
+        from careeros.resume.resume_generator import generate_resume as _gen
 
         output_path: Path = _gen(
             target_company=request.target_company,

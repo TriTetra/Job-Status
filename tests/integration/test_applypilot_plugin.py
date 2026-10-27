@@ -8,7 +8,7 @@ Usage:
 import sys
 
 
-from plugins.plugin_loader import list_available_job_sources, load_job_source_plugin
+from careeros.jobs.sources.loader import list_available_job_sources, load_job_source_plugin
 
 
 def test_list_sources():

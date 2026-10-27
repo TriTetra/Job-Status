@@ -12,7 +12,7 @@ import sys
 
 def test_llm_client():
     print("\n[TEST 1] LLM Client")
-    from shared.llm import get_llm_client
+    from careeros.shared.llm import get_llm_client
 
     client = get_llm_client()
     response = client.complete("Say 'CareerOS' and nothing else.", max_tokens=20)
@@ -23,7 +23,7 @@ def test_llm_client():
 
 def test_llm_json_mode():
     print("\n[TEST 2] LLM JSON mode")
-    from shared.llm import get_llm_client
+    from careeros.shared.llm import get_llm_client
 
     client = get_llm_client()
     result = client.complete_json(
@@ -37,7 +37,7 @@ def test_llm_json_mode():
 
 def test_evidence_loading():
     print("\n[TEST 3] Evidence loading (no LLM)")
-    from services.resume_intelligence.application.resume_generator import ResumeGenerator
+    from careeros.resume.resume_generator import ResumeGenerator
 
     gen = ResumeGenerator(user_id="default")
     evidence, projects = gen._load_evidence()
@@ -56,7 +56,7 @@ def test_evidence_loading():
 
 def test_extract_priorities():
     print("\n[TEST 4] Extract priorities (LLM)")
-    from services.resume_intelligence.application.resume_generator import ResumeGenerator
+    from careeros.resume.resume_generator import ResumeGenerator
 
     gen = ResumeGenerator(user_id="default")
     priorities = gen._extract_priorities(
@@ -74,7 +74,7 @@ def test_extract_priorities():
 
 def test_full_generation():
     print("\n[TEST 5] Full resume generation E2E (LLM x4)")
-    from services.resume_intelligence.application.resume_generator import generate_resume
+    from careeros.resume.resume_generator import generate_resume
 
     output = generate_resume(
         target_company="Google",

@@ -1,12 +1,13 @@
 """Architecture rules, enforced. Each test names the rule and lists violations.
 
-  1. Configuration is read only in shared/config.py (no os.getenv / dotenv elsewhere).
-  2. The LLM HTTP API is called only from shared/llm.py.
+  1. Configuration is read only in careeros/shared/config.py (no os.getenv / dotenv elsewhere).
+  2. The LLM HTTP API is called only from careeros/shared/llm.py.
   3. Library code logs; it does not print. (CLIs, scripts and `__main__` blocks may print.)
   4. Nothing manipulates sys.path — the repo is an installed package.
-  5. core.domain stays pure: it never imports the DB layer.
+  5. Domain modules stay pure: they never import the DB layer.
   6. evidence_items is the only evidence store: nothing uses the legacy `evidence` model.
   7. Routers are HTTP only: no queries or raw SQL — they call services/repositories.
+  8. Dependencies point inward: careeros never imports apps (API/CLI).
 """
 
 import ast
@@ -14,7 +15,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
-APP_DIRS = ["apps/api", "apps/cli", "core", "services", "plugins", "scripts"]
+APP_DIRS = ["apps/api", "apps/cli", "careeros", "scripts"]
+DOMAIN_DIRS = ["careeros/identity/domain", "careeros/jobs/domain"]
 
 
 def _py_files(dirs):
@@ -26,28 +28,31 @@ def _py_files(dirs):
             yield rel, path.read_text(encoding="utf-8-sig")
 
 
-def _violations(dirs, pattern):
+def _violations(dirs, pattern, exclude=()):
     rx = re.compile(pattern)
     return [
         f"{rel}:{n}: {line.strip()}"
         for rel, src in _py_files(dirs)
+        if rel not in exclude
         for n, line in enumerate(src.splitlines(), 1)
         if rx.search(line) and not line.lstrip().startswith("#")
     ]
 
 
 def test_config_only_read_in_shared_config():
-    found = _violations(APP_DIRS, r"os\.getenv\(|os\.environ(\.get)?[\[(]|load_dotenv|from dotenv")
+    found = _violations(APP_DIRS, r"os\.getenv\(|os\.environ(\.get)?[\[(]|load_dotenv|from dotenv",
+                        exclude={"careeros/shared/config.py"})
     assert not found, "read settings via shared.config.get_settings():\n" + "\n".join(found)
 
 
 def test_llm_api_only_called_from_shared_llm():
-    found = _violations(APP_DIRS, r"chat/completions|openrouter\.ai")
+    found = _violations(APP_DIRS, r"chat/completions|openrouter\.ai",
+                        exclude={"careeros/shared/llm.py", "careeros/shared/config.py"})
     assert not found, "use shared.llm.get_llm_client():\n" + "\n".join(found)
 
 
 def test_no_sys_path_manipulation():
-    found = _violations(APP_DIRS + ["shared", "tests/unit", "tests/integration", "tests/manual"], r"sys\.path\.(insert|append)")
+    found = _violations(APP_DIRS + ["tests/unit", "tests/integration", "tests/manual"], r"sys\.path\.(insert|append)")
     assert not found, "install the package (pip install -e .) instead:\n" + "\n".join(found)
 
 
@@ -71,7 +76,7 @@ def _prints_outside_main(src):
 
 
 def test_library_code_logs_instead_of_printing():
-    library = ["apps/api", "core", "services", "plugins", "shared"]
+    library = ["apps/api", "careeros"]
     found = [
         f"{rel}:{line}"
         for rel, src in _py_files(library)
@@ -82,16 +87,16 @@ def test_library_code_logs_instead_of_printing():
 
 
 def test_core_domain_does_not_import_db_layer():
-    found = _violations(["core/domain"], r"^\s*(from|import)\s+(core\.db|sqlalchemy)")
-    assert not found, "core.domain must stay pure:\n" + "\n".join(found)
+    found = _violations(DOMAIN_DIRS, r"^\s*(from|import)\s+(careeros\.db|sqlalchemy|careeros\.[a-z_]+\.models)")
+    assert not found, "domain modules must stay pure:\n" + "\n".join(found)
 
 
 def test_legacy_evidence_model_is_not_used():
     found = [
-        v for v in _violations(APP_DIRS + ["shared"], r"models\.evidence import|models import .*\bEvidence\b(?!Item)")
-        if not v.startswith("core/db/models/")
+        v for v in _violations(APP_DIRS, r"legacy\.evidence import|legacy import|models import .*\bEvidence\b(?!Item)")
+        if not v.startswith("careeros/db/")
     ]
-    assert not found, "read/write evidence_items via services.evidence:\n" + "\n".join(found)
+    assert not found, "read/write evidence_items via careeros.evidence:\n" + "\n".join(found)
 
 
 def test_routers_do_not_query_the_database_directly():
@@ -100,3 +105,8 @@ def test_routers_do_not_query_the_database_directly():
         r"session\.(query|execute)\(|sa\.text\(|from sqlalchemy import .*\btext\b|\bselect\(",
     )
     assert not found, "move the query into a service or repository:\n" + "\n".join(found)
+
+
+def test_careeros_does_not_import_apps():
+    found = _violations(["careeros"], r"^\s*(from|import)\s+apps\b")
+    assert not found, "careeros must not depend on the API/CLI layer:\n" + "\n".join(found)

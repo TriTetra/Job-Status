@@ -9,8 +9,8 @@ Kullanım:
 
 from sqlalchemy import func, select, text
 
-from core.db.connection import db
-from core.db.repositories import CareerScoreRepository
+from careeros.db.connection import db
+from careeros.jobs.repositories.career_score_repo import CareerScoreRepository
 
 
 def main():

@@ -13,9 +13,7 @@ ROOT = Path(__file__).parents[2]
 
 # (source dir, import prefix)
 PACKAGES = [
-    ("core", "core"),
-    ("services", "services"),
-    ("plugins", "plugins"),
+    ("careeros", "careeros"),
     ("apps/api/app", "apps.api.app"),
     ("apps/cli", "apps.cli"),
 ]
@@ -57,13 +55,14 @@ def _cold_import(module):
 
 
 # Entry points, plus modules whose import order used to matter
-# (core.domain <-> core.db.models was circular).
+# (domain <-> db models used to be circular).
 @pytest.mark.parametrize("module", [
     "apps.api.app.main",
     "apps.cli.main",
-    "core.domain",
-    "core.db.models",
-    "services.job_intelligence.application.scoring_service",
+    "careeros.identity.domain",
+    "careeros.db.models",
+    "careeros.db.connection",
+    "careeros.jobs.scoring_service",
 ])
 def test_cold_import(module):
     result = _cold_import(module)

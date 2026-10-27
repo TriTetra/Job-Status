@@ -5,11 +5,11 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from core.db.models.career_score import CareerScore
-from core.db.repositories import ApplicationRepository
-from services.job_intelligence.application import opportunities
-from services.job_intelligence.application.scan import run_scan, scan_jobs
-from shared.background import JobForbidden, JobNotFound
+from careeros.jobs.models.career_score import CareerScore
+from careeros.applications.repositories.application_repo import ApplicationRepository
+from careeros.jobs import opportunities
+from careeros.jobs.scan import run_scan, scan_jobs
+from careeros.shared.background import JobForbidden, JobNotFound
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.job import JobListResponse, JobWithScore

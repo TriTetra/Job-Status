@@ -1,9 +1,9 @@
-"""shared.config — env loading and typed settings."""
+"""careeros.shared.config — env loading and typed settings."""
 
 import pytest
 
-from shared import config as cfg
-from shared.config import get_settings, load_env
+from careeros.shared import config as cfg
+from careeros.shared.config import get_settings, load_env
 
 
 @pytest.fixture

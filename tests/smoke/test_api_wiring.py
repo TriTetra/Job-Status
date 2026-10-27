@@ -53,11 +53,11 @@ def test_route_inventory_unchanged(app):
 
 def test_run_pipeline_callers_pass_valid_kwargs():
     """Every ScoringService.run_pipeline(...) call in app code uses keywords it accepts."""
-    from services.job_intelligence.application.scoring_service import ScoringService
+    from careeros.jobs.scoring_service import ScoringService
 
     accepted = set(inspect.signature(ScoringService.run_pipeline).parameters)
     calls = []
-    for d in ("apps", "services", "scripts"):
+    for d in ("apps", "careeros", "scripts"):
         for path in (ROOT / d).rglob("*.py"):
             if "node_modules" in path.parts:
                 continue
@@ -68,7 +68,7 @@ def test_run_pipeline_callers_pass_valid_kwargs():
                 and isinstance(node.func, ast.Attribute)
                 and node.func.attr == "run_pipeline"
             ]
-    assert any(p.endswith("job_intelligence/application/scan.py") for p, _ in calls), "scan no longer calls run_pipeline"
+    assert any(p.endswith("careeros/jobs/scan.py") for p, _ in calls), "scan no longer calls run_pipeline"
     for path, call in calls:
         passed = {kw.arg for kw in call.keywords if kw.arg}
         assert passed <= accepted, f"{path}:{call.lineno} unexpected kwargs: {passed - accepted}"

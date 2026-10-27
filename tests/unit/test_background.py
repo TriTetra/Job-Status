@@ -1,10 +1,10 @@
-"""shared.background — job tracking used by scan, CV extraction and graph build."""
+"""careeros.shared.background — job tracking used by scan, CV extraction and graph build."""
 
 from datetime import datetime, timedelta
 
 import pytest
 
-from shared.background import JobForbidden, JobNotFound, JobStore
+from careeros.shared.background import JobForbidden, JobNotFound, JobStore
 
 
 def test_create_and_poll_owned_job():

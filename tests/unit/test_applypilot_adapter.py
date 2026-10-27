@@ -2,8 +2,8 @@
 
 import pytest
 
-from shared.config import load_plugin_config
-from plugins.job_sources.applypilot.adapter import ApplyPilotAdapter
+from careeros.shared.config import load_plugin_config
+from careeros.jobs.sources.applypilot.adapter import ApplyPilotAdapter
 
 
 @pytest.fixture(scope="module")

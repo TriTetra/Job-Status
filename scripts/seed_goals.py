@@ -1,7 +1,7 @@
 """Seed the goals registry — profession-aware motivation catalog."""
 import json
 from sqlalchemy import text
-from core.db.connection import db
+from careeros.db.connection import db
 
 ALL = {
     "Engineering", "AI/ML", "Data", "Design", "Product", "Management",

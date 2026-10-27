@@ -10,7 +10,7 @@ import sys
 
 def test_template_loader():
     print("\n[TEST 1] Template Loader")
-    from core.prompts import template_loader
+    from careeros.resume.prompts import template_loader
 
     templates = template_loader.list_templates()
     assert len(templates) >= 4, f"Expected >=4 templates, got {len(templates)}"
@@ -24,7 +24,7 @@ def test_template_loader():
 
 def test_tailor_prompt():
     print("\n[TEST 2] tailor_for_target.jinja")
-    from core.prompts import template_loader
+    from careeros.resume.prompts import template_loader
 
     output = template_loader.render(
         "resume/tailor_for_target.jinja",
@@ -71,7 +71,7 @@ def test_tailor_prompt():
 
 def test_summary_prompt():
     print("\n[TEST 3] generate_summary.jinja")
-    from core.prompts import template_loader
+    from careeros.resume.prompts import template_loader
 
     output = template_loader.render(
         "resume/generate_summary.jinja",
@@ -100,7 +100,7 @@ def test_summary_prompt():
 
 def test_project_selection_prompt():
     print("\n[TEST 4] select_projects.jinja")
-    from core.prompts import template_loader
+    from careeros.resume.prompts import template_loader
 
     output = template_loader.render(
         "resume/select_projects.jinja",
@@ -142,7 +142,7 @@ def test_project_selection_prompt():
 
 def test_job_priorities_prompt():
     print("\n[TEST 5] extract_priorities.jinja")
-    from core.prompts import template_loader
+    from careeros.resume.prompts import template_loader
 
     output = template_loader.render(
         "job/extract_priorities.jinja",

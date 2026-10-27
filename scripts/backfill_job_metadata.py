@@ -10,11 +10,11 @@ Run once:  python scripts/backfill_job_metadata.py [--force]
 import sys
 
 
-from plugins.plugin_loader import load_job_source_plugin
-from core.db.connection import db
-from core.db.models.career_score import CareerScore
-from core.db.models.company import Company
-from services.evidence.aggregation import aggregate_user_skills
+from careeros.jobs.sources.loader import load_job_source_plugin
+from careeros.db.connection import db
+from careeros.jobs.models.career_score import CareerScore
+from careeros.companies.models.company import Company
+from careeros.evidence.aggregation import aggregate_user_skills
 
 FORCE = "--force" in sys.argv
 
@@ -91,7 +91,7 @@ def main():
 
 
 if __name__ == "__main__":
-    from shared.logging import configure_logging
+    from careeros.shared.logging import configure_logging
 
     configure_logging()
     main()

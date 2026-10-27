@@ -68,47 +68,24 @@ $ career-os resume generate --company Anthropic --title "ML Engineer"
 
 ## Architecture
 
+One Python package, **one folder per feature**. Each feature owns its models,
+repositories and services; `apps/` only translates HTTP / CLI into calls to it.
+
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  SOURCES                                                            │
-│  ApplyPilot (job postings)  ·  GitHub API  ·  HN  ·  TechCrunch   │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  PLUGINS           plugins/                                         │
-│  JobSourcePlugin → applypilot/                                      │
-│  MarketPlugin     → hackernews/ · techcrunch/                       │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  SERVICES          services/                                        │
-│  evidence              → GitHub · CV (PDF+LLM) · portfolio → items  │
-│  resume_intelligence   → evidence_items + 4-call LLM pipeline      │
-│  company_intelligence  → tech stack enrichment + interview memory   │
-│  market_intelligence   → signal extraction + trend queries          │
-│  application_engine    → state machine (to_apply → offer/rejected)  │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  CORE              core/                                            │
-│  db/           SQLAlchemy + Alembic · 16 tables · BaseRepository[T] │
-│  timeline/     track_snapshot() · auto-diff · detect_changes()      │
-│  events/       thread-safe EventBus · 18 domain event types         │
-│  prompts/      Jinja2 template loader · custom filters              │
-│  knowledge/    Countries · Visas · Salary ranges (DB-backed)        │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │
-                    ┌──────┴──────┐
-                    ▼             ▼
-          ┌──────────────┐  ┌──────────────┐
-          │  FastAPI     │  │  Typer CLI   │
-          │  24 endpoints│  │  career-os   │
-          │  apps/api/   │  │  apps/cli/   │
-          └──────────────┘  └──────────────┘
+ apps/api (FastAPI, HTTP only)        apps/cli (Typer: career-os)         apps/web (Next.js)
+          │                                   │
+          └─────────────────┬─────────────────┘
+                            ▼
+ careeros/
+   identity · onboarding · evidence · jobs · applications · companies · market · resume · knowledge
+                            │
+                            ▼
+   shared (config, LLM, logging, background jobs, crypto)        db (Base, connection, migrations)
 ```
+
+Rules enforced by `tests/smoke/test_architecture.py`: config only via `careeros.shared.config`,
+LLM only via `careeros.shared.llm`, routers never query the DB, domain modules never import the
+DB layer, `careeros` never imports `apps`, library code logs instead of printing.
 
 ---
 
@@ -122,8 +99,8 @@ docker compose -f infra/docker/docker-compose.yml up -d
 
 # 2. Install dependencies + the project itself (editable), apply migrations
 pip install -r requirements-dev.txt
-pip install -e .            # makes core/services/plugins/apps importable everywhere
-alembic -c core/db/alembic.ini upgrade head
+pip install -e .            # makes careeros + apps importable everywhere
+alembic -c careeros/db/alembic.ini upgrade head
 
 # 3. Configure
 cp config.yaml.example config.yaml
@@ -146,7 +123,7 @@ pytest                                                 # offline tests; -m integ
 
 ### Evidence Graph
 
-All proof lives in one table, `evidence_items`, written by three sources in `services/evidence/`:
+All proof lives in one table, `evidence_items`, written by three sources in `careeros/evidence/`:
 your GitHub repos (OAuth — languages, stars, topics, `has_tests` / `has_docs` / `has_releases`),
 your uploaded CV (PDF → LLM extraction of skills, experience, projects, achievements) and your
 portfolio site. `aggregation.py` weighs sources (GitHub > portfolio > CV) into one confidence per skill.
@@ -258,26 +235,25 @@ career-os
 ```
 applypilot-jobs/
 ├── apps/
-│   ├── api/              FastAPI app — 24 endpoints across 7 routers
-│   └── cli/              career-os launcher + Typer app
-├── services/
-│   ├── evidence/              evidence_items: GitHub, CV, portfolio, aggregation
-│   ├── resume_intelligence/   evidence_items → Target-Aware Resume
-│   ├── company_intelligence/  Tech stack enrichment + company memory
-│   ├── market_intelligence/   HN + TechCrunch signal scanning
-│   └── application_engine/    Application state machine
-├── shared/               config (.env + Settings), LLM client, logging
-├── core/
-│   ├── db/               Models, repositories, Alembic migrations
-│   ├── prompts/          Jinja2 template loader
-│   └── knowledge/        Country/visa/salary repositories
-├── plugins/
-│   ├── job_sources/      ApplyPilot SQLite adapter
-│   └── market_signals/   HN + TechCrunch scrapers
-├── infra/seeds/v1/       14 YAML files → DB seed (countries, visas, salaries)
+│   ├── api/              FastAPI — routers (HTTP only), schemas, auth dependency
+│   ├── cli/              Typer app (`career-os`)
+│   └── web/              Next.js 16 dashboard
+├── careeros/
+│   ├── shared/           config (.env → Settings), LLM client, logging, background jobs, token crypto
+│   ├── db/               Base, connection, model registry, Alembic migrations, legacy tables
+│   ├── identity/         users, roles, preferences, GitHub account linking
+│   ├── onboarding/       sign-up wizard → Career Graph
+│   ├── evidence/         evidence_items from GitHub, CV (PDF+LLM), portfolio; aggregation
+│   ├── jobs/             sources (ApplyPilot), scoring, decisions, scan, opportunities
+│   ├── applications/     application pipeline (+ CLI)
+│   ├── companies/        company profiles, interview memory (+ CLI)
+│   ├── market/           HN + TechCrunch signals, refresh job (+ CLI)
+│   ├── resume/           target-aware resume generation, prompts, templates (+ CLI)
+│   └── knowledge/        countries, visas, salaries, skill graph loader
+├── infra/                docker-compose, plugin config, YAML seeds
+├── scripts/              seed / backfill / sync operations
 ├── tests/                unit/ · smoke/ (offline) · integration/ (live) · manual/
-├── config.yaml.example   Profile template
-└── docker-compose.yml    PostgreSQL 16 + Adminer
+└── config.yaml.example   candidate profile template
 ```
 
 ---

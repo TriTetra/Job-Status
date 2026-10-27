@@ -5,7 +5,7 @@ time (see get_evidence_sources) via title keywords → inferred category.
 """
 import json
 from sqlalchemy import text
-from core.db.connection import db
+from careeros.db.connection import db
 
 # ─── All platforms (new platform = one row here; no code change) ──────────────
 # (id, label, icon, category, status, oauth_provider, connect_kind, sort_order)

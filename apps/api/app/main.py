@@ -3,7 +3,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from shared.logging import configure_logging
+from careeros.shared.logging import configure_logging
 
 from .dependencies import get_user_id
 from .routers import applications, companies, evidence, goals, jobs, market, onboarding, resume, settings, webhooks, roles, preferences, oauth

@@ -1,7 +1,7 @@
 # One installable package for the whole Python side of the repo.
 # Setup (once per venv):   pip install -r requirements-dev.txt && pip install -e .
-# After that every module is importable as core.*, services.*, plugins.*,
-# shared.*, apps.cli.*, apps.api.app.* — from any directory, with no sys.path tweaks.
+# After that every module is importable as careeros.* (features + shared + db),
+# apps.cli.*, apps.api.app.* — from any directory, with no sys.path tweaks.
 #   API:  uvicorn apps.api.app.main:app --reload --port 8000
 #   CLI:  career-os <command>
 
@@ -20,7 +20,7 @@ career-os = "apps.cli.main:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["shared*", "core*", "services*", "plugins*", "apps*"]
+include = ["careeros*", "apps*"]
 namespaces = false
 
 [tool.setuptools.package-data]
@@ -50,7 +50,7 @@ line-length = 120
 extend-exclude = [
     "_archive",
     "venv",
-    "core/db/migrations/versions",
+    "careeros/db/migrations/versions",
 ]
 
 [tool.ruff.lint]

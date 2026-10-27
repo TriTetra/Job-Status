@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.application import ApplicationCreate, ApplicationResponse, ApplicationUpdate
-from core.db.repositories import ApplicationRepository
+from careeros.applications.repositories.application_repo import ApplicationRepository
 
 router = APIRouter()
 

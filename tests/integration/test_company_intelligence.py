@@ -1,22 +1,16 @@
 ﻿"""Test Company Intelligence — 6 tests."""
 
 import sys
-from pathlib import Path
 
 
-try:
-    from dotenv import load_dotenv
-    for _env in [Path(".env"), Path("services/hiring-agent/.env")]:
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
+from careeros.shared.config import load_env
+
+load_env()
 
 
 def test_knowledge_loader():
     print("\n[TEST 1] Knowledge loader")
-    from core.knowledge import CompanyLoader
+    from careeros.companies.knowledge import CompanyLoader
 
     loader = CompanyLoader()
     all_companies = loader.load_all()
@@ -35,9 +29,9 @@ def test_knowledge_loader():
 
 def test_seed_from_knowledge():
     print("\n[TEST 2] Seed Company table from knowledge YAML")
-    from services.company_intelligence.application.company_enricher import CompanyEnricher
-    from core.db.connection import db
-    from core.db.repositories import CompanyRepository
+    from careeros.companies.enricher import CompanyEnricher
+    from careeros.db.connection import db
+    from careeros.companies.repositories.company_repo import CompanyRepository
 
     count = CompanyEnricher().seed_from_knowledge()
     print(f"  Seeded {count} companies")
@@ -64,9 +58,9 @@ def test_seed_from_knowledge():
 
 def test_enrich_from_jobs():
     print("\n[TEST 3] Enrich from job postings")
-    from services.company_intelligence.application.company_enricher import CompanyEnricher
-    from core.db.connection import db
-    from core.db.repositories import CompanyRepository
+    from careeros.companies.enricher import CompanyEnricher
+    from careeros.db.connection import db
+    from careeros.companies.repositories.company_repo import CompanyRepository
 
     fake_jobs = [
         {"company": "Stripe", "required_skills": ["Rust", "Go"], "preferred_skills": ["Kafka"]},
@@ -93,7 +87,7 @@ def test_enrich_from_jobs():
 
 def test_company_memory():
     print("\n[TEST 4] Company memory — record + retrieve")
-    from services.company_intelligence.application.company_memory import CompanyMemoryService
+    from careeros.companies.memory import CompanyMemoryService
 
     service = CompanyMemoryService(user_id="test_user_3a")
 
@@ -126,8 +120,8 @@ def test_company_memory():
 
 def test_hiring_now_query():
     print("\n[TEST 5] Hiring now query")
-    from core.db.connection import db
-    from core.db.repositories import CompanyRepository
+    from careeros.db.connection import db
+    from careeros.companies.repositories.company_repo import CompanyRepository
 
     with db.session_scope() as session:
         repo = CompanyRepository(session)
@@ -154,8 +148,8 @@ def test_hiring_now_query():
 
 def test_tech_stack_search():
     print("\n[TEST 6] Tech stack JSONB search")
-    from core.db.connection import db
-    from core.db.repositories import CompanyRepository
+    from careeros.db.connection import db
+    from careeros.companies.repositories.company_repo import CompanyRepository
 
     with db.session_scope() as session:
         repo = CompanyRepository(session)

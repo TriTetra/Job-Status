@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from services.identity_service.application import github_account
-from services.identity_service.application.github_account import GitHubAccountError
-from shared.config import get_settings
+from careeros.identity import github_account
+from careeros.identity.github_account import GitHubAccountError
+from careeros.shared.config import get_settings
 
 from ..dependencies import get_db_session, get_user_id
 

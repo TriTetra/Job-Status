@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session
-from core.db.repositories.user_repo import UserRepository
-from shared.config import get_settings
+from careeros.identity.repositories.user_repo import UserRepository
+from careeros.shared.config import get_settings
 
 router = APIRouter()
 

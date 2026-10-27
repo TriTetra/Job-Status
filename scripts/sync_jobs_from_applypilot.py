@@ -14,9 +14,9 @@ import sys
 from datetime import datetime, timezone
 
 
-from core.db.connection import db
-from core.db.repositories import JobRepository
-from plugins.plugin_loader import load_job_source_plugin
+from careeros.db.connection import db
+from careeros.jobs.repositories.job_repo import JobRepository
+from careeros.jobs.sources.loader import load_job_source_plugin
 
 
 def _parse_dt(val) -> datetime | None:
@@ -107,7 +107,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    from shared.logging import configure_logging
+    from careeros.shared.logging import configure_logging
 
     configure_logging()
     sys.exit(main())

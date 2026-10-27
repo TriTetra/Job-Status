@@ -1,11 +1,11 @@
-"""shared.llm — the single LLM client. HTTP is faked; nothing leaves the process."""
+"""careeros.shared.llm — the single LLM client. HTTP is faked; nothing leaves the process."""
 
 import pytest
 import requests
 
-from shared import llm as llm_mod
-from shared.config import get_settings
-from shared.llm import LLMClient, LLMError, LLMNotConfiguredError, get_llm_client, parse_json
+from careeros.shared import llm as llm_mod
+from careeros.shared.config import get_settings
+from careeros.shared.llm import LLMClient, LLMError, LLMNotConfiguredError, get_llm_client, parse_json
 
 
 class FakeResponse:

@@ -1,12 +1,12 @@
-"""services.job_intelligence — scan input mapping, skill levels, opportunity query."""
+"""careeros.jobs — scan input mapping, skill levels, opportunity query."""
 
 import pytest
 from sqlalchemy.dialects import postgresql
 
-from core.db.repositories import CareerScoreRepository
-from core.domain import SkillLevel
-from services.job_intelligence.application.opportunities import DECISION_BY_APPLICATION_STATUS
-from services.job_intelligence.application.scan import skill_level_for, to_scoring_input
+from careeros.jobs.repositories.career_score_repo import CareerScoreRepository
+from careeros.identity.domain.skill import SkillLevel
+from careeros.jobs.opportunities import DECISION_BY_APPLICATION_STATUS
+from careeros.jobs.scan import skill_level_for, to_scoring_input
 
 
 @pytest.mark.parametrize("conf, level", [
@@ -86,10 +86,10 @@ def test_opportunities_query_with_filters():
 def test_run_scan_happy_path(monkeypatch):
     from types import SimpleNamespace
 
-    import plugins.plugin_loader as loader
-    import services.job_intelligence.application.scoring_service as scoring
-    from services.job_intelligence.application import scan
-    from shared.background import JobStore
+    import careeros.jobs.sources.loader as loader
+    import careeros.jobs.scoring_service as scoring
+    from careeros.jobs import scan
+    from careeros.shared.background import JobStore
 
     profile = SimpleNamespace(skills=["Python"], years_experience=3)
     monkeypatch.setattr(scan, "load_profile", lambda uid: profile)
@@ -121,8 +121,8 @@ def test_run_scan_happy_path(monkeypatch):
 
 
 def test_run_scan_without_profile_fails_with_guidance(monkeypatch):
-    from services.job_intelligence.application import scan
-    from shared.background import JobStore
+    from careeros.jobs import scan
+    from careeros.shared.background import JobStore
 
     monkeypatch.setattr(scan, "load_profile", lambda uid: None)
     job = JobStore().create("user_1")

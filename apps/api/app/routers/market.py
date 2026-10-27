@@ -5,9 +5,9 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from core.db.repositories import MarketSignalRepository
-from services.market_intelligence.refresh import refresh_jobs, run_refresh, start_refresh
-from shared.background import JobNotFound
+from careeros.market.repositories.market_signal_repo import MarketSignalRepository
+from careeros.market.refresh import refresh_jobs, run_refresh, start_refresh
+from careeros.shared.background import JobNotFound
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.market import MarketSignalResponse, MarketSummaryResponse, SkillTrendResponse

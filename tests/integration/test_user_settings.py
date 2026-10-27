@@ -9,7 +9,7 @@ import sys
 
 
 from sqlalchemy import inspect
-from core.db.connection import db
+from careeros.db.connection import db
 
 
 def test_table_exists():
@@ -24,7 +24,7 @@ def test_table_exists():
 def test_default_user_seeded():
     print("\n[TEST 2] 'default' user seeded in user_settings")
     with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
+        from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
         repo = UserSettingsRepository(s)
         row = repo.get_settings("default")
         assert row is not None, "default user not found — migration may not have run"
@@ -39,7 +39,7 @@ def test_upsert_and_weights():
     test_user = "test_weights_user"
 
     with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
+        from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
         repo = UserSettingsRepository(s)
         repo.upsert(
             test_user,
@@ -50,7 +50,7 @@ def test_upsert_and_weights():
         )
 
     with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
+        from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
         repo = UserSettingsRepository(s)
         weights = repo.get_weights(test_user)
         assert abs(weights["fit"] - 0.50) < 0.001, f"fit weight mismatch: {weights}"
@@ -68,13 +68,13 @@ def test_custom_skills():
     test_user = "test_custom_skills_user"
 
     with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
+        from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
         repo = UserSettingsRepository(s)
         repo.add_custom_skill(test_user, "Blender", "3d")
         repo.add_custom_skill(test_user, "Figma", "design")
 
     with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
+        from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
         repo = UserSettingsRepository(s)
         names = repo.get_custom_skills(test_user)
         assert "Blender" in names
@@ -82,7 +82,7 @@ def test_custom_skills():
         repo.remove_custom_skill(test_user, "Blender")
 
     with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
+        from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
         repo = UserSettingsRepository(s)
         names2 = repo.get_custom_skills(test_user)
         assert "Blender" not in names2
@@ -94,8 +94,10 @@ def test_custom_skills():
 
 def test_scorer_weights():
     print("\n[TEST 5] OpportunityScorer respects per-user weights")
-    from core.intelligence import OpportunityScorer
-    from core.domain import Job, UserProfile, Skill, SkillLevel
+    from careeros.jobs.scoring.opportunity_scorer import OpportunityScorer
+    from careeros.jobs.domain.job import Job
+    from careeros.identity.domain.profile import UserProfile
+    from careeros.identity.domain.skill import Skill, SkillLevel
 
     scorer = OpportunityScorer()
     job = Job(

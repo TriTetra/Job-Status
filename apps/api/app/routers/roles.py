@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from services.identity_service.application import roles
+from careeros.identity import roles
 
 from ..dependencies import get_db_session
 

@@ -1,7 +1,7 @@
 """Verify roles seed — category distribution."""
 from sqlalchemy import text, create_engine
 
-from shared.config import get_settings
+from careeros.shared.config import get_settings
 
 engine = create_engine(get_settings().database_url)
 

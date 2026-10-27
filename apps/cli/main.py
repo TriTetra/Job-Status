@@ -16,7 +16,7 @@ import sys
 
 import typer
 
-from shared.logging import configure_logging
+from careeros.shared.logging import configure_logging
 
 # Rich output uses box-drawing chars and arrows; Windows consoles/pipes default
 # to cp1252 and crash on them. Force UTF-8 for this process's own streams.
@@ -39,25 +39,25 @@ app = typer.Typer(
 
 def _mount_existing_clis() -> None:
     try:
-        from services.application_engine.cli import app as track_app
+        from careeros.applications.cli import app as track_app
         app.add_typer(track_app, name="track", help="Application tracking pipeline")
     except Exception:
         pass
 
     try:
-        from services.resume_intelligence.cli import app as resume_app
+        from careeros.resume.cli import app as resume_app
         app.add_typer(resume_app, name="resume", help="Target-aware resume generation")
     except Exception:
         pass
 
     try:
-        from services.company_intelligence.cli import app as company_app
+        from careeros.companies.cli import app as company_app
         app.add_typer(company_app, name="company", help="Company intelligence and memory")
     except Exception:
         pass
 
     try:
-        from services.market_intelligence.cli import app as market_app
+        from careeros.market.cli import app as market_app
         app.add_typer(market_app, name="market", help="Market signals and skill trends")
     except Exception:
         pass
@@ -79,11 +79,12 @@ def version():
 @app.command()
 def status():
     """Show counts for all DB tables."""
-    from core.db.connection import db
-    from core.db.models import Company, MarketSignal
-    from core.db.models.career_score import CareerScore
-    from core.db.models.application import Application
-    from core.db.models.evidence_item import EvidenceItem
+    from careeros.db.connection import db
+    from careeros.companies.models.company import Company
+    from careeros.market.models.market_signal import MarketSignal
+    from careeros.jobs.models.career_score import CareerScore
+    from careeros.applications.models.application import Application
+    from careeros.evidence.models.evidence_item import EvidenceItem
     from sqlalchemy import func, select
 
     with db.session_scope() as session:
@@ -115,7 +116,7 @@ def scan(
 ):
     """Scan jobs from ApplyPilot and store results."""
     try:
-        from plugins.plugin_loader import load_job_source_plugin
+        from careeros.jobs.sources.loader import load_job_source_plugin
         plugin = load_job_source_plugin("applypilot")
         jobs = plugin.scan_and_normalize(hours_old=hours, min_score=min_score)
         typer.echo(f"Found {len(jobs)} jobs (last {hours}h, min_score={min_score})")
@@ -139,8 +140,8 @@ def strategy(
     semantic: bool = typer.Option(False, "--semantic", help="Use semantic matcher (slow, downloads model)"),
 ):
     """Run full career strategy: scan → score → save → print summary."""
-    from services.identity_service.application.profile_service import ProfileService
-    from services.job_intelligence.application.scoring_service import ScoringService
+    from careeros.identity.profile_service import ProfileService
+    from careeros.jobs.scoring_service import ScoringService
 
     typer.echo(f"Loading profile for user: {user_id}")
     profile_svc = ProfileService(user_id=user_id)
@@ -155,14 +156,14 @@ def strategy(
 
     typer.echo(f"\nLoading jobs (last {hours}h)...")
     try:
-        from plugins.plugin_loader import load_job_source_plugin
+        from careeros.jobs.sources.loader import load_job_source_plugin
         plugin = load_job_source_plugin("applypilot")
         raw_jobs = plugin.scan_and_normalize(hours_old=hours, min_score=7)
     except Exception as e:
         typer.echo(f"  [strategy] Job source error: {e}", err=True)
         raise typer.Exit(code=1)
 
-    from core.domain import Job
+    from careeros.jobs.domain.job import Job
     jobs = [
         Job(
             id=j["url"],

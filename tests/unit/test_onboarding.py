@@ -1,12 +1,12 @@
-"""services.onboarding — pure parts (no DB)."""
+"""careeros.onboarding — pure parts (no DB)."""
 
 from types import SimpleNamespace
 
 import pytest
 
-from services.onboarding import resume_upload
-from services.onboarding.career_graph import build_career_graph, split_evidence
-from services.onboarding.profile import OnboardingInputError, classify_role_id, validate_goals
+from careeros.onboarding import resume_upload
+from careeros.onboarding.career_graph import build_career_graph, split_evidence
+from careeros.onboarding.profile import OnboardingInputError, classify_role_id, validate_goals
 
 
 # ── identity / goals ──────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ class _Session:
         self.items, self.added, self.commits = items, [], 0
 
     def query(self, model):
-        from core.db.models.evidence_item import EvidenceItem
+        from careeros.evidence.models.evidence_item import EvidenceItem
         return _Q(self.items if model is EvidenceItem else [])
 
     def add(self, obj):
@@ -164,9 +164,9 @@ def _fake_db(monkeypatch, module, session):
 
 
 def test_run_graph_building_persists_graph_and_finishes_onboarding(monkeypatch):
-    from core.domain.identity.onboarding import OnboardingState
-    from services.onboarding import career_graph
-    from shared.background import JobStore
+    from careeros.identity.domain.onboarding import OnboardingState
+    from careeros.onboarding import career_graph
+    from careeros.shared.background import JobStore
 
     session = _Session(ITEMS)
     _fake_db(monkeypatch, career_graph, session)
@@ -184,8 +184,8 @@ def test_run_graph_building_persists_graph_and_finishes_onboarding(monkeypatch):
 
 
 def test_run_graph_building_without_evidence_fails_cleanly(monkeypatch):
-    from services.onboarding import career_graph
-    from shared.background import JobStore
+    from careeros.onboarding import career_graph
+    from careeros.shared.background import JobStore
 
     _fake_db(monkeypatch, career_graph, _Session([]))
     job = JobStore().create("user_1")

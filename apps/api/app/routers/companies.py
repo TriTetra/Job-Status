@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.company import CompanyMemoryResponse, CompanyResponse
-from core.db.repositories import CompanyMemoryRepository, CompanyRepository
+from careeros.companies.repositories.company_repo import CompanyMemoryRepository, CompanyRepository
 
 router = APIRouter()
 

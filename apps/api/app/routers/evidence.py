@@ -1,4 +1,4 @@
-"""Evidence API — HTTP layer over services.evidence."""
+"""Evidence API — HTTP layer over careeros.evidence."""
 
 from typing import Optional
 
@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from services.evidence import items, portfolio
-from services.evidence.aggregation import ranked_user_skills
-from services.evidence.sources import list_sources
+from careeros.evidence import items, portfolio
+from careeros.evidence.aggregation import ranked_user_skills
+from careeros.evidence.sources import list_sources
 
 from ..dependencies import get_db_session, get_user_id
 

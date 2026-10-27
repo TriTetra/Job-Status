@@ -13,8 +13,10 @@ from pathlib import Path
 
 import yaml
 
-from core.db.connection import db
-from core.db.models import Country, SalaryRange, Visa
+from careeros.db.connection import db
+from careeros.knowledge.models.country import Country
+from careeros.knowledge.models.salary_range import SalaryRange
+from careeros.knowledge.models.visa import Visa
 
 
 def seed_countries() -> int:
@@ -200,7 +202,7 @@ def main():
 
 
 if __name__ == "__main__":
-    from shared.logging import configure_logging
+    from careeros.shared.logging import configure_logging
 
     configure_logging()
     sys.exit(main())

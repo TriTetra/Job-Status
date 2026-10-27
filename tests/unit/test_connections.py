@@ -5,13 +5,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from services.evidence.items import group_for_review
-from services.evidence.sources import DEFAULT_SOURCES, present_sources, suggested_source_ids
-from services.identity_service.application import github_account
-from services.identity_service.application.current_role import CurrentRole, infer_category
-from services.onboarding.goals_catalog import visible_goals
-from shared.background import JobStore
-from shared.config import get_settings
+from careeros.evidence.items import group_for_review
+from careeros.evidence.sources import DEFAULT_SOURCES, present_sources, suggested_source_ids
+from careeros.identity import github_account
+from careeros.identity.current_role import CurrentRole, infer_category
+from careeros.onboarding.goals_catalog import visible_goals
+from careeros.shared.background import JobStore
+from careeros.shared.config import get_settings
 
 
 # ── role → category → sources / goals ─────────────────────────────────────
@@ -132,7 +132,7 @@ class FakeSession:
 def oauth_env(monkeypatch):
     from cryptography.fernet import Fernet
 
-    from shared.crypto import get_token_cipher
+    from careeros.shared.crypto import get_token_cipher
 
     monkeypatch.setenv("GITHUB_CLIENT_ID", "cid")
     monkeypatch.setenv("GITHUB_CLIENT_SECRET", "secret")
@@ -168,7 +168,7 @@ def test_failed_token_exchange_does_not_leak_github_response(oauth_env):
 
 
 def test_successful_callback_stores_encrypted_token(oauth_env):
-    from shared.crypto import get_token_cipher
+    from careeros.shared.crypto import get_token_cipher
 
     state = github_account.oauth_states.issue("user_1")
     http = FakeHTTP(_resp(200, {"access_token": "gho_real"}), _resp(200, {"id": 42, "login": "octo", "followers": 3}))
@@ -197,9 +197,9 @@ def test_create_unless_active_is_single_flight():
 
 
 def test_market_refresh_continues_when_one_source_fails(monkeypatch):
-    import plugins.market_signals.hackernews.signal_extractor as hn
-    import plugins.market_signals.techcrunch.signal_extractor as tc
-    from services.market_intelligence import refresh
+    import careeros.market.sources.hackernews.signal_extractor as hn
+    import careeros.market.sources.techcrunch.signal_extractor as tc
+    from careeros.market import refresh
 
     class BrokenHN:
         def extract_monthly_signals(self, year, month):
@@ -224,7 +224,7 @@ def test_market_refresh_continues_when_one_source_fails(monkeypatch):
 # ── role search relevance ─────────────────────────────────────────────────
 
 def test_role_relevance_ranking():
-    from services.identity_service.application.roles import relevance
+    from careeros.identity.roles import relevance
 
     def role(title, slug, aliases=(), category="Engineering"):
         return SimpleNamespace(title=title, slug=slug, aliases=list(aliases), category=category)

@@ -1,12 +1,12 @@
-"""services.evidence and the resume generator's evidence view — pure parts, no DB."""
+"""careeros.evidence and the resume generator's evidence view — pure parts, no DB."""
 
 from types import SimpleNamespace
 
 import pytest
 
-from services.evidence.github import GitHubAnalyzer, detect_docs, detect_tests
-from services.evidence.skills import find_canonical
-from services.resume_intelligence.application.resume_generator import build_project_list, build_skill_evidence
+from careeros.evidence.github import GitHubAnalyzer, detect_docs, detect_tests
+from careeros.evidence.skills import find_canonical
+from careeros.resume.resume_generator import build_project_list, build_skill_evidence
 
 
 # ── skills: canonical matching ────────────────────────────────────────────
@@ -172,7 +172,7 @@ class FakeQuery:
 
 class FakeSession:
     def __init__(self, skills):
-        from core.db.models.skill import Skill
+        from careeros.evidence.models.skill import Skill
 
         self._rows = {Skill: skills}
         self.added = []
@@ -192,8 +192,8 @@ class FakeSession:
 
 
 def test_create_github_evidence_projects_and_canonical_language_skills():
-    from core.db.models.evidence_item import EvidenceItem
-    from services.evidence.github import create_github_evidence
+    from careeros.evidence.models.evidence_item import EvidenceItem
+    from careeros.evidence.github import create_github_evidence
 
     session = FakeSession(SKILLS)
     repos = [
@@ -218,7 +218,7 @@ def test_create_github_evidence_projects_and_canonical_language_skills():
 
 
 def test_sync_portfolio_dedupes_technologies_and_maps_canonical():
-    from services.evidence.portfolio import sync_portfolio_evidence
+    from careeros.evidence.portfolio import sync_portfolio_evidence
 
     class Crawler:
         def crawl(self, url):
@@ -235,7 +235,7 @@ def test_sync_portfolio_dedupes_technologies_and_maps_canonical():
 
 
 def test_sync_portfolio_raises_on_crawl_error():
-    from services.evidence.portfolio import PortfolioCrawlError, sync_portfolio_evidence
+    from careeros.evidence.portfolio import PortfolioCrawlError, sync_portfolio_evidence
 
     class Broken:
         def crawl(self, url):

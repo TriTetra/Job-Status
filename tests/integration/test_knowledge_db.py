@@ -1,17 +1,11 @@
 ﻿"""Test Knowledge DB — 6 tests (DB-First)."""
 
 import sys
-from pathlib import Path
 
 
-try:
-    from dotenv import load_dotenv
-    for _env in [Path(".env"), Path("services/hiring-agent/.env")]:
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
+from careeros.shared.config import load_env
+
+load_env()
 
 
 def test_seed():
@@ -31,8 +25,8 @@ def test_seed():
 
 def test_country_queries():
     print("\n[TEST 2] Country repository")
-    from core.db.connection import db
-    from core.db.repositories import CountryRepository
+    from careeros.db.connection import db
+    from careeros.knowledge.repositories.country_repo import CountryRepository
 
     with db.session_scope() as session:
         repo = CountryRepository(session)
@@ -58,8 +52,8 @@ def test_country_queries():
 
 def test_visa_queries():
     print("\n[TEST 3] Visa repository")
-    from core.db.connection import db
-    from core.db.repositories import VisaRepository
+    from careeros.db.connection import db
+    from careeros.knowledge.repositories.visa_repo import VisaRepository
 
     with db.session_scope() as session:
         repo = VisaRepository(session)
@@ -82,8 +76,8 @@ def test_visa_queries():
 
 def test_salary_queries():
     print("\n[TEST 4] Salary repository")
-    from core.db.connection import db
-    from core.db.repositories import SalaryRangeRepository
+    from careeros.db.connection import db
+    from careeros.knowledge.repositories.salary_repo import SalaryRangeRepository
 
     with db.session_scope() as session:
         repo = SalaryRangeRepository(session)
@@ -109,8 +103,8 @@ def test_salary_queries():
 
 def test_update_salary():
     print("\n[TEST 5] Update salary (UI simulation)")
-    from core.db.connection import db
-    from core.db.repositories import SalaryRangeRepository
+    from careeros.db.connection import db
+    from careeros.knowledge.repositories.salary_repo import SalaryRangeRepository
 
     with db.session_scope() as session:
         repo = SalaryRangeRepository(session)
@@ -136,10 +130,10 @@ def test_update_salary():
 
 def test_no_yaml_at_runtime():
     print("\n[TEST 6] No runtime YAML dependency")
-    from core.db.connection import db
-    from core.db.repositories import (
-        CountryRepository, SalaryRangeRepository, VisaRepository,
-    )
+    from careeros.db.connection import db
+    from careeros.knowledge.repositories.country_repo import CountryRepository
+    from careeros.knowledge.repositories.salary_repo import SalaryRangeRepository
+    from careeros.knowledge.repositories.visa_repo import VisaRepository
 
     with db.session_scope() as session:
         countries = CountryRepository(session).get_all()

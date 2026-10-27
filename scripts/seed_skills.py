@@ -3,7 +3,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from shared.config import get_settings
+from careeros.shared.config import get_settings
 
 DATABASE_URL = get_settings().database_url
 
@@ -113,7 +113,7 @@ def slugify(name: str) -> str:
 
 
 def main():
-    from core.db.models.skill import Skill
+    from careeros.evidence.models.skill import Skill
 
     engine = create_engine(DATABASE_URL, echo=False)
 
