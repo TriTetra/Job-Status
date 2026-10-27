@@ -6,7 +6,7 @@ import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 interface LogEntry {
   timestamp: string;
   message: string;
-  type: "info" | "success" | "error";
+  type?: string; // "info" | "success" | "error"; anything else renders as info
 }
 
 interface ExtractionLogProps {
@@ -26,7 +26,7 @@ export function ExtractionLog({ logs }: ExtractionLogProps) {
     }
   }, [logs, visibleLogs]);
 
-  const getIcon = (type: string) => {
+  const getIcon = (type?: string) => {
     switch (type) {
       case "success":
         return <CheckCircle2 className="h-4 w-4 text-[var(--success)]" strokeWidth={2} />;

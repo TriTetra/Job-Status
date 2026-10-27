@@ -51,6 +51,11 @@ def list_opportunities(session: Session, user_id: str, recommendation: str = "AL
     )
 
 
+def count_opportunities(session: Session, user_id: str, recommendation: str = "ALL") -> int:
+    """Total matching jobs, independent of the list limit."""
+    return CareerScoreRepository(session).count_latest(user_id, None if recommendation == "ALL" else recommendation)
+
+
 def get_opportunity(session: Session, user_id: str, url: str) -> Optional[CareerScore]:
     return CareerScoreRepository(session).get_latest_score(url=url, user_id=user_id)
 

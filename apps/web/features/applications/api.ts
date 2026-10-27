@@ -1,30 +1,7 @@
+import { apiFetch } from "@/lib/api/client";
 /**
  * Applications API client — CRUD for the application pipeline.
  */
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (typeof window !== "undefined") {
-    const clerk = (window as any).Clerk;
-    const token = await clerk?.session?.getToken?.();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-  }
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    ...init,
-    headers,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${path}: ${res.status} ${text}`);
-  }
-  if (res.status === 204 || res.headers.get("content-length") === "0") {
-    return undefined as T;
-  }
-  return res.json() as Promise<T>;
-}
 
 export type ApplicationStatus =
   | "to_apply"
@@ -43,6 +20,9 @@ export interface Application {
   notes: string | null;
 }
 
+/** Statuses still on the board (the pipeline columns); rejected / withdrawn are terminal. */
+export const ACTIVE_STATUSES: ApplicationStatus[] = ["to_apply", "applied", "interview", "offer"];
+
 export const applicationsApi = {
   list: (status?: ApplicationStatus) => {
     const q = status ? `?status=${status}` : "";
@@ -56,6 +36,7 @@ export const applicationsApi = {
     title: string;
     company?: string;
     status?: ApplicationStatus;
+    notes?: string;
   }) =>
     apiFetch<Application>("/api/applications/", {
       method: "POST",

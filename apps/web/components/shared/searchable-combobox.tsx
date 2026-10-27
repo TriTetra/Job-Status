@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { Search, ChevronDown, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +59,7 @@ export function SearchableCombobox({
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ComboboxOption[]>([]);
+  const listboxId = useId();
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
@@ -116,15 +117,12 @@ export function SearchableCombobox({
     };
   }, [query, isOpen, performSearch]);
 
-  useEffect(() => {
-    if (isOpen && results.length === 0 && !query) {
-      setResults(initialOptions.slice(0, 15));
-    }
-  }, [isOpen, initialOptions, query, results.length]);
+  // Before the first search, an open combobox shows the first initial options
+  const shown = isOpen && results.length === 0 && !query ? initialOptions.slice(0, 15) : results;
 
   // ─── Grouping ─────────────────────────────────────────────────
 
-  const grouped = results.reduce(
+  const grouped = shown.reduce(
     (acc, option) => {
       const cat = option.category || "Other";
       if (!acc[cat]) acc[cat] = [];
@@ -224,6 +222,7 @@ export function SearchableCombobox({
         role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
+        aria-controls={listboxId}
       >
         <Search className="h-4 w-4 shrink-0" style={{ color: "var(--text-muted)" }} strokeWidth={1.75} />
         <input
@@ -265,7 +264,7 @@ export function SearchableCombobox({
       {/* Dropdown */}
       {isOpen && (
         <div
-          id="combobox-listbox"
+          id={listboxId}
           role="listbox"
           className="absolute z-50 w-full mt-1.5 rounded-lg border shadow-lg max-h-72 overflow-y-auto"
           style={{ background: "var(--surface)", borderColor: "var(--border)" }}

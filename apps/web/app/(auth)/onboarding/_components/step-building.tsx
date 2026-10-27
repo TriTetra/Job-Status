@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import type { CareerGraphData, JobStatus } from "@/features/onboarding/types";
 import { onboardingApi, STEP_ORDER } from "@/features/onboarding";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { AplioLogo } from "@/components/shared/aplio-logo";
@@ -13,10 +13,9 @@ interface StepBuildingProps {
 }
 
 export function StepBuilding({ onComplete }: StepBuildingProps) {
-  const router = useRouter();
   const [jobId, setJobId] = useState<string | null>(null);
-  const [status, setStatus] = useState<any>(null);
-  const [graphData, setGraphData] = useState<any>(null);
+  const [status, setStatus] = useState<JobStatus<CareerGraphData> | null>(null);
+  const [graphData, setGraphData] = useState<CareerGraphData | null>(null);
 
   useEffect(() => {
     onboardingApi.buildGraph().then((r) => setJobId(r.job_id)).catch(console.error);
@@ -44,7 +43,7 @@ export function StepBuilding({ onComplete }: StepBuildingProps) {
     return () => clearInterval(t);
   }, [jobId, onComplete]);
 
-  const stepIdx = STEP_ORDER.indexOf("BUILDING" as any);
+  const stepIdx = STEP_ORDER.indexOf("BUILDING");
 
   return (
     <div className="w-full">

@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { settingsApi, API_BASE } from "@/features/settings/api";
+import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
 import { Section, Row, UnderlineInput } from "./kit";
 
 export function AccountTab() {
   const { user } = useUser();
-  const [github, setGithub] = useState<Record<string, any> | null>(null);
-  const [portfolio, setPortfolio] = useState<Record<string, any> | null>(null);
+  const [github, setGithub] = useState<GithubStatus | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioStatus | null>(null);
   const [urlOpen, setUrlOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,7 +28,7 @@ export function AccountTab() {
   useEffect(refresh, []);
 
   const connectGithub = () => {
-    window.location.href = `${API_BASE}/api/oauth/github/authorize`;
+    window.location.assign(`${API_BASE}/api/oauth/github/authorize`);
   };
 
   const addPortfolio = async () => {

@@ -55,7 +55,7 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
 
   const handleConnect = (s: Source) => {
     if (s.connect_kind === "oauth" && s.oauth_provider) {
-      window.location.href = `${apiBase}/api/oauth/${s.oauth_provider}/authorize`;
+      window.location.assign(`${apiBase}/api/oauth/${s.oauth_provider}/authorize`);
     } else if (s.connect_kind === "url") {
       setPortfolioOpen(true);
     }

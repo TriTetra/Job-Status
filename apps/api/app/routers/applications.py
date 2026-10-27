@@ -51,6 +51,7 @@ def create_application(
         company=data.company,
         status=data.status,
         user_id=user_id,
+        notes=data.notes or None,
     )
     return ApplicationResponse.model_validate(app)
 

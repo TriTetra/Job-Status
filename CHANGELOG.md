@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 7 — Web: One Data Path | Web reads only through FastAPI (lib/db + postgres removed; new /api/briefing, GET /api/onboarding/identity); one apiFetch (client + server-only); 4 dashboard pages → server page + client view with loading/error; ESLint 78 → 0; badge/notes/reasoning bugs fixed | ✅ Tamam | 2026-10-28 |
 | Refactor Step 6 — Feature Packages | core/ services/ plugins/ shared/ → one package `careeros/` with one folder per feature (identity, onboarding, evidence, jobs, applications, companies, market, resume, knowledge) + shared + db; 152 files moved with history, 411 imports rewritten by AST; 2 new architecture rules | ✅ Tamam | 2026-10-28 |
 | Refactor Step 5b — Thin Routers (evidence, oauth, market, goals, roles) | All API routers now HTTP-only (enforced by an architecture test); role context unified; GitHub OAuth in a service (no leaked GitHub errors, WEB_APP_URL setting); market refresh on JobStore (atomic single-flight); token cipher moved to shared | ✅ Tamam | 2026-10-28 |
 | Refactor Step 5 — Thin Routers (onboarding, jobs) | onboarding router 726 → 115 lines, jobs 390 → 102; logic in services/onboarding and job_intelligence (opportunities, scan); one shared/background JobStore replaces 2 ad-hoc job dicts; upload size checked before write | ✅ Tamam | 2026-10-28 |
@@ -87,6 +88,49 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 7] — 2026-10-28 — Web: one data path, one fetch, server-first pages ✅
+
+### Tek veri yolu: web → FastAPI
+- `apps/web/lib/db/` (direct Postgres via `postgres.js`) and the `postgres` dependency are **removed**; the web app no longer needs `DATABASE_URL`.
+- **New API** `GET /api/briefing` (`careeros/briefing/facts.py`, ORM, one call): top opportunities, evidence counts, hiring companies, last-24h changes, live interviews/offers, GitHub connected, tone. The web keeps the *copy*: `features/briefing/build.ts` (pure, typed — was `lib/db/dashboard.ts` with `any` rows) + `features/briefing/templates.ts`.
+- **New API** `GET /api/onboarding/identity` (symmetric to the existing POST) feeds the Settings profile tab (was a raw SQL query in `settings/page.tsx` with its own unpooled client).
+- Dashboard layout gets the onboarding state from `GET /api/onboarding/state` (was raw SQL + `console.log` on every navigation).
+
+### Tek fetch
+- `lib/api/shared.ts` (`API_BASE`, typed `ApiError{status}`), `lib/api/client.ts` (browser, Clerk token per call), `lib/api/server.ts` (`server-only`, `auth().getToken()`, `no-store`; optional internal `API_URL`).
+- 6 copy-pasted `apiFetch` wrappers + `rolesApi` raw fetches + the detail panel's raw fetch → the shared client (roles requests now carry the auth header too).
+
+### Server-first sayfalar (`features/` = data, `app/` = routing)
+- `/companies`, `/market`, `/inbox`, `/applications`: `page.tsx` is a 6-line Server Component that fetches the first render; the old page body moved (git mv) to `_components/*-view.tsx` with initial props. No more mount-time `useEffect` fetch / loading flash; `loading.tsx` + `error.tsx` per route (shared `components/shared/route-states.tsx`) — an API failure now shows a retry screen instead of an empty list.
+- Feature modules: `features/companies/{types,api,server}`, `features/market/{types,snapshot,server}` (one `loadMarketSnapshot` used by server and client), `features/opportunities/{api,server,tier}` (`tierOf`/`groupByTier`/`toScanJob`), `features/applications/server`, `features/onboarding/server` (+ `stepUrl`).
+
+### Hatalar giderildi
+- **Inbox refetched all 500 opportunities on every selection change** (incl. arrow-key navigation): `loadData` depended on `selectedUrl`.
+- Scan polling interval was never cleared on unmount.
+- Opportunity reasoning reloaded the whole page; now updates in place (panel keyed per opportunity so state never leaks between selections).
+- **Sidebar Opportunities badge capped at 1**: `/api/jobs/?limit=1` returned `total=len(page)`. `total` is now the real count (`CareerScoreRepository.count_latest`).
+- **Recommendation filter was exact-match**: rows stored as "APPLY - Good fit" never matched `?recommendation=APPLY` (and the briefing's APPLY/CONSIDER filter). Now prefix match in the repository and briefing facts.
+- Applications badge summed a non-existent `screening` status and skipped `to_apply`; uses shared `ACTIVE_STATUSES`.
+- New-application **notes were collected but never sent**; now persisted (`ApplicationCreate.notes` → repository).
+- Briefing "why" showed `matched_skills` objects; now skill names.
+- Next.js control-flow errors (dynamic rendering / redirect) were swallowed by `try/catch` in the dashboard layout and settings page → `unstable_rethrow`.
+- Combobox listbox had a fixed DOM id (duplicate when two comboboxes render) → `useId` + `aria-controls`.
+
+### Temizlik
+- ESLint **78 problems → 0** (52 `any` replaced with wire types: `JobStatus<R>`, `CareerGraphData`, `EvidenceReview`, `GithubStatus`, `PortfolioStatus`, `Preferences`, `OpportunityExplanation`, `ProfileData`, …; set-state-in-effect fixed by derived state / render-time adjustment rather than suppressions).
+- Dead components removed: `why-button`, `why-panel`, `score-badge`.
+
+### Doğrulama
+- `tsc --noEmit`: clean · `eslint .`: 0 problems · `next build`: compiles, dashboard routes dynamic, no swallowed control-flow errors
+- Python: 323 passed, 3 xfailed · `ruff`: clean · route inventory updated (`/api/briefing`)
+- **Not clicked through in a browser** (needs a signed-in Clerk session).
+
+### Dikkat
+- `apps/web/.env.local` → `DATABASE_URL` is no longer used by the web app (safe to remove). Optional `API_URL` for server-to-server calls (falls back to `NEXT_PUBLIC_API_URL`).
+- The API must be running for every dashboard page now (before, briefing/settings read Postgres directly).
 
 ---
 

@@ -17,3 +17,9 @@ export function stepIndex(state: OnboardingState): number {
 export function isComplete(state: OnboardingState): boolean {
   return state === "READY";
 }
+
+/** Where an unfinished user is sent when they open the dashboard. */
+export function stepUrl(state: OnboardingState): string {
+  if (state === "NOT_STARTED" || state === "READY") return "/onboarding?step=IDENTITY";
+  return `/onboarding?step=${state}`;
+}

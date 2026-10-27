@@ -1,10 +1,11 @@
 "use client";
 
-import type { Opportunity, Criterion, NextAction } from "@/features/opportunities/types";
+import type { Opportunity, Criterion } from "@/features/opportunities/types";
 import { Button } from "@/components/shared/button";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { Check, X, Minus, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { apiFetch } from "@/lib/api/client";
 import { WhyModal } from "./why-modal";
 
 interface OpportunityDetailPanelProps {
@@ -34,7 +35,8 @@ export function OpportunityDetailPanel({
   onShortlist,
   onSkip,
 }: OpportunityDetailPanelProps) {
-  const { decision, explanation } = opp;
+  const [decision, setDecision] = useState(opp.decision);
+  const { explanation } = opp;
   const [whyOpen, setWhyOpen] = useState(false);
   const [reasoningLoading, setReasoningLoading] = useState(false);
 
@@ -54,7 +56,7 @@ export function OpportunityDetailPanel({
     explanation?.matched_skills ?? [];
   const gapSkills: string[] = opp.skill_gaps ?? [];
 
-  // On-demand reasoning fetch
+  // On-demand reasoning: generated (and cached server-side) on first open
   const fetchReasoning = async () => {
     if (reasoning) {
       setWhyOpen(true);
@@ -62,16 +64,13 @@ export function OpportunityDetailPanel({
     }
     setReasoningLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/jobs/reasoning/${encodeURIComponent(opp.url)}`,
-        { credentials: "include" }
+      const res = await apiFetch<{ decision: NonNullable<Opportunity["decision"]> }>(
+        `/api/jobs/reasoning/${encodeURIComponent(opp.url)}`
       );
-      if (res.ok) {
-        // Reasoning cached in DB, reload page or mutate state
-        window.location.reload();
-      }
-    } catch {
-      /* silent */
+      setDecision(res.decision);
+      setWhyOpen(true);
+    } catch (err) {
+      console.error("[opportunity] reasoning failed:", err);
     } finally {
       setReasoningLoading(false);
     }
@@ -265,7 +264,7 @@ export function OpportunityDetailPanel({
         </button>
       </div>
 
-      {whyOpen && <WhyModal opp={opp} onClose={() => setWhyOpen(false)} />}
+      {whyOpen && <WhyModal opp={{ ...opp, decision }} onClose={() => setWhyOpen(false)} />}
     </div>
   );
 }

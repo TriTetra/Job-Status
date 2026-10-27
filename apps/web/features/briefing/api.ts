@@ -1,21 +1,15 @@
+import "server-only";
+
+import { serverApiFetch } from "@/lib/api/server";
+
+import { buildBriefing } from "./build";
+import type { BriefingFacts } from "./facts";
 import type { BriefingResult } from "./types";
-import { auth } from "@clerk/nextjs/server";
-import { getBriefingData } from "@/lib/db/dashboard";
 
 /**
- * Fetches today's briefing from Postgres (server-side, direct DB).
- * - No signed-in user  -> quiet empty state
- * - DB error           -> propagates to briefing/error.tsx (retry UI)
+ * Today's briefing for the signed-in user (Server Components only).
+ * API errors propagate to briefing/error.tsx (retry UI).
  */
 export async function getBriefing(): Promise<BriefingResult> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return {
-      status: "empty",
-      data: { watching: ["Sign in to see your personalized briefing."] },
-    };
-  }
-
-  return getBriefingData(userId);
+  return buildBriefing(await serverApiFetch<BriefingFacts>("/api/briefing"));
 }

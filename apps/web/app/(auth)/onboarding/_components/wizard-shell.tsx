@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { AplioLogo } from "@/components/shared/aplio-logo";
-import { STEP_ORDER, STEP_META, type OnboardingState } from "@/features/onboarding";
+import { STEP_ORDER, type OnboardingState } from "@/features/onboarding";
 import { cn } from "@/lib/utils";
 
 interface WizardShellProps {

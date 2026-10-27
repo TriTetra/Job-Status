@@ -1,40 +1,29 @@
+import { apiFetch } from "@/lib/api/client";
+import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
+export { API_BASE } from "@/lib/api/client";
 /**
  * Settings API client — onboarding ile AYNI tabloları konuşur.
  * users / career_preferences / user_settings / connected_accounts.
  */
-
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-
-  if (typeof window !== "undefined") {
-    const clerk = (window as any).Clerk;
-    const token = await clerk?.session?.getToken?.();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    ...init,
-    headers,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${path}: ${res.status} ${text}`);
-  }
-  if (res.status === 204 || res.headers.get("content-length") === "0") {
-    return undefined as T;
-  }
-  return res.json() as Promise<T>;
-}
 
 export interface ScoringWeights {
   fit: number;
   acceptance: number;
   career_value: number;
   market_demand: number;
+}
+
+/** GET/PATCH /api/preferences (apps/api/app/routers/preferences.py: PreferencesOut). */
+export interface Preferences {
+  goal_ids: string[];
+  preferred_role_ids: string[];
+  preferred_country_codes: string[];
+  work_arrangements: string[];
+  requires_sponsorship: boolean | null;
+  salary: { min: number | null; max: number | null; currency: string | null; period: string; negotiable: boolean } | null;
+  pref_metadata: { communication_style?: string; [key: string]: unknown };
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export const settingsApi = {
@@ -47,10 +36,10 @@ export const settingsApi = {
     }),
 
   // ── Preferences (career_preferences tablosu) ──────────────────────────
-  getPreferences: () => apiFetch<Record<string, any>>("/api/preferences"),
+  getPreferences: () => apiFetch<Preferences>("/api/preferences"),
 
   patchPreferences: (data: Record<string, unknown>) =>
-    apiFetch<Record<string, any>>("/api/preferences", {
+    apiFetch<Preferences>("/api/preferences", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -68,12 +57,12 @@ export const settingsApi = {
     }),
 
   // ── Connections ────────────────────────────────────────────────────────
-  getGithubStatus: () => apiFetch<Record<string, any>>("/api/oauth/github/status"),
-  getPortfolioStatus: () => apiFetch<Record<string, any>>("/api/evidence/portfolio/status"),
-  disconnectGithub: () => apiFetch<any>("/api/oauth/github", { method: "DELETE" }),
-  disconnectPortfolio: () => apiFetch<any>("/api/evidence/portfolio", { method: "DELETE" }),
+  getGithubStatus: () => apiFetch<GithubStatus>("/api/oauth/github/status"),
+  getPortfolioStatus: () => apiFetch<PortfolioStatus>("/api/evidence/portfolio/status"),
+  disconnectGithub: () => apiFetch<{ status: string }>("/api/oauth/github", { method: "DELETE" }),
+  disconnectPortfolio: () => apiFetch<{ status: string }>("/api/evidence/portfolio", { method: "DELETE" }),
   crawlPortfolio: (url: string) =>
-    apiFetch<any>("/api/evidence/portfolio/crawl", {
+    apiFetch<{ status: string; projects_found: number; technologies_found: number; evidence_created: number }>("/api/evidence/portfolio/crawl", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),

@@ -46,10 +46,11 @@ def list_jobs(
     user_id: str = Depends(get_user_id),
     session: Session = Depends(get_db_session),
 ):
-    """All scored opportunities (latest score per job). The client groups them by tier."""
+    """Scored opportunities (latest score per job), best first. `total` counts all matches, not just this page."""
     scores = opportunities.list_opportunities(session, user_id, recommendation, limit)
     decisions = opportunities.user_decisions(session, user_id)
-    return JobListResponse(total=len(scores), jobs=[_serialize(s, decisions.get(s.url)) for s in scores])
+    total = opportunities.count_opportunities(session, user_id, recommendation)
+    return JobListResponse(total=total, jobs=[_serialize(s, decisions.get(s.url)) for s in scores])
 
 
 @router.get("/pipeline", summary="Pipeline summary counts")

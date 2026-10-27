@@ -32,6 +32,12 @@ def get_onboarding_state(user_id: str = Depends(get_user_id), session: Session =
     return OnboardingStateOut(**profile.get_state(session, user_id))
 
 
+@router.get("/identity")
+def get_identity(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """The saved identity step (name, role, level, …) — used by the settings profile tab."""
+    return profile.get_identity(session, user_id)
+
+
 @router.post("/identity")
 def save_identity(data: IdentityPayload, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
     state = profile.save_identity(session, user_id, data.model_dump())

@@ -70,14 +70,14 @@ def _sql(**kwargs):
 def test_opportunities_query_without_filters_is_latest_per_url_only():
     sql = _sql(min_score=None, recommendation=None)
     assert "max(career_scores.scanned_at)" in sql
-    assert "career_scores.recommendation =" not in sql
+    assert "career_scores.recommendation LIKE" not in sql
     assert "career_scores.career_score >=" not in sql
     assert "LIMIT" in sql
 
 
 def test_opportunities_query_with_filters():
     sql = _sql(min_score=60.0, recommendation="APPLY")
-    assert "career_scores.recommendation =" in sql
+    assert "career_scores.recommendation LIKE" in sql  # prefix match
     assert "career_scores.career_score >=" in sql
 
 
@@ -128,3 +128,21 @@ def test_run_scan_without_profile_fails_with_guidance(monkeypatch):
     job = JobStore().create("user_1")
     scan.run_scan(job, "user_1", hours=1, limit=1)
     assert job.status == "failed" and "complete onboarding" in job.error
+
+
+class _CountSession(CapturingSession):
+    def execute(self, stmt):
+        self.stmt = stmt
+
+        class _R:
+            def scalar_one(self):
+                return 7
+        return _R()
+
+
+def test_count_latest_counts_all_matches_without_limit():
+    session = _CountSession()
+    assert CareerScoreRepository(session).count_latest("u1", recommendation="APPLY") == 7
+    sql = str(session.stmt.compile(dialect=postgresql.dialect()))
+    assert "count(*)" in sql and "LIMIT" not in sql
+    assert "career_scores.recommendation LIKE" in sql

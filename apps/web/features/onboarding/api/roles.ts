@@ -2,7 +2,7 @@
  * Roles API client — search and retrieve canonical tech roles.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiFetch } from "@/lib/api/client";
 
 export interface Role {
   id: string;
@@ -26,36 +26,12 @@ export interface RoleSearchResult extends Role {
 }
 
 export const rolesApi = {
-  async getAll(): Promise<Role[]> {
-    const response = await fetch(`${API_BASE}/api/roles`, {
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error("Failed to fetch roles");
-    return response.json();
-  },
+  getAll: () => apiFetch<Role[]>("/api/roles"),
 
-  async search(query: string, limit = 10): Promise<RoleSearchResult[]> {
-    const params = new URLSearchParams({ q: query, limit: String(limit) });
-    const response = await fetch(`${API_BASE}/api/roles/search?${params}`, {
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error("Failed to search roles");
-    return response.json();
-  },
+  search: (query: string, limit = 10) =>
+    apiFetch<RoleSearchResult[]>(`/api/roles/search?${new URLSearchParams({ q: query, limit: String(limit) })}`),
 
-  async getCategories(): Promise<string[]> {
-    const response = await fetch(`${API_BASE}/api/roles/categories`, {
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error("Failed to fetch categories");
-    return response.json();
-  },
+  getCategories: () => apiFetch<string[]>("/api/roles/categories"),
 
-  async getBySlug(slug: string): Promise<Role> {
-    const response = await fetch(`${API_BASE}/api/roles/${slug}`, {
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error(`Role '${slug}' not found`);
-    return response.json();
-  },
+  getBySlug: (slug: string) => apiFetch<Role>(`/api/roles/${encodeURIComponent(slug)}`),
 };

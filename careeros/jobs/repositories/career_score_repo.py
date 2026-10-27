@@ -70,7 +70,11 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
         limit: int = 20,
         user_id: str = "default",
     ) -> List[CareerScore]:
-        """Latest score per job URL, filtered and ranked. None for min_score/recommendation = no filter."""
+        """Latest score per job URL, filtered and ranked. None for min_score/recommendation = no filter.
+
+        `recommendation` matches as a prefix: rows scored before normalization store the
+        scorer's full text ("APPLY - Strong opportunity").
+        """
         latest_subq = (
             select(
                 self.model.url,
@@ -97,8 +101,26 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
         if min_score is not None:
             stmt = stmt.where(self.model.career_score >= min_score)
         if recommendation is not None:
-            stmt = stmt.where(self.model.recommendation == recommendation)
+            stmt = stmt.where(self.model.recommendation.startswith(recommendation))
         return list(self.session.execute(stmt).scalars().all())
+
+    def count_latest(self, user_id: str, recommendation: Optional[str] = None) -> int:
+        """How many jobs have a latest score (optionally in one recommendation bucket)."""
+        latest_subq = (
+            select(self.model.url, func.max(self.model.scanned_at).label("latest_scan"))
+            .where(self.model.user_id == user_id)
+            .group_by(self.model.url)
+            .subquery()
+        )
+        stmt = (
+            select(func.count())
+            .select_from(self.model)
+            .join(latest_subq, and_(self.model.url == latest_subq.c.url, self.model.scanned_at == latest_subq.c.latest_scan))
+            .where(self.model.user_id == user_id)
+        )
+        if recommendation is not None:
+            stmt = stmt.where(self.model.recommendation.startswith(recommendation))
+        return self.session.execute(stmt).scalar_one()
 
     def get_trends(self, url: str, days: int = 30, user_id: str = "default") -> List[CareerScore]:
         """Score history over the last N days (oldest first)."""

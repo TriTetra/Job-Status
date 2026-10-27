@@ -1,12 +1,14 @@
 /**
- * Canonical client for the FastAPI backend (browser side).
+ * Browser client for the FastAPI backend.
  *
  * Every API route requires a signed-in user, so each request carries the
- * Clerk session token as a Bearer header. Feature modules should use this
- * instead of their own fetch wrappers.
+ * current Clerk session token (fresh per call — the SDK refreshes it).
+ * Feature modules import this; never write another fetch wrapper.
  */
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_BASE, parseResponse } from "./shared";
+
+export { API_BASE, ApiError } from "./shared";
 
 type ClerkWindow = Window & {
   Clerk?: { session?: { getToken?: () => Promise<string | null> } };
@@ -23,12 +25,5 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${API_BASE}${path}`, { credentials: "include", ...init, headers });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${path}: ${res.status} ${text}`);
-  }
-  if (res.status === 204 || res.headers.get("content-length") === "0") {
-    return undefined as T;
-  }
-  return res.json() as Promise<T>;
+  return parseResponse<T>(path, res);
 }

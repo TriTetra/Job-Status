@@ -7,8 +7,20 @@ import { PreferencesTab } from "./preferences-tab";
 import { ScoringTab } from "./scoring-tab";
 import { AccountTab } from "./account-tab";
 
+/** users.profile_data as written by the identity step. */
+export interface ProfileData {
+  first_name?: string;
+  last_name?: string | null;
+  country?: string;
+  current_role_title?: string;
+  total_years?: number | null;
+  languages?: Array<{ code: string; level: string }>;
+  education_level?: string | null;
+  [key: string]: unknown;
+}
+
 export interface InitialProfile {
-  profileData: Record<string, any>;
+  profileData: ProfileData;
   yearsInRole: number;
   careerLevel: string;
   currentRoleId: string;

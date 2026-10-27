@@ -129,7 +129,7 @@ export function BriefingEmpty({ watching, stats, greeting = "Good evening" }: Br
           className="text-[11px] uppercase tracking-[0.08em] mb-4"
           style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)" }}
         >
-          We're Watching
+          We&apos;re Watching
         </div>
         <div className="space-y-2.5">
           {watching.map((item, i) => (
@@ -160,7 +160,7 @@ export function BriefingEmpty({ watching, stats, greeting = "Good evening" }: Br
 
       <div className="rhythm-reflection space-y-[var(--rhythm-thought)]">
         <NarrativeText size="lg" style={{ color: "var(--text-muted)" }}>
-          We'll let you know when something worth your attention appears.
+          We&apos;ll let you know when something worth your attention appears.
         </NarrativeText>
         <NarrativeText size="lg" style={{ color: "var(--text-muted)" }}>
           See you tomorrow.

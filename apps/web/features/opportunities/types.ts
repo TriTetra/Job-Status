@@ -48,6 +48,18 @@ export interface UserDecision {
   decided_at: string | null;
 }
 
+/** career_scores.explanation — JSON written by the scorer; these keys are read by the UI. */
+export interface OpportunityExplanation {
+  company?: string;
+  title?: string;
+  location?: string;
+  remote?: boolean;
+  remote_region?: string;
+  source?: string;
+  matched_skills?: Array<{ name: string; confidence: number }>;
+  [key: string]: unknown;
+}
+
 export interface Opportunity {
   url: string;
   career_score: number | null;
@@ -58,7 +70,7 @@ export interface Opportunity {
   expected_value: number | null;
   recommendation: "APPLY" | "CONSIDER" | "SKIP";
   skill_gaps: string[];
-  explanation: Record<string, any>;
+  explanation: OpportunityExplanation;
   scanned_at: string | null;
   decision?: Decision;
   user_decision: UserDecision;
@@ -88,4 +100,29 @@ export interface ScanJob {
     skip: number;
   };
   error?: string;
+}
+
+/** Backend scan job as polled from GET /api/jobs/scan/{id}/status. */
+export interface ScanStatusResponse {
+  job_id: string;
+  status: "pending" | "profile" | "scanning" | "scoring" | "completed" | "failed";
+  progress: number;
+  logs: Array<{ timestamp: string; message: string; type?: string }>;
+  result: ScanJob["result"] | null;
+  error: string | null;
+}
+
+/** The subset of /api/preferences the inbox header summarizes. */
+export interface InboxPreferences {
+  work_arrangements?: string[];
+  preferred_country_codes?: string[];
+  requires_sponsorship?: boolean | null;
+  salary?: { min?: number; max?: number } | null;
+  salary_min?: number;
+  salary_max?: number;
+}
+
+export interface InboxData {
+  jobs: Opportunity[];
+  prefs: InboxPreferences | null;
 }

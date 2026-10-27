@@ -1,4 +1,3 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { getBriefing } from "@/features/briefing/api";
 import { BriefingGreeting } from "./_components/briefing-greeting";
 import { BriefingFocus } from "./_components/briefing-focus";
@@ -8,7 +7,7 @@ import { BriefingClosing } from "./_components/briefing-closing";
 import { BriefingEmpty } from "./_components/briefing-empty";
 
 export default async function BriefingPage() {
-  const [result, clerkUser] = await Promise.all([getBriefing(), currentUser()]);
+  const result = await getBriefing();
 
   if (result.status === "empty") {
     return <BriefingEmpty watching={result.data.watching} stats={result.data.stats} greeting={result.data.greeting} />;

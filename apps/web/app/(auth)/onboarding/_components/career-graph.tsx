@@ -1,22 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
-interface GraphNode { id: string; type: string; label: string; confidence: number; metadata: any; }
-interface GraphEdge { source: string; target: string; weight: number; }
-interface CareerGraphProps { data: { nodes: GraphNode[]; edges: GraphEdge[]; stats: any; }; }
+import type { CareerGraphData, CareerGraphEdge as GraphEdge, CareerGraphNode as GraphNode } from "@/features/onboarding/types";
+
+interface CareerGraphProps { data: CareerGraphData; }
 
 export function CareerGraph({ data }: CareerGraphProps) {
   const [visibleNodes, setVisibleNodes] = useState<string[]>([]);
   const [visibleEdges, setVisibleEdges] = useState<string[]>([]);
 
-  const centerNode: GraphNode = { id: "you", type: "you", label: "You", confidence: 1, metadata: {} };
-  const allNodes = [centerNode, ...data.nodes];
+  const allNodes = useMemo<GraphNode[]>(
+    () => [{ id: "you", type: "you", label: "You", confidence: 1, metadata: {} }, ...data.nodes],
+    [data.nodes],
+  );
 
-  // You → her skill + mevcut skill→project edges
-  const skillEdges: GraphEdge[] = data.nodes.filter((n) => n.type === "skill").map((n) => ({ source: "you", target: n.id, weight: 1 }));
-  const allEdges = [...skillEdges, ...data.edges];
+  // You → every skill, plus the existing project/company → skill edges
+  const allEdges = useMemo<GraphEdge[]>(
+    () => [
+      ...data.nodes.filter((n) => n.type === "skill").map((n) => ({ source: "you", target: n.id, weight: 1 })),
+      ...data.edges,
+    ],
+    [data.nodes, data.edges],
+  );
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -26,7 +33,7 @@ export function CareerGraph({ data }: CareerGraphProps) {
       });
     }, 160);
     return () => clearInterval(t);
-  }, [allNodes.length]);
+  }, [allNodes]);
 
   useEffect(() => {
     if (visibleNodes.length >= allNodes.length) {
@@ -39,7 +46,7 @@ export function CareerGraph({ data }: CareerGraphProps) {
       }, 70);
       return () => clearInterval(t);
     }
-  }, [visibleNodes.length, allEdges.length, allNodes.length]);
+  }, [visibleNodes.length, allEdges, allNodes.length]);
 
   // Layout: You merkez · skill iç halka · project/company dış halka
   const cx = 200, cy = 150;

@@ -1,31 +1,13 @@
 import type { OnboardingStatus } from "./types";
+import { apiFetch } from "@/lib/api/client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-
-  // Her istekte TAZE token al — SDK expired ise otomatik refresh eder
-  if (typeof window !== "undefined") {
-    const clerk = (window as any).Clerk;
-    const token = await clerk?.session?.getToken?.();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    ...init,
-    headers,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${path}: ${res.status} ${text}`);
-  }
-  if (res.status === 204 || res.headers.get("content-length") === "0") {
-    return undefined as T;
-  }
-  return res.json() as Promise<T>;
-}
+import type {
+  CareerGraphData,
+  EvidenceReview,
+  ExtractionSummary,
+  GithubStatus,
+  JobStatus,
+} from "./types";
 
 export const onboardingApi = {
   getState(): Promise<OnboardingStatus> {
@@ -89,7 +71,7 @@ export const onboardingApi = {
     return apiFetch("/api/onboarding/resume", { method: "POST", body: formData });
   },
 
-  getResumeStatus(jobId: string): Promise<any> {
+  getResumeStatus(jobId: string): Promise<JobStatus<ExtractionSummary>> {
     return apiFetch(`/api/onboarding/resume/${jobId}/status`);
   },
 
@@ -97,25 +79,11 @@ export const onboardingApi = {
     return apiFetch("/api/onboarding/build-graph", { method: "POST" });
   },
 
-  getGraphStatus(jobId: string): Promise<any> {
+  getGraphStatus(jobId: string): Promise<JobStatus<CareerGraphData>> {
     return apiFetch(`/api/onboarding/build-graph/${jobId}/status`);
   },
 
-  getEvidenceItems(source?: string): Promise<{
-    skills: Array<{
-      id: string;
-      name: string;
-      skill_id: number | null;
-      confidence: number;
-      source: string;
-      evidence_text: string | null;
-      evidence_data: Record<string, any>;
-    }>;
-    projects: Array<any>;
-    experiences: Array<any>;
-    education: Array<any>;
-    certifications: Array<any>;
-  }> {
+  getEvidenceItems(source?: string): Promise<EvidenceReview> {
     const params = source ? `?source=${source}` : '';
     return apiFetch(`/api/evidence/items${params}`);
   },
@@ -126,17 +94,11 @@ export const onboardingApi = {
     });
   },
 
-  getCareerGraph(): Promise<any> {
+  getCareerGraph(): Promise<CareerGraphData> {
     return apiFetch("/api/onboarding/career-graph");
   },
 
-  getGithubStatus(): Promise<{
-    connected: boolean;
-    username?: string;
-    provider_user_id?: string;
-    metadata?: any;
-    last_synced_at?: string | null;
-  }> {
+  getGithubStatus(): Promise<GithubStatus> {
     return apiFetch("/api/oauth/github/status");
   },
 

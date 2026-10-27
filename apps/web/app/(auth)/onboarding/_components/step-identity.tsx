@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, useEffect, useCallback, useMemo } from "react";
+import { useState, type FormEvent, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { onboardingApi, COUNTRIES, rolesApi, SENIORITY, type SeniorityId } from "@/features/onboarding";
 import { ROLES } from "@/features/onboarding/data/roles";
@@ -82,18 +82,16 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
     }));
   }, []);
 
-  // Sync with Clerk user details once loaded if empty
-  useEffect(() => {
-    if (user) {
-      if (!firstName) setFirstName(user.firstName || "");
-      if (!lastName) setLastName(user.lastName || "");
-    }
-  }, [user, firstName, lastName]);
+  // Prefill empty name fields from Clerk once the user has loaded
+  const [prefilled, setPrefilled] = useState(false);
+  if (user && !prefilled) {
+    setPrefilled(true);
+    if (!firstName) setFirstName(user.firstName || "");
+    if (!lastName) setLastName(user.lastName || "");
+  }
 
 
   const isValid = firstName.trim().length > 0 && currentRoleId && country.length > 0 && languages.length > 0;
-
-  const suggestion = suggestCareerLevel(yearsInRole);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -118,6 +116,7 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
       });
       onComplete();
     } catch (err) {
+      console.error("[onboarding] save identity failed:", err);
       setSaving(false);
       setError("Failed to save. Please try again.");
     }

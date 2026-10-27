@@ -11,6 +11,7 @@ class ApplicationCreate(BaseModel):
     title: str
     company: Optional[str] = None
     status: str = "to_apply"
+    notes: Optional[str] = None
 
 
 class ApplicationUpdate(BaseModel):

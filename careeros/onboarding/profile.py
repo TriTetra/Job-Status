@@ -107,6 +107,19 @@ def _resolve_role(session: Session, clerk_id: str, role_id: str, role_title: str
     return None, str(custom.id)
 
 
+def get_identity(session: Session, clerk_id: str) -> dict:
+    """What the identity step saved — read back by the settings profile tab."""
+    user = ensure_user(session, clerk_id)
+    return {
+        "profile_data": user.profile_data or {},
+        "years_in_role": user.years_in_role,
+        "career_level": user.career_level,
+        "current_role_id": str(user.current_role_id) if user.current_role_id else None,
+        "current_custom_role_id": str(user.current_custom_role_id) if user.current_custom_role_id else None,
+        "email": user.email,
+    }
+
+
 def save_identity(session: Session, clerk_id: str, identity: dict[str, Any]) -> str:
     """Persist the identity step, record the role in history, advance the state. Returns new state."""
     user = ensure_user(session, clerk_id)

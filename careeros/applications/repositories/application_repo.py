@@ -20,12 +20,13 @@ class ApplicationRepository(BaseRepository[Application]):
         company: str | None = None,
         status: str = "to_apply",
         user_id: str = "default",
+        notes: str | None = None,
     ) -> Application:
         """Insert if not exists for this user, else return existing."""
         existing = self._get_for_user(url=url, user_id=user_id)
         if existing:
             return existing
-        return self.create(user_id=user_id, url=url, title=title, company=company, status=status)
+        return self.create(user_id=user_id, url=url, title=title, company=company, status=status, notes=notes)
 
     def mark_applied(
         self, url: str, applied_at: datetime | None = None, user_id: str = "default"

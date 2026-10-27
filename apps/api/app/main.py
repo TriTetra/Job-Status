@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from careeros.shared.logging import configure_logging
 
 from .dependencies import get_user_id
-from .routers import applications, companies, evidence, goals, jobs, market, onboarding, resume, settings, webhooks, roles, preferences, oauth
+from .routers import applications, briefing, companies, evidence, goals, jobs, market, onboarding, resume, settings, webhooks, roles, preferences, oauth
 
 configure_logging()
 
@@ -37,6 +37,7 @@ app.add_middleware(
 #              authenticated by its single-use state token
 authenticated = [Depends(get_user_id)]
 
+app.include_router(briefing.router, prefix="/api/briefing", tags=["briefing"], dependencies=authenticated)
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"], dependencies=authenticated)
 app.include_router(companies.router, prefix="/api/companies", tags=["companies"], dependencies=authenticated)
 app.include_router(applications.router, prefix="/api/applications", tags=["applications"], dependencies=authenticated)

@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { EvidenceReviewItem } from "@/features/onboarding/types";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { onboardingApi } from "@/features/onboarding/api";
 import { Check, Github, FileText, Globe } from "lucide-react";
+
+type AggregatedSkill = Awaited<ReturnType<typeof onboardingApi.getAggregatedSkills>>["skills"][number];
 
 interface ExtractionResultProps {
   onComplete: () => void;
 }
 
 export function ExtractionResult({ onComplete }: ExtractionResultProps) {
-  const [skills, setSkills] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [experiences, setExperiences] = useState<any[]>([]);
+  const [skills, setSkills] = useState<AggregatedSkill[]>([]);
+  const [projects, setProjects] = useState<EvidenceReviewItem[]>([]);
+  const [experiences, setExperiences] = useState<EvidenceReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -87,7 +90,7 @@ export function ExtractionResult({ onComplete }: ExtractionResultProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 text-[var(--text-muted)]">
-                    {s.sources.map((src: any) => <span key={src.type}>{srcDot(src.type)}</span>)}
+                    {s.sources.map((src) => <span key={src.type}>{srcDot(src.type)}</span>)}
                   </div>
                 </div>
                 <span className="text-xs font-mono font-semibold shrink-0" style={{ color: conf(s.aggregated_confidence) }}>
@@ -112,11 +115,11 @@ export function ExtractionResult({ onComplete }: ExtractionResultProps) {
             {topProjects.map((p) => (
               <div key={p.id} className="px-2.5 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-medium text-[var(--text-primary)] truncate">{p.name || p.skill_name}</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)] truncate">{p.name}</span>
                   <Check className="h-3 w-3 text-[var(--success)] shrink-0 ml-auto" />
                 </div>
-                {p.evidence_data?.technologies?.length > 0 && (
-                  <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">{p.evidence_data.technologies.slice(0, 3).join(" · ")}</p>
+                {(p.evidence_data.technologies?.length ?? 0) > 0 && (
+                  <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">{p.evidence_data.technologies?.slice(0, 3).join(" · ")}</p>
                 )}
               </div>
             ))}
@@ -132,7 +135,7 @@ export function ExtractionResult({ onComplete }: ExtractionResultProps) {
             {topExp.map((e) => (
               <div key={e.id} className="px-2.5 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-medium text-[var(--text-primary)] truncate">{e.evidence_data?.role || e.name || e.skill_name}</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)] truncate">{e.evidence_data.role || e.name}</span>
                   <Check className="h-3 w-3 text-[var(--success)] shrink-0 ml-auto" />
                 </div>
                 <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">

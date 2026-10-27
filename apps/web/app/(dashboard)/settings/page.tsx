@@ -1,36 +1,21 @@
-import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
-import postgres from "postgres";
-import { SettingsShell, type InitialProfile } from "./_components/settings-shell";
-
-const sql = postgres(process.env.DATABASE_URL!);
+import { unstable_rethrow } from "next/navigation";
+import { getSavedIdentity } from "@/features/onboarding/server";
+import { SettingsShell, type InitialProfile, type ProfileData } from "./_components/settings-shell";
 
 export default async function SettingsPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
-
   let initialProfile: InitialProfile | null = null;
   try {
-    const rows = await sql`
-      SELECT profile_data, years_in_role, career_level,
-             current_role_id, current_custom_role_id, email
-      FROM users
-      WHERE clerk_id = ${userId}
-      LIMIT 1
-    `;
-    if (rows[0]) {
-      const r = rows[0];
-      initialProfile = {
-        profileData: (r.profile_data as Record<string, any>) ?? {},
-        yearsInRole: Number(r.years_in_role ?? 0),
-        careerLevel: (r.career_level as string) ?? "mid",
-        currentRoleId:
-          (r.current_role_id as string) ??
-          (r.current_custom_role_id ? `custom_${r.current_custom_role_id}` : ""),
-        email: (r.email as string) ?? "",
-      };
-    }
+    const id = await getSavedIdentity();
+    initialProfile = {
+      profileData: (id.profile_data ?? {}) as ProfileData,
+      yearsInRole: Number(id.years_in_role ?? 0),
+      careerLevel: id.career_level ?? "mid",
+      currentRoleId: id.current_role_id ?? (id.current_custom_role_id ? `custom_${id.current_custom_role_id}` : ""),
+      email: id.email ?? "",
+    };
   } catch (err) {
+    unstable_rethrow(err); // Next.js control-flow errors are not ours to swallow
+    // The tabs still load their own data; the profile tab starts blank
     console.error("[settings] profile load failed:", err);
   }
 
