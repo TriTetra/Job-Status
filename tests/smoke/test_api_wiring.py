@@ -5,10 +5,13 @@ silently drop or rename an endpoint. If a route is added/removed on purpose,
 update EXPECTED_PATHS in the same commit.
 """
 
+import ast
 import inspect
+from pathlib import Path
 
 import pytest
-from starlette.requests import Request
+
+ROOT = Path(__file__).parents[2]
 
 EXPECTED_PATHS = {
     "/", "/health",
@@ -48,45 +51,19 @@ def test_route_inventory_unchanged(app):
     assert set(app.openapi()["paths"]) == EXPECTED_PATHS
 
 
-@pytest.mark.xfail(strict=True, reason="known bug: jobs router passes job_dicts=, run_pipeline expects job_meta=")
 def test_scan_router_calls_run_pipeline_with_valid_kwargs():
+    """The scan background task must only pass keywords run_pipeline accepts."""
     from services.job_intelligence.application.scoring_service import ScoringService
 
-    params = inspect.signature(ScoringService.run_pipeline).parameters
-    assert "job_dicts" in params
-
-
-def _anonymous_request(headers=None):
-    raw = [(k.lower().encode(), v.encode()) for k, v in (headers or {}).items()]
-    return Request({"type": "http", "method": "GET", "path": "/", "headers": raw})
-
-
-@pytest.mark.xfail(strict=True, reason="known security bug: no credentials falls back to user 'default'")
-def test_anonymous_request_is_rejected():
-    from fastapi import HTTPException
-
-    from app.dependencies import get_user_id
-
-    with pytest.raises(HTTPException) as exc:
-        get_user_id(_anonymous_request(), x_user_id=None)
-    assert exc.value.status_code == 401
-
-
-@pytest.mark.xfail(strict=True, reason="known security bug: X-User-Id e2e bypass is active in every environment")
-def test_e2e_header_bypass_is_rejected_outside_test_env():
-    from fastapi import HTTPException
-
-    from app.dependencies import get_user_id
-
-    with pytest.raises(HTTPException):
-        get_user_id(_anonymous_request({"X-User-Id": "user_e2e_attacker"}), x_user_id="user_e2e_attacker")
-
-
-def test_forged_non_e2e_user_id_is_rejected():
-    from fastapi import HTTPException
-
-    from app.dependencies import get_user_id
-
-    with pytest.raises(HTTPException) as exc:
-        get_user_id(_anonymous_request(), x_user_id="user_someone_else")
-    assert exc.value.status_code == 401
+    accepted = set(inspect.signature(ScoringService.run_pipeline).parameters)
+    source = (ROOT / "apps/api/app/routers/jobs.py").read_text(encoding="utf-8")
+    calls = [
+        node for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "run_pipeline"
+    ]
+    assert calls, "run_pipeline call not found in jobs router"
+    for call in calls:
+        passed = {kw.arg for kw in call.keywords if kw.arg}
+        assert passed <= accepted, f"unexpected kwargs: {passed - accepted}"

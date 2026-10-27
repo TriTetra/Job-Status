@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Security Fix — API Auth Hardening + Scan Fix | Router-level auth on all API routers, no anonymous "default" fallback, e2e bypass opt-in only, Clerk webhook fails closed, resume user from token, single in-flight market refresh, scan job_meta kwarg fix, market page sends Clerk token | ✅ Tamam | 2026-10-28 |
 | Refactor Step 1 — Dead Code Removal | Removed unused core/events, memory, timeline, 6 unused core/domain subpackages, career_os/data, GapAnalyzer, MatchingService, CareerDecisionEngine, 9 debug scripts, 9 unused web components, 4 unused npm deps; API import 28s → 1.7s | ✅ Tamam | 2026-10-28 |
 | Refactor Step 0 — Test Safety Net | pyproject.toml (pytest + ruff), tests split into unit/smoke/integration/manual, offline unit + smoke tests, known bugs pinned as strict xfail | ✅ Tamam | 2026-10-28 |
 | Phase D — Opportunities Gating Fix | Removed min_score filtering on backend list_jobs, showing all scored opportunities (strong/look/low fit) with collapsible low fit groups | ✅ Tamam | 2026-08-09 |
@@ -80,6 +81,44 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Security Fix] — 2026-10-28 — API Auth Hardening + Scan Fix ✅
+
+### Yapılan
+
+**Auth is secure by default** (`apps/api/app/main.py`):
+- Every router is mounted with `dependencies=[Depends(get_user_id)]`. Only `/`, `/health`, `POST /api/webhooks/clerk` (Svix signature) and `GET /api/oauth/github/callback` (single-use state token) are public; the oauth router keeps its per-endpoint auth.
+- Newly protected: `companies` (list/get/hiring/track), `market` (signals/summary/trend/refresh/status), `resume/generate`, `roles`.
+
+**`get_user_id`** (`apps/api/app/dependencies.py`):
+- Removed the anonymous fallback that returned user `"default"` → now `401 Authentication required`.
+- `X-User-Id: user_e2e_*` bypass only works when `CAREEROS_E2E_AUTH_BYPASS=1` is set (local e2e scripts).
+- Invalid bearer/cookie tokens are logged (`logger.info`) instead of silently swallowed.
+
+**Webhook** (`apps/api/app/routers/webhooks.py`): missing `CLERK_WEBHOOK_SECRET` → `503` (was: signature check skipped, any payload accepted).
+
+**Resume** (`routers/resume.py`, `schemas/resume.py`): `user_id` comes from the auth token; removed from the request body (was: any caller could generate from another user's data).
+
+**Market refresh** (`routers/market.py`): at most one HN/TechCrunch refresh in flight; a second request returns the running job.
+
+**Scan fix** (`routers/jobs.py`): background scan passed `job_dicts=` to `ScoringService.run_pipeline`, which only accepts `job_meta=` → every API scan failed with `TypeError`. Now `job_meta=job_meta`.
+
+**Web** (`apps/web/lib/api-client.ts`, `app/(dashboard)/market/page.tsx`): new canonical `apiFetch` (Clerk bearer token + credentials); the market page used raw `fetch` without a token and would now get 401.
+
+**Config**: `.env.example` documents `CLERK_WEBHOOK_SECRET` and `CAREEROS_E2E_AUTH_BYPASS`.
+
+### Testler
+- `tests/smoke/test_auth.py`: every non-public route returns 401 anonymously (sandboxed: no outbound sockets, no background tasks — mutation-checked: unprotecting `market` fails in ~3s listing the leaked routes); webhook 503/401; `get_user_id` cases (anonymous, forged header, e2e opt-in on/off, bad token, cookie, bearer precedence).
+- `tests/smoke/test_api_wiring.py`: scan xfail replaced with an AST check that `run_pipeline` is only called with accepted kwargs.
+- Removed 3 strict xfails (auth fallback, e2e bypass, scan kwarg). Remaining xfails: visa heuristic, HN substring + negation, `core.domain` circular import.
+- `pytest`: 205 passed, 4 xfailed · `ruff`: clean · `tsc`: clean
+
+### Bilinen / dikkat
+- Root `.env` has no `CLERK_WEBHOOK_SECRET` (it is only in `apps/web/.env.local`): the API webhook will answer 503 until it is added.
+- `tests/integration/test_clerk_auth.py` and `tests/manual/*` e2e scripts need the API started with `CAREEROS_E2E_AUTH_BYPASS=1`.
+- Not browser-verified (needs a signed-in Clerk session).
 
 ---
 

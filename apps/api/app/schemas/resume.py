@@ -8,7 +8,6 @@ class ResumeGenerateRequest(BaseModel):
     target_title: str
     template_name: str = "ml_research"
     job_description: str = ""
-    user_id: str = "default"
 
 
 class ResumeGenerateResponse(BaseModel):

@@ -289,8 +289,9 @@ def run_scan(job_id: str, user_id: str, hours: int, limit: int) -> None:
         )
         log(f"✓ {len(raw_jobs)} jobs found (last {hours}h)")
 
-        # Build job_dicts mapping for decision builder
-        job_dicts = {
+        # Per-URL metadata the Job dataclass doesn't carry (remote_region, source …);
+        # ScoringService merges it into the decision builder input.
+        job_meta = {
             j["url"]: {
                 "title": j.get("title", ""),
                 "company": j.get("company", ""),
@@ -327,7 +328,7 @@ def run_scan(job_id: str, user_id: str, hours: int, limit: int) -> None:
         from services.job_intelligence.application.scoring_service import ScoringService
 
         result = ScoringService(user_id=user_id).run_pipeline(
-            jobs_to_score, profile, semantic=False, job_dicts=job_dicts
+            jobs_to_score, profile, semantic=False, job_meta=job_meta
         )
 
         job.update(status="completed", progress=100, result=result)

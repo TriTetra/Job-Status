@@ -1,6 +1,8 @@
 """Resume generation router."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from ..dependencies import get_user_id
 
 from ..schemas.resume import ResumeGenerateRequest, ResumeGenerateResponse
 
@@ -8,7 +10,10 @@ router = APIRouter()
 
 
 @router.post("/generate", response_model=ResumeGenerateResponse)
-def generate_resume(request: ResumeGenerateRequest):
+def generate_resume(
+    request: ResumeGenerateRequest,
+    user_id: str = Depends(get_user_id),
+):
     """Generate a target-aware resume."""
     try:
         from pathlib import Path
@@ -19,7 +24,7 @@ def generate_resume(request: ResumeGenerateRequest):
             target_title=request.target_title,
             template_name=request.template_name,
             job_description=request.job_description,
-            user_id=request.user_id,
+            user_id=user_id,
         )
         content = output_path.read_text(encoding="utf-8")
         return ResumeGenerateResponse(

@@ -13,8 +13,7 @@ import {
   ExternalLink,
   Loader2,
 } from "lucide-react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { apiFetch } from "@/lib/api-client";
 
 interface MarketSignal {
   id: number;
@@ -63,8 +62,8 @@ export default function MarketPage() {
     setLoading(true);
 
     Promise.all([
-      fetch(`${API_BASE}/api/market/summary?days=${days}`).then((r) => r.json()),
-      fetch(`${API_BASE}/api/market/signals?days=${days}&limit=20`).then((r) => r.json()),
+      apiFetch<MarketSummary>(`/api/market/summary?days=${days}`),
+      apiFetch<MarketSignal[]>(`/api/market/signals?days=${days}&limit=20`),
     ])
       .then(async ([sum, sigs]) => {
         setSummary(sum);
@@ -72,11 +71,9 @@ export default function MarketPage() {
         const topSkills = sum.top_skills?.slice(0, 5) ?? [];
         const trendResults = await Promise.all(
           topSkills.map((s: { skill: string }) =>
-            fetch(
-              `${API_BASE}/api/market/trend/${encodeURIComponent(s.skill)}?days=${days}`
-            )
-              .then((r) => r.json())
-              .catch(() => null)
+            apiFetch<SkillTrend>(
+              `/api/market/trend/${encodeURIComponent(s.skill)}?days=${days}`
+            ).catch(() => null)
           )
         );
         setTrends(trendResults.filter((t): t is SkillTrend => t !== null));
@@ -92,7 +89,7 @@ export default function MarketPage() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetch(`${API_BASE}/api/market/refresh`, { method: "POST" });
+      await apiFetch(`/api/market/refresh`, { method: "POST" });
       setTimeout(() => loadData(timeRange), 3000);
     } catch {
       /* sessiz */

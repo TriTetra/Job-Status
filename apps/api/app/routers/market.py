@@ -97,7 +97,16 @@ def start_refresh(
     """
     Start a background HN + TechCrunch refresh.
     Poll GET /refresh/{job_id}/status for progress.
+
+    Market data is global, so at most one refresh runs at a time: a second
+    request returns the in-flight job instead of starting another crawl.
     """
+    in_flight = next(
+        (j for j in refresh_jobs.values() if j["status"] in ("pending", "running")), None
+    )
+    if in_flight:
+        return {"job_id": in_flight["job_id"], "status": in_flight["status"]}
+
     job_id = str(uuid.uuid4())
     refresh_jobs[job_id] = {
         "job_id": job_id,

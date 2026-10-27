@@ -47,7 +47,7 @@ def _verify_svix_signature(request_headers: dict, body: bytes) -> bool:
     Signed string: "{svix_id}.{svix_timestamp}.{body}"
     """
     if not CLERK_WEBHOOK_SECRET:
-        return True  # Skip verification in dev if secret not set
+        return False  # fail closed: unsigned webhooks are never trusted
 
     svix_id = request_headers.get("svix-id", "")
     svix_ts = request_headers.get("svix-timestamp", "")
@@ -85,6 +85,12 @@ async def clerk_webhook(
     request: Request,
     session: Session = Depends(get_db_session),
 ):
+    if not CLERK_WEBHOOK_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Webhook secret not configured",
+        )
+
     body = await request.body()
 
     if not _verify_svix_signature(dict(request.headers), body):
