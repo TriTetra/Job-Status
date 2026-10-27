@@ -118,5 +118,24 @@ def seed(
             typer.echo(f"  {name:<10} {counts[name]}")
 
 
+@app.command("llm-usage")
+def llm_usage(days: int = typer.Option(7, "--days", help="How many days back")):
+    """LLM calls, tokens and cost per day and task, against today's budget."""
+    from careeros.db.connection import db
+    from careeros.shared.llm_usage import budget_status, usage_report
+
+    with db.session_scope() as s:
+        status, rows = budget_status(s), usage_report(s, days)
+    budget = status["daily_budget_usd"]
+    typer.echo(f"Today: ${status['spent_today_usd']:.4f}" + (f" of ${budget:.4f}" if budget else " (no daily budget)")
+               + f" · resets {status['resets_at'][:16]} UTC\n")
+    typer.echo(f"{'day':<12}{'task':<14}{'calls':>6}{'errors':>7}{'refused':>8}{'tokens':>10}{'cost $':>10}")
+    for r in rows:
+        typer.echo(f"{r['day']:<12}{r['task']:<14}{r['calls']:>6}{r['errors']:>7}{r['refused']:>8}"
+                   f"{r['tokens']:>10}{r['cost_usd']:>10.4f}")
+    if not rows:
+        typer.echo("(no LLM calls)")
+
+
 if __name__ == "__main__":
     app()

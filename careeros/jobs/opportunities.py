@@ -100,7 +100,7 @@ def get_or_create_reasoning(session: Session, user_id: str, url: str) -> Optiona
         )
 
     if not decision.get("reasoning"):
-        text, source = reasoning_for(explanation, decision, matched, gaps)
+        text, source = reasoning_for(explanation, decision, matched, gaps, user_id)
         decision.update(reasoning=text, reasoning_source=source, generated_at=datetime.utcnow().isoformat())
         explanation["decision"] = decision
         score.explanation = explanation

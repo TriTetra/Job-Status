@@ -9,6 +9,7 @@ import yaml
 
 from careeros.jobs.sources.ats import FETCHERS, Board
 from careeros.shared.config import ROOT
+from careeros.shared.text import word_pattern
 
 COMPANIES_FILE = ROOT / "infra" / "config" / "companies.yaml"
 _WORKDAY_FIELDS = ("host", "tenant", "site")
@@ -27,7 +28,7 @@ class TitleFilter:
     exclude: tuple[str, ...]
 
     def __post_init__(self):
-        object.__setattr__(self, "_inc", [[_word(w) for w in _words(t)] for t in self.include if _words(t)])
+        object.__setattr__(self, "_inc", [[word_pattern(w) for w in _words(t)] for t in self.include if _words(t)])
         object.__setattr__(self, "_exc", _phrases_regex(self.exclude))
 
     def with_terms(self, extra: Iterable[str]) -> "TitleFilter":
@@ -41,12 +42,6 @@ class TitleFilter:
 
 def _words(term: str) -> list[str]:
     return [w for w in re.split(r"[\s\-/,]+", term.strip()) if w]
-
-
-def _word(word: str) -> re.Pattern:
-    """Whole word; two letters or fewer ("AI", "ML", "QA") must match case too."""
-    flags = 0 if len(word) <= 2 else re.IGNORECASE
-    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(word) + r"(?![A-Za-z0-9])", flags)
 
 
 def _phrases_regex(terms: Iterable[str]) -> Optional[re.Pattern]:

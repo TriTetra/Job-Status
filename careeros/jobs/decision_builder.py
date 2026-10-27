@@ -247,7 +247,8 @@ def template_reasoning(
     return (lead + unc).strip()
 
 
-def _llm_reasoning(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[Any], gaps: List[str]) -> str:
+def _llm_reasoning(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[Any], gaps: List[str],
+                   user_id: Optional[str] = None) -> str:
     names = [m.get("name") if isinstance(m, dict) else str(m) for m in matched[:3]]
     crit_lines = "\n".join(f"- {c['label']}: {c['state']} ({c['detail']})" for c in decision["criteria"])
     prompt = (
@@ -264,15 +265,18 @@ def _llm_reasoning(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[A
     return get_llm_client().complete(
         prompt,
         system="You write calm, precise, editorial prose. Return plain text only.",
+        task="reasoning",
+        user_id=user_id,
         temperature=0.3,
         max_tokens=220,
     )
 
 
-def reasoning_for(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[Any], gaps: List[str]) -> Tuple[str, str]:
-    """Try LLM (locked prompt); fall back to template. Returns (text, source)."""
+def reasoning_for(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[Any], gaps: List[str],
+                  user_id: Optional[str] = None) -> Tuple[str, str]:
+    """Try LLM (locked prompt); fall back to template (no key, over budget, error). Returns (text, source)."""
     try:
-        return _llm_reasoning(ex, decision, matched, gaps), "llm"
+        return _llm_reasoning(ex, decision, matched, gaps, user_id), "llm"
     except Exception as e:
         logger.info("[reasoning] LLM unavailable (%s) — using template", e)
         return (

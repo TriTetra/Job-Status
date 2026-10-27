@@ -105,3 +105,10 @@ def upsert_settings(
         preferences=row.preferences or {},
         weights=row.weights or {},
     )
+
+
+@router.get("/llm-usage", summary="Today's LLM spend against the budgets, and the last 7 days")
+def llm_usage(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    from careeros.shared.llm_usage import budget_status, usage_report
+
+    return {"budget": budget_status(session, user_id), "days": usage_report(session, 7)}

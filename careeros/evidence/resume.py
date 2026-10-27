@@ -69,7 +69,7 @@ def process_resume(
         db.commit()
 
         log("Running LLM skill extraction...")
-        structured = extract_resume(text)
+        structured = extract_resume(text, user_id=resume_doc.user_id)
         resume_doc.parse_result = structured.model_dump()
 
         skills_raw   = structured.skills

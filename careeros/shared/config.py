@@ -61,6 +61,20 @@ def _bool(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes")
 
 
+def _float(name: str, default: float) -> float:
+    return float(os.getenv(name) or default)
+
+
+def _pairs(name: str) -> dict:
+    """"a=x, b=y" → {"a": "x", "b": "y"}."""
+    out = {}
+    for part in (os.getenv(name) or "").split(","):
+        key, _, value = part.partition("=")
+        if key.strip() and value.strip():
+            out[key.strip()] = value.strip()
+    return out
+
+
 @dataclass(frozen=True)
 class Settings:
     # Database
@@ -75,6 +89,12 @@ class Settings:
     openrouter_api_key: Optional[str]
     llm_model: str
     llm_base_url: str
+    llm_fast_model: str                 # bulk extraction (cheap)
+    llm_task_models: dict               # per-task overrides: {"reasoning": "anthropic/…"}
+    llm_daily_budget_usd: float         # all users together; <= 0 = no limit
+    llm_user_daily_budget_usd: float    # per signed-in user; <= 0 = no limit
+    llm_bulk_budget_share: float        # bulk tasks stop at this share of the daily budget
+    llm_max_concurrency: int
 
     # GitHub
     github_token: Optional[str]
@@ -110,6 +130,12 @@ def get_settings() -> Settings:
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY") or None,
         llm_model=os.getenv("DEFAULT_MODEL", "openai/gpt-4o-mini"),
         llm_base_url=os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/"),
+        llm_fast_model=os.getenv("LLM_FAST_MODEL") or os.getenv("DEFAULT_MODEL", "openai/gpt-4o-mini"),
+        llm_task_models=_pairs("LLM_TASK_MODELS"),
+        llm_daily_budget_usd=_float("LLM_DAILY_BUDGET_USD", 2.0),
+        llm_user_daily_budget_usd=_float("LLM_USER_DAILY_BUDGET_USD", 0.5),
+        llm_bulk_budget_share=_float("LLM_BULK_BUDGET_SHARE", 0.7),
+        llm_max_concurrency=_int("LLM_MAX_CONCURRENCY", 4),
         github_token=os.getenv("GITHUB_TOKEN") or None,
         github_client_id=os.getenv("GITHUB_CLIENT_ID") or None,
         github_client_secret=os.getenv("GITHUB_CLIENT_SECRET") or None,

@@ -1,4 +1,5 @@
-"""Periodic refresh: sync every company board, then rescore every active user.
+"""Periodic refresh: sync every company board, extract facts from new postings (LLM),
+then rescore every active user.
 
 Runs as a daemon thread inside the API process (JOB_SYNC_INTERVAL_HOURS > 0).
 The sync's advisory lock keeps it from overlapping a manual `career-os jobs sync`;
@@ -14,12 +15,14 @@ from careeros.db.connection import db
 logger = logging.getLogger(__name__)
 
 FIRST_RUN_DELAY_S = 120  # let the app finish starting (and migrations settle) first
+ENRICH_PER_CYCLE = 300   # postings read by the LLM per cycle (within the bulk budget)
 
 
 def run_cycle() -> Optional[dict]:
     """One sync + rescore. Returns the sync totals, or None if another sync was running."""
     from careeros.identity.models.user import User
     from careeros.jobs.ingest import SyncBusy, sync_all
+    from careeros.jobs.llm_extract import enrich_jobs
     from careeros.jobs.scan import run_scan, scan_jobs
 
     try:
@@ -27,6 +30,10 @@ def run_cycle() -> Optional[dict]:
     except SyncBusy:
         logger.info("Scheduled job sync skipped: another sync is running")
         return None
+    try:
+        enrich_jobs(ENRICH_PER_CYCLE)
+    except Exception:  # scoring falls back to keyword extraction
+        logger.exception("Job fact extraction failed")
 
     with db.session_scope() as s:
         user_ids = [uid for (uid,) in s.query(User.id).filter(User.is_active.is_(True)).all()]

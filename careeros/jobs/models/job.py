@@ -53,6 +53,11 @@ class Job(Base, TimestampMixin):
     sponsors_visa: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)  # None = not stated
     required_skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
 
+    # LLM-extracted facts (careeros/jobs/llm_extract.py), valid while llm_facts_hash == content_hash
+    llm_facts: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    llm_facts_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    llm_model: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+
     # Lifecycle. content_hash changes when the posting text does → rescore.
     content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     posted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

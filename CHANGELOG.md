@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Phase 3 — LLM Brain + Gateway | One gateway for every model call: task routing (fast model for bulk), daily budgets (global, per user, bulk share), concurrency cap, `llm_calls` log, pydantic-validated output; LLM reads each relevant posting once (cached per version) and the deterministic scorer uses those facts; canonical skill names, real skill gaps, fit not diluted by long lists; last known-bug xfails fixed | ✅ Tamam | 2026-10-28 |
 | Phase 2 — Company Career Boards | 74 verified company boards (Greenhouse, Lever, Ashby, Workday) read directly, ~9k relevant postings; incremental sync (new/changed/closed) with per-board run log and advisory lock; scores upserted one per (user, job) and rescored only when posting or profile changes; scheduler in the API; `career-os jobs` CLI; apply links to the company site; visa negation + Go/AI keyword bugs fixed | ✅ Tamam | 2026-10-28 |
 | Phase 1 — Own Auth + Coolify Deploy | Clerk removed: invite-only accounts (`career-os user`), argon2id passwords, hashed server-side sessions in an httpOnly cookie, login throttling, CSRF header, no CORS; users.clerk_id → users.id (data kept); Coolify compose stack (db + internal api + public web, /api proxied); DB connect timeout; torch made optional | ✅ Tamam | 2026-10-28 |
 | Refactor Step 8 — Seeds, Scripts, Docs | All seed data in infra/seeds/v1/*.yaml (roles, skills, goals, evidence sources) + one idempotent `career-os seed`; no more killing DB connections; role metadata merge; scripts/ = 3 ops scripts; new docs/ARCHITECTURE.md + DEVELOPMENT.md, stale docs archived | ✅ Tamam | 2026-10-28 |
@@ -91,6 +92,48 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Phase 3] — 2026-10-28 — LLM brain + gateway ✅
+
+**Neden:** 4 farklı yerde LLM çağrısı vardı; bütçe, loglama, eşzamanlılık sınırı ve
+model seçimi yoktu. İş gereksinimleri anahtar kelimeyle okunuyordu. Şimdi LLM okur ve
+açıklar, karar deterministik puanlayıcıda kalır.
+
+### Gateway (`careeros/shared/llm.py`, `careeros/shared/llm_usage.py`)
+- Her çağrı bir **task** taşır: `job_extract`, `hn_extract` (bulk) · `reasoning`, `cv_extract`, `resume` (interactive).
+- **Model yönlendirme:** bulk → `LLM_FAST_MODEL`, interactive → `DEFAULT_MODEL`, `LLM_TASK_MODELS` ile task bazında override.
+- **Günlük bütçe** (USD, 00:00 UTC'de sıfırlanır): toplam `LLM_DAILY_BUDGET_USD` (2.0), bulk işler bunun `LLM_BULK_BUDGET_SHARE`'inde (0.7) durur, kullanıcı başına `LLM_USER_DAILY_BUDGET_USD` (0.5). Reddedilen çağrı `LLMBudgetExceeded` (bir `LLMError`) → mevcut fallback'ler (şablon reasoning, keyword çıkarımı, regex HN) devreye girer.
+- **Eşzamanlılık:** süreç başına `LLM_MAX_CONCURRENCY` (4).
+- **`llm_calls` tablosu:** her çağrı/hata/red — task, model, kullanıcı, token, maliyet, süre, durum. Prompt ve çıktı saklanmaz. Maliyet OpenRouter'ın bildirdiği gerçek değer (`usage.include`), yoksa kötümser tahmin.
+- **Şema doğrulama:** `complete_model(prompt, Schema)` → pydantic; geçersizse hatayı modele gösterip bir kez daha dener.
+- `career-os llm-usage`, `GET /api/settings/llm-usage`.
+
+### İş beyni (`careeros/jobs/llm_extract.py`)
+- `JobFacts`: zorunlu beceriler (önem sırasıyla, en çok 10), nice-to-have, min yıl, kıdem, çalışma şekli, remote bölgeleri, vize (yes/no/unknown), maaş, tek cümle özet.
+- İlan **sürümü başına bir kez** okunur (`llm_facts_hash == content_hash`); sadece birinin rollerine uyan açık ilanlar, en yeniler önce. Scheduler döngüsü: sync → enrich (300/döngü) → herkesi yeniden puanla. `career-os jobs enrich`.
+- Scan güncel fact'leri kullanır, yoksa keyword çıkarımına düşer; fact gelince iş yeniden puanlanır (`SCORER_VERSION` 4).
+
+### Puanlama düzeltmeleri
+- Beceri adları taksonomiden kanonik (`knowledge/skill_names.py`): "postgres" = PostgreSQL, "golang" = Go.
+- **Skill gap'ler hiç kaydedilmiyordu** (her zaman boş) → artık gerçek eksikler.
+- "Matched skills" alt-dize eşleşmesiydi (Go ⊂ Django) → kanonik eşitlik.
+- Fit ilk 6 gereksinime göre ölçülür (uzun liste skoru seyreltmez); nice-to-have %15 ağırlık.
+- Vize "bilinmiyor" artık "hayır" sayılmıyor (Faz 2'den), LLM "no" diyorsa çatışma.
+
+### Diğer
+- HN parser: "Good"→Go, "Interested"→REST hataları ve "No visa sponsorship" = sponsor hatası düzeltildi; **son iki xfail kaldırıldı**. Ortak kurallar `careeros/shared/text.py`'de (kelime eşleşmesi, vize olumsuzluğu).
+- Migration `llm_gateway_001`: `llm_calls` tablosu; `jobs.llm_facts`, `llm_facts_hash`, `llm_model`.
+
+### Doğrulama
+- 429 test (yeni 21: routing, bütçe, log, şema retry, kanonik beceriler, fit, gap, fact eşleme, enrich bütçe durması), ruff temiz.
+- Geçici Postgres + **gerçek OpenRouter** (test bütçesi $0.05): 5 ilan okundu, 0 hata, **$0.0019** (~$0.0004/ilan; bu kullanıcının 434 eşleşmesi ≈ $0.17). PayPal full-stack ilanında keyword 0 beceri bulmuştu, LLM JavaScript/TypeScript/React + maaş aralığını buldu. Bütçe sınırında: 0 API çağrısı, 3 "refused" log satırı. Reasoning çağrısı interactive modelle, kullanıcıya yazıldı ($0.00007).
+
+### Bilinen açıklar
+- LLM bazen genel kategori döndürüyor ("RDBMS", "NoSQL") — prompt yasaklıyor ama tam değil.
+- Bütçe kontrolü çağrı öncesi; 4 eşzamanlı çağrı sınırı birkaç çağrı kadar aşabilir.
+- Canlı DB'de migration'lar (013–015) henüz çalıştırılmadı.
 
 ---
 

@@ -9,6 +9,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from careeros.shared.config import load_plugin_config
+from careeros.shared.text import sponsorship_stance, word_pattern
 
 _REQUIREMENTS_HEADING = re.compile(
     r"(requirements?|qualifications?|what you.?ll need"
@@ -30,14 +31,6 @@ _SALARY_RANGE = re.compile(
     r"(?:\$|USD\s?|US\$)\s?" + _AMOUNT + r"\s*(?:-|–|—|to)\s*(?:\$|USD\s?|US\$)?\s?" + _AMOUNT
 )
 
-_NO_SPONSORSHIP = re.compile(
-    r"(?:not|unable to|cannot|can't|won't|will not|do not|does not|don't|doesn't|no)\s+"
-    r"(?:\w+\s+){0,3}(?:visa\s+)?sponsor",
-    re.IGNORECASE,
-)
-_SPONSORSHIP = re.compile(r"visa sponsorship|sponsor(?:ship)? (?:is )?available|will sponsor", re.IGNORECASE)
-
-
 def _amount(text: str) -> int:
     text = text.replace(",", "").strip()
     if text[-1] in "kK":
@@ -51,12 +44,7 @@ class TextExtractor:
         self._skills = cfg["skill_extraction"]
         self._sizes = cfg["company_sizes"]
         self._seniority = cfg["seniority"]
-        # Two-letter keywords are ordinary words in lower case ("go", "ai"): match those exactly
-        self._skill_patterns = [
-            (skill, re.compile(r"(?<![A-Za-z0-9])" + re.escape(skill) + r"(?![A-Za-z0-9])",
-                               0 if len(skill) <= 2 else re.IGNORECASE))
-            for skill in self._skills["keywords"]
-        ]
+        self._skill_patterns = [(skill, word_pattern(skill)) for skill in self._skills["keywords"]]
 
     def skills(self, description: str, title: str) -> List[str]:
         """Known skill keywords, from the requirements section when there is one."""
@@ -115,8 +103,4 @@ class TextExtractor:
     @staticmethod
     def sponsors_visa(text: str) -> Optional[bool]:
         """False if the posting rules sponsorship out, True if it offers it, None if silent."""
-        if _NO_SPONSORSHIP.search(text or ""):
-            return False
-        if _SPONSORSHIP.search(text or ""):
-            return True
-        return None
+        return sponsorship_stance(text)

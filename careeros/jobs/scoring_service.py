@@ -17,6 +17,7 @@ from careeros.jobs.domain.scoring import OpportunityScore
 from careeros.identity.domain.profile import UserProfile
 from careeros.jobs.scoring.opportunity_scorer import OpportunityScorer
 from careeros.jobs.decision_builder import build_decision
+from careeros.knowledge.skill_names import key as skill_key
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,12 @@ def _builtin(value):
     if hasattr(value, "item"):
         return value.item()
     raise TypeError(f"{type(value).__name__} is not JSON serializable")
+
+
+def skill_gaps(jobs: List[Job], profile: UserProfile) -> Dict[str, List[str]]:
+    """Required skills the user has no evidence for, per job."""
+    have = {skill_key(s.name) for s in profile.skills}
+    return {j.url: [r for r in j.required_skills or [] if skill_key(r) not in have] for j in jobs}
 
 
 def json_safe(data):
@@ -64,8 +71,9 @@ class ScoringService:
         job = opp.job
         matched_skills = []
         req_skills = job.required_skills or []
+        wanted = {skill_key(r) for r in req_skills + (job.preferred_skills or [])}
         for s in profile.skills:
-            if any(s.name.lower() in req.lower() for req in req_skills):
+            if skill_key(s.name) in wanted:
                 matched_skills.append({
                     "name": s.name,
                     "confidence": s.level.value if hasattr(s.level, 'value') else 0.7
@@ -168,7 +176,8 @@ class ScoringService:
                     )
 
                     # Root-level fields the UI reads directly
-                    for key in ("source", "remote_region", "application_url", "company_key", "posted_at"):
+                    for key in ("source", "remote_region", "application_url", "company_key", "posted_at",
+                                "summary", "extracted_by", "preferred_skills"):
                         if job_meta_data.get(key) and job_meta_data[key] != "unknown":
                             explanation[key] = job_meta_data[key]
 
@@ -242,7 +251,8 @@ class ScoringService:
             else self.score_jobs(jobs, profile, weights)
         )
         saved = self.save_scores(
-            scores, profile=profile, job_dicts=job_dicts, prefs=prefs, input_hashes=input_hashes
+            scores, skill_gaps_map=skill_gaps(jobs, profile), profile=profile,
+            job_dicts=job_dicts, prefs=prefs, input_hashes=input_hashes,
         )
 
         def clean_rec(r):

@@ -84,6 +84,17 @@ def scan(
         raise typer.Exit(1)
 
 
+@app.command()
+def enrich(limit: int = typer.Option(300, "--limit", help="Max postings to read (0 = all pending)")):
+    """Let the LLM read new or changed postings that match someone's roles (cached per posting)."""
+    from careeros.jobs.llm_extract import enrich_jobs
+
+    s = enrich_jobs(limit)
+    typer.echo(f"✓ {s.extracted} of {s.candidates} postings read · {s.failed} failed")
+    if s.stopped:
+        typer.echo(f"  stopped: {s.stopped}")
+
+
 @app.command("import-applypilot")
 def import_applypilot(hours: int = typer.Option(0, "--hours", help="Only jobs found in the last N hours (0 = all)")):
     """Copy jobs from a local ApplyPilot database into CareerOS (they are scored like any other job)."""

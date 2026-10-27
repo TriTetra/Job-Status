@@ -3,6 +3,8 @@
 import re
 from typing import Dict, List
 
+from careeros.shared.text import sponsorship_stance, word_pattern
+
 
 _SKILL_KEYWORDS = [
     # ── Engineering / Backend ─────────────────────────────────────────────
@@ -49,6 +51,7 @@ _SKILL_KEYWORDS = [
 
 _REMOTE_RE = re.compile(r'\b(remote|anywhere|work from home|wfh)\b', re.IGNORECASE)
 _VISA_RE = re.compile(r'\b(visa|h1b|sponsor|sponsorship)\b', re.IGNORECASE)
+_SKILL_PATTERNS = [(s, word_pattern(s)) for s in _SKILL_KEYWORDS]
 _HTML_RE = re.compile(r'<[^>]+>')
 _ENTITY_RE = re.compile(r'&[a-z#0-9]+;')
 
@@ -64,7 +67,7 @@ class WhoIsHiringParser:
         company = self._extract_company(text)
         role = self._extract_role(text)
         remote = bool(_REMOTE_RE.search(text))
-        sponsors_visa = bool(_VISA_RE.search(text))
+        sponsors_visa = self._sponsors_visa(text)
         skills = self._extract_skills(text)
 
         comment_id = comment.get("id")
@@ -101,5 +104,10 @@ class WhoIsHiringParser:
         return "Software Engineer"
 
     def _extract_skills(self, text: str) -> List[str]:
-        text_lower = text.lower()
-        return [s for s in _SKILL_KEYWORDS if s.lower() in text_lower]
+        return [s for s, rx in _SKILL_PATTERNS if rx.search(text)]
+
+    @staticmethod
+    def _sponsors_visa(text: str) -> bool:
+        """"No visa sponsorship" is a no; on HN a bare "VISA" / "H1B" in the header means yes."""
+        stance = sponsorship_stance(text)
+        return stance if stance is not None else bool(_VISA_RE.search(text))

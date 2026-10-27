@@ -198,7 +198,9 @@ career-os
     sync [--company KEY] [--dry-run]   Read company career boards
     boards                             Open postings + last sync per company
     scan EMAIL                         Score what changed for one user
+    enrich [--limit N]                 LLM reads new postings (cached per posting)
     import-applypilot                  Copy a local ApplyPilot DB in
+  llm-usage [--days N]                 LLM spend per day and task vs budget
 
   track
     add --url --title --company --status

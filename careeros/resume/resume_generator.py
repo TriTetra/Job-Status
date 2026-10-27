@@ -249,7 +249,8 @@ class ResumeGenerator:
         return self._llm_json(prompt)
 
     def _llm_json(self, prompt: str) -> dict:
-        return self.llm.complete_json(prompt, system=_JSON_SYSTEM, json_mode=True, max_tokens=2000)
+        return self.llm.complete_json(prompt, system=_JSON_SYSTEM, json_mode=True, max_tokens=2000,
+                                     task="resume", user_id=self.user_id)
 
     def _tailor_evidence(self, company, title, priorities, evidence, projects) -> dict:
         prompt = template_loader.render(
@@ -337,7 +338,8 @@ class ResumeGenerator:
             top_skills=top_skills,
             featured_projects=featured,
         )
-        return self.llm.complete(prompt, system=_TEXT_SYSTEM, temperature=0.5, max_tokens=200)
+        return self.llm.complete(prompt, system=_TEXT_SYSTEM, temperature=0.5, max_tokens=200,
+                                task="resume", user_id=self.user_id)
 
     # ------------------------------------------------------------------
     # Template rendering

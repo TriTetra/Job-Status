@@ -94,7 +94,7 @@ Resume:
 {text}"""
 
 
-def extract_resume(text: str) -> StructuredResume:
+def extract_resume(text: str, user_id: Optional[str] = None) -> StructuredResume:
     """Call OpenRouter to extract structured data from resume text.
 
     Returns a StructuredResume with validated achievements.
@@ -103,7 +103,8 @@ def extract_resume(text: str) -> StructuredResume:
     prompt = EXTRACT_PROMPT.format(text=text[:12000])  # stay within context window
 
     raw: dict[str, Any] = get_llm_client().complete_json(
-        prompt, system=SYSTEM_PROMPT, temperature=0.1, max_tokens=3500, timeout=120
+        prompt, system=SYSTEM_PROMPT, task="cv_extract", user_id=user_id,
+        temperature=0.1, max_tokens=3500, timeout=120
     )
 
     # Normalise achievement entries: accept both "category" and "type" keys

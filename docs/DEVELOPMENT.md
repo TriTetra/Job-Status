@@ -36,7 +36,10 @@ Notable ones:
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL (`postgresql+psycopg://…`) |
-| `OPENROUTER_API_KEY`, `DEFAULT_MODEL`, `LLM_BASE_URL` | LLM client |
+| `OPENROUTER_API_KEY`, `DEFAULT_MODEL`, `LLM_BASE_URL` | LLM client (interactive model) |
+| `LLM_FAST_MODEL`, `LLM_TASK_MODELS` | bulk model (default = `DEFAULT_MODEL`); per-task overrides `task=model,…` |
+| `LLM_DAILY_BUDGET_USD`, `LLM_USER_DAILY_BUDGET_USD`, `LLM_BULK_BUDGET_SHARE` | daily caps (2.00 / 0.50 / 0.7); `0` = no cap |
+| `LLM_MAX_CONCURRENCY` | calls in flight per process (4) |
 | `SESSION_COOKIE_SECURE` | `true` (default) in production; `false` for http://localhost |
 | `DB_CONNECT_TIMEOUT`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW` | fail fast on an unreachable DB; pool 5 + 5 |
 | `TOKEN_ENCRYPTION_KEY` | Fernet key for stored OAuth tokens |
@@ -67,7 +70,9 @@ career-os jobs sync                        # all boards (or --company stripe --c
 career-os jobs sync --company acme --dry-run   # check a new board without writing
 career-os jobs boards                      # open postings + last sync per company
 career-os jobs scan you@example.com        # score what changed for one user
+career-os jobs enrich --limit 300          # LLM reads new postings (also part of every scheduled cycle)
 career-os jobs import-applypilot           # optional: copy a local ApplyPilot DB in
+career-os llm-usage --days 7               # LLM calls, tokens and cost vs today's budget
 ```
 
 Add a company: one line in `infra/config/companies.yaml` (the file explains the four

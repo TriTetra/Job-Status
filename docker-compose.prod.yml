@@ -38,6 +38,10 @@ services:
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?required}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-openai/gpt-4o-mini}
+      LLM_FAST_MODEL: ${LLM_FAST_MODEL:-}
+      LLM_TASK_MODELS: ${LLM_TASK_MODELS:-}
+      LLM_DAILY_BUDGET_USD: ${LLM_DAILY_BUDGET_USD:-2.0}            # all users together, per UTC day
+      LLM_USER_DAILY_BUDGET_USD: ${LLM_USER_DAILY_BUDGET_USD:-0.5}
       WEB_APP_URL: ${WEB_APP_URL:?required}            # e.g. https://career.example.com
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}

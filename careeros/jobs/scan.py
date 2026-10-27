@@ -16,7 +16,9 @@ import sqlalchemy as sa
 
 from careeros.db.connection import db
 from careeros.jobs.domain.job import Job
+from careeros.jobs.llm_extract import SENIORITY_YEARS
 from careeros.jobs.models.job import Job as JobRow
+from careeros.knowledge.skill_names import canonical_list
 from careeros.identity.domain.skill import Skill, SkillLevel
 from careeros.identity.domain.profile import UserProfile
 from careeros.evidence.aggregation import aggregate_user_skills
@@ -29,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "2"
+SCORER_VERSION = "4"
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -99,9 +101,17 @@ def profile_fingerprint(profile: UserProfile, prefs: dict) -> str:
     return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
 
 
+def current_facts(row: JobRow) -> Optional[dict]:
+    """LLM facts if they were extracted from this exact version of the posting."""
+    if row.llm_facts and row.llm_facts_hash and row.llm_facts_hash == row.content_hash:
+        return row.llm_facts
+    return None
+
+
 def input_hash(row: JobRow, fingerprint: str) -> str:
     content = row.content_hash or hashlib.sha256(f"{row.title}{row.location}{row.description}".encode()).hexdigest()
-    return hashlib.sha256(f"{SCORER_VERSION}:{content}:{fingerprint}".encode()).hexdigest()
+    reader = "llm" if current_facts(row) else "keywords"  # facts arriving later → rescore
+    return hashlib.sha256(f"{SCORER_VERSION}:{content}:{reader}:{fingerprint}".encode()).hexdigest()
 
 
 def pick_changed(rows: list[JobRow], known: dict[str, Optional[str]], fingerprint: str,
@@ -129,46 +139,94 @@ def candidate_urls(session, user_id: str, hours: int) -> list[str]:
     return [url for url, title in rows if titles.keeps(title or "")]
 
 
+_VISA = {"yes": True, "no": False}
+
+
+def job_fields(r: JobRow) -> dict:
+    """What scoring knows about a job: LLM facts when current, keyword extraction otherwise."""
+    facts = current_facts(r)
+    fields = {
+        "required_skills": canonical_list(r.required_skills or []),
+        "preferred_skills": [],
+        "required_years": float(r.required_years or DEFAULT_YEARS_EXPERIENCE),
+        "remote": bool(r.remote),
+        "hybrid": False,
+        "remote_region": r.remote_region,
+        "sponsors_visa": r.sponsors_visa,
+        "salary_min": r.salary_min,
+        "salary_max": r.salary_max,
+        "salary_currency": r.salary_currency or "USD",
+        "summary": None,
+        "extracted_by": "keywords",
+    }
+    if not facts:
+        return fields
+    fields["extracted_by"] = "llm"
+    fields["summary"] = facts.get("summary") or None
+    if facts.get("required_skills"):
+        fields["required_skills"] = canonical_list(facts["required_skills"])
+    fields["preferred_skills"] = canonical_list(facts.get("nice_to_have_skills") or [])
+    years = facts.get("min_years")
+    if years is None:
+        years = SENIORITY_YEARS.get(facts.get("seniority"))
+    if years is not None:
+        fields["required_years"] = float(years)
+    workplace = facts.get("workplace")
+    if workplace in ("remote", "hybrid", "onsite"):
+        fields["remote"] = workplace == "remote"
+        fields["hybrid"] = workplace == "hybrid"
+    if facts.get("remote_regions"):
+        fields["remote_region"] = facts["remote_regions"][0]
+    if facts.get("visa_sponsorship") in _VISA:
+        fields["sponsors_visa"] = _VISA[facts["visa_sponsorship"]]
+    if not (r.salary_min or r.salary_max) and facts.get("salary_period") == "year" and facts.get("salary_min"):
+        fields.update(salary_min=facts["salary_min"], salary_max=facts.get("salary_max"),
+                      salary_currency=facts.get("salary_currency") or "USD")
+    return fields
+
+
 def to_scoring_input(rows: list[JobRow]) -> tuple[list[Job], dict[str, dict]]:
     """Stored job rows → (Job objects to score, per-URL metadata the Job type doesn't carry)."""
-    jobs = [
-        Job(
+    jobs, meta = [], {}
+    for r in rows:
+        f = job_fields(r)
+        jobs.append(Job(
             id=r.url,
             title=r.title or "",
             company=r.company or "",
             description=r.description or r.full_description or "",
             url=r.url,
             location=r.location or "",
-            remote=bool(r.remote),
-            required_skills=r.required_skills or [],
-            required_years=float(r.required_years or DEFAULT_YEARS_EXPERIENCE),
-            salary_min=r.salary_min,
-            salary_max=r.salary_max,
-            salary_currency=r.salary_currency or "USD",
+            remote=f["remote"],
+            hybrid=f["hybrid"],
+            required_skills=f["required_skills"],
+            preferred_skills=f["preferred_skills"],
+            required_years=f["required_years"],
+            salary_min=f["salary_min"],
+            salary_max=f["salary_max"],
+            salary_currency=f["salary_currency"],
             company_size=r.company_size or "unknown",
-            sponsors_visa=r.sponsors_visa,
+            sponsors_visa=f["sponsors_visa"],
             source=r.source or "unknown",
-        )
-        for r in rows
-    ]
-    meta = {
-        r.url: {
+        ))
+        meta[r.url] = {
             "title": r.title or "",
             "company": r.company or "",
             "location": r.location or "",
-            "remote": bool(r.remote),
-            "remote_region": r.remote_region,
-            "sponsors_visa": r.sponsors_visa,
-            "salary_min": r.salary_min,
-            "salary_max": r.salary_max,
-            "required_skills": r.required_skills or [],
+            "remote": f["remote"],
+            "remote_region": f["remote_region"],
+            "sponsors_visa": f["sponsors_visa"],
+            "salary_min": f["salary_min"],
+            "salary_max": f["salary_max"],
+            "required_skills": f["required_skills"],
+            "preferred_skills": f["preferred_skills"],
             "source": r.ats or r.site or r.source or "unknown",
             "company_key": r.company_key,
             "application_url": r.application_url or r.url,
             "posted_at": r.posted_at.isoformat() if r.posted_at else None,
+            "summary": f["summary"],
+            "extracted_by": f["extracted_by"],
         }
-        for r in rows
-    }
     return jobs, meta
 
 

@@ -8,6 +8,10 @@ import numpy as np
 from careeros.identity.domain.profile import UserProfile
 from careeros.jobs.domain.job import Job
 from careeros.jobs.domain.scoring import OpportunityScore
+from careeros.knowledge.skill_names import key as skill_key
+
+
+FIT_CORE_SKILLS = 6
 
 
 class OpportunityScorer:
@@ -291,8 +295,8 @@ class OpportunityScorer:
 
         # Factor 1: Skill development
         # More missing skills = more growth potential
-        user_skills = {s.name.lower() for s in user.skills}
-        required = {s.lower() for s in job.required_skills}
+        user_skills = {skill_key(s.name) for s in user.skills}
+        required = {skill_key(s) for s in job.required_skills}
         missing = required - user_skills
 
         if missing:
@@ -360,12 +364,15 @@ class OpportunityScorer:
         if not job.required_skills:
             return 0.5
 
-        user_skills = {s.name.lower() for s in user.skills}
-        required = [s.lower() for s in job.required_skills]
-
-        matched = sum(1 for s in required if s in user_skills)
-
-        return matched / len(required)
+        user_skills = {skill_key(s.name) for s in user.skills}
+        required = {skill_key(s) for s in job.required_skills}
+        # Postings list requirements most important first and pad the tail; matching
+        # the top few counts in full instead of being diluted by a long list
+        fit = min(1.0, len(required & user_skills) / min(len(required), FIT_CORE_SKILLS))
+        preferred = {skill_key(s) for s in job.preferred_skills} - required
+        if preferred:  # nice-to-haves move the needle, but less
+            fit = 0.85 * fit + 0.15 * (len(preferred & user_skills) / len(preferred))
+        return fit
 
     def _generate_recommendation(self,
                                  career_score: float,

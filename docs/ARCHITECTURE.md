@@ -126,6 +126,41 @@ infra/config/companies.yaml ──► ingest.sync_all ──► jobs ──► s
   rescore-everyone on that interval in a daemon thread.
 - **Apply**: every posting links to the company's own page (`application_url`).
 
+## The LLM as the brain
+
+The LLM reads and explains; it never decides. Scores come from the deterministic
+scorer, so they are reproducible, cheap and testable.
+
+| Step | Where | Task (tier) | When |
+|---|---|---|---|
+| Read a posting → `JobFacts` (skills, years, seniority, workplace, visa, salary, summary) | `jobs/llm_extract.py` | `job_extract` (bulk) | once per posting version, only for jobs matching someone's roles |
+| Score | `jobs/scoring/`, `jobs/scan.py` | — | every scan, only what changed |
+| Explain one opportunity | `jobs/decision_builder.py` | `reasoning` (interactive) | when the user opens "why", cached on the score |
+| Read a CV | `evidence/resume_llm.py` | `cv_extract` (interactive) | on upload |
+| Tailor a resume | `resume/resume_generator.py` | `resume` (interactive) | on request |
+| Read HN "Who is hiring" comments | `market/sources/hackernews/llm_extractor.py` | `hn_extract` (bulk) | market refresh |
+
+**Gateway** (`shared/llm.py` + `shared/llm_usage.py`), the only way to call a model:
+
+- **Routing**: bulk tasks use `LLM_FAST_MODEL`, interactive ones `DEFAULT_MODEL`;
+  `LLM_TASK_MODELS="reasoning=…"` overrides per task.
+- **Budgets** (USD per UTC day, checked before every call): `LLM_DAILY_BUDGET_USD` for
+  everyone; bulk tasks stop at `LLM_BULK_BUDGET_SHARE` of it so background reading can't
+  starve users; `LLM_USER_DAILY_BUDGET_USD` per signed-in user. A refused call raises
+  `LLMBudgetExceeded`, an `LLMError`, so every caller's fallback applies (template
+  reasoning, keyword extraction, regex HN parsing).
+- **Concurrency**: at most `LLM_MAX_CONCURRENCY` calls in flight per process.
+- **Log**: every call, failure and refusal goes to `llm_calls` (task, model, user,
+  tokens, cost, latency, status) — never the prompt or output. Cost is what OpenRouter
+  reports, or a pessimistic estimate.
+- **Schemas**: `complete_model(prompt, Schema)` validates JSON with pydantic and retries
+  once, showing the model its validation error.
+
+Facts are only trusted for the posting version they were read from
+(`llm_facts_hash == content_hash`); a job is rescored when facts arrive. Skill names on
+both sides go through `knowledge/skill_names.py` (taxonomy aliases: "postgres" →
+PostgreSQL), and fit counts the top requirements so a long list doesn't dilute it.
+
 ## Background work
 
 Long operations (job scan, CV extraction, Career Graph build, market refresh) run as
@@ -141,7 +176,7 @@ FastAPI background tasks tracked by `careeros/shared/background.py`:
 
 | Service | Where | Notes |
 |---|---|---|
-| OpenRouter (LLM) | `careeros/shared/llm.py` | retries 429/5xx/timeouts; `LLMNotConfiguredError` lets callers fall back (reasoning → template) |
+| OpenRouter (LLM) | `careeros/shared/llm.py` | task routing, daily budgets, concurrency cap, `llm_calls` log; retries 429/5xx/timeouts; any `LLMError` lets callers fall back |
 | GitHub | `careeros/evidence/github.py`, `careeros/identity/github_account.py` | user's OAuth token, encrypted at rest (`careeros/shared/crypto.py`) |
 | Company job boards | `careeros/jobs/sources/ats/` | public Greenhouse / Lever / Ashby APIs and Workday's site JSON; retries 429/5xx |
 | ApplyPilot | `careeros/jobs/sources/applypilot/` | optional import from a local SQLite file (`career-os jobs import-applypilot`) |
@@ -159,6 +194,5 @@ FastAPI background tasks tracked by `careeros/shared/background.py`:
 
 - In-process background jobs and OAuth state (single worker).
 - Portfolio crawler fetches user-supplied URLs without blocking private addresses (SSRF).
-- Known bugs pinned as strict `xfail` tests: HN parser substring matching and visa negation.
-- Job requirements come from keyword matching (`extraction.py`); scores inherit its blind
-  spots until extraction moves to the LLM layer.
+- Without an API key (or over budget) job requirements come from keyword matching
+  (`extraction.py`) and scores inherit its blind spots.

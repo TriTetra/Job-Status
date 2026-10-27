@@ -37,13 +37,11 @@ def test_empty_comment_returns_empty_dict(parser):
     assert parser.parse_comment({"id": 1, "text": ""}) == {}
 
 
-@pytest.mark.xfail(strict=True, reason="known bug: substring matching ('good' → Go, 'storage' → RAG)")
 def test_no_false_positive_skills_from_plain_words(parser):
     out = parser.parse_comment({"id": 1, "text": "Good people. Interested? We do storage."})
     assert out["skills"] == []
 
 
-@pytest.mark.xfail(strict=True, reason="known bug: 'no visa sponsorship' is read as sponsoring")
 def test_negated_visa_is_not_sponsorship(parser):
     out = parser.parse_comment({"id": 1, "text": "Acme | Engineer | Onsite | No visa sponsorship"})
     assert out["sponsors_visa"] is False

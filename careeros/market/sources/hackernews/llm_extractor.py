@@ -49,6 +49,7 @@ def extract_batch(comment_texts: List[str]) -> List[LLMJob]:
     raw = get_llm_client().complete_json(
         EXTRACT_PROMPT.format(n=n, blocks=blocks),
         system=SYSTEM_PROMPT,
+        task="hn_extract",
         temperature=0.1,
         max_tokens=2500,
         timeout=120,
