@@ -77,7 +77,7 @@ repositories and services; `apps/` only translates HTTP / CLI into calls to it.
           └─────────────────┬─────────────────┘
                             ▼
  careeros/
-   identity · onboarding · evidence · jobs · applications · companies · market · resume · knowledge
+   identity · onboarding · evidence · jobs · applications · companies · market · resume · briefing · knowledge
                             │
                             ▼
    shared (config, LLM, logging, background jobs, crypto)        db (Base, connection, migrations)
@@ -106,16 +106,18 @@ alembic -c careeros/db/alembic.ini upgrade head
 cp config.yaml.example config.yaml
 # fill in: candidate.name, github, skills; set OPENROUTER_API_KEY in .env
 
-# 4. Seed knowledge (countries, visas, salary ranges)
-python scripts/seed_knowledge_from_yaml.py
+# 4. Seed reference data (countries, visas, salaries, skills, roles, goals, evidence sources)
+career-os seed
 
 # 5. Run
 career-os status                                       # CLI
 uvicorn apps.api.app.main:app --reload --port 8000     # API (from any directory)
+cd apps/web && npm install && npm run dev               # web on :3000
 pytest                                                 # offline tests; -m integration for live ones
 ```
 
 > Your API key belongs in `.env`, never in `config.yaml`. Both files are gitignored.
+> Every setting is listed in `.env.example`; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full workflow.
 
 ---
 
@@ -249,7 +251,8 @@ applypilot-jobs/
 │   ├── companies/        company profiles, interview memory (+ CLI)
 │   ├── market/           HN + TechCrunch signals, refresh job (+ CLI)
 │   ├── resume/           target-aware resume generation, prompts, templates (+ CLI)
-│   └── knowledge/        countries, visas, salaries, skill graph loader
+│   ├── briefing/         facts for the dashboard home page
+│   └── knowledge/        reference data + all seeding (infra/seeds/v1 → career-os seed)
 ├── infra/                docker-compose, plugin config, YAML seeds
 ├── scripts/              seed / backfill / sync operations
 ├── tests/                unit/ · smoke/ (offline) · integration/ (live) · manual/

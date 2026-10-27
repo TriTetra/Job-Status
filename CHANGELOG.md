@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 8 — Seeds, Scripts, Docs | All seed data in infra/seeds/v1/*.yaml (roles, skills, goals, evidence sources) + one idempotent `career-os seed`; no more killing DB connections; role metadata merge; scripts/ = 3 ops scripts; new docs/ARCHITECTURE.md + DEVELOPMENT.md, stale docs archived | ✅ Tamam | 2026-10-28 |
 | Refactor Step 7 — Web: One Data Path | Web reads only through FastAPI (lib/db + postgres removed; new /api/briefing, GET /api/onboarding/identity); one apiFetch (client + server-only); 4 dashboard pages → server page + client view with loading/error; ESLint 78 → 0; badge/notes/reasoning bugs fixed | ✅ Tamam | 2026-10-28 |
 | Refactor Step 6 — Feature Packages | core/ services/ plugins/ shared/ → one package `careeros/` with one folder per feature (identity, onboarding, evidence, jobs, applications, companies, market, resume, knowledge) + shared + db; 152 files moved with history, 411 imports rewritten by AST; 2 new architecture rules | ✅ Tamam | 2026-10-28 |
 | Refactor Step 5b — Thin Routers (evidence, oauth, market, goals, roles) | All API routers now HTTP-only (enforced by an architecture test); role context unified; GitHub OAuth in a service (no leaked GitHub errors, WEB_APP_URL setting); market refresh on JobStore (atomic single-flight); token cipher moved to shared | ✅ Tamam | 2026-10-28 |
@@ -88,6 +89,39 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 8] — 2026-10-28 — Seeds, scripts, docs ✅
+
+### Seed verisi koddan YAML'a
+- Exported (DB untouched) with a round-trip check: `infra/seeds/v1/roles.yaml` (180 roles — the exact list `seed_roles_v1.py` built at runtime, incl. its generated level variants), `skills.yaml` (87), `goals.yaml` (21; sets expanded to the sorted lists the DB stores), `evidence_sources.yaml` (19 sources + category recommendations). Title typo fixed: "Localization_engineer" → "Localization Engineer".
+- **One seeding module** `careeros/knowledge/seeds.py` + **one command** `career-os seed [reference|skills|roles|goals|sources]` (all, in dependency order, by default). Every seed idempotent; batched `executemany` instead of one huge string-built `VALUES` statement.
+- `scripts/seed_knowledge_from_yaml.py` → `careeros/knowledge/reference_seed.py` (paths anchored at the repo root instead of the cwd; prints → logging).
+- Removed: `seed_roles_v1.py` (1,803 lines), `seed_skills.py`, `seed_goals.py`, `seed_evidence_sources.py`, `verify_roles.py` (the roles seed now logs the per-category counts).
+
+### Giderilen hatalar
+- **`seed_roles_v1.py` ran `pg_terminate_backend` on every other connection to the database** — including the running API. Gone.
+- **Re-seeding roles wiped `suggested_source_ids`**: the upsert replaced `metadata`, the sources seed had added that key. Now `metadata = existing || seed` (merge).
+- `seed_skills.py` had a dead fallback (`core.db.connection.get_db_url`, never existed) and its own engine; now uses the shared connection.
+- Category→source recommendations existed twice (seed script + `careeros/evidence/sources.py`); verified equal, now both read `evidence_sources.yaml`.
+- `career-os` silently dropped a sub-command group whose import failed; now logs a warning naming the group.
+
+### scripts/
+Only operational scripts remain: `sync_jobs_from_applypilot.py`, `backfill_job_metadata.py`, `backfill_decisions.py` (documented in DEVELOPMENT.md).
+
+### Dokümanlar
+- New, current: **`docs/ARCHITECTURE.md`** (packages, layer table, the 8 enforced rules, data, request lifecycle, background jobs, external services, web structure, known limits) and **`docs/DEVELOPMENT.md`** (setup, run, every setting, tests/folders/xfail convention, seeding, DB change workflow, scripts, conventions).
+- Archived (git mv → `docs/_archive/pre-refactor-2026-10/`): ARCHITECTURE, CODEBASE_OVERVIEW, DIRECTORY_MAP, SYSTEM_SUMMARY, QUICK_START, USAGE, APPLY_NOW, WINDOWS_SCHEDULER_GUIDE — they described core/services/plugins/career_os/hiring-agent and archived scripts.
+- Phase and development reports kept as history, labelled as such in `docs/README.md`.
+- README quickstart: `career-os seed`, web dev command, link to DEVELOPMENT.md; layout lists `briefing/`.
+
+### Testler
+- `tests/unit/test_seeds.py` (9): role/skill/goal/source integrity (unique ids, no slug-like titles, goals only suggested where visible, recommendations only name registered sources), runtime recommendations == seed file, runner order + unknown target, roles upsert merges metadata in one batch.
+- `pytest`: 334 passed, 3 xfailed · `ruff`: temiz · `career-os seed --help` / unknown target rejected
+
+### Dikkat
+- **Seeds were not run against the database** (it would write to the live Neon DB). Running `career-os seed` is safe to repeat; it will also apply the role-title typo fix.
 
 ---
 

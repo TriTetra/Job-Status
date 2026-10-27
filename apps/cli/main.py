@@ -37,30 +37,25 @@ app = typer.Typer(
 # Mount existing service CLIs as sub-command groups
 # ---------------------------------------------------------------------------
 
+_SUB_CLIS = [
+    # (module, Typer attribute, command name, help)
+    ("careeros.applications.cli", "app", "track", "Application tracking pipeline"),
+    ("careeros.resume.cli", "app", "resume", "Target-aware resume generation"),
+    ("careeros.companies.cli", "app", "company", "Company intelligence and memory"),
+    ("careeros.market.cli", "app", "market", "Market signals and skill trends"),
+]
+
+
 def _mount_existing_clis() -> None:
-    try:
-        from careeros.applications.cli import app as track_app
-        app.add_typer(track_app, name="track", help="Application tracking pipeline")
-    except Exception:
-        pass
+    """Mount feature CLIs. A broken one is reported (not silently dropped) and the rest still load."""
+    import importlib
+    import logging
 
-    try:
-        from careeros.resume.cli import app as resume_app
-        app.add_typer(resume_app, name="resume", help="Target-aware resume generation")
-    except Exception:
-        pass
-
-    try:
-        from careeros.companies.cli import app as company_app
-        app.add_typer(company_app, name="company", help="Company intelligence and memory")
-    except Exception:
-        pass
-
-    try:
-        from careeros.market.cli import app as market_app
-        app.add_typer(market_app, name="market", help="Market signals and skill trends")
-    except Exception:
-        pass
+    for module, attr, name, help_text in _SUB_CLIS:
+        try:
+            app.add_typer(getattr(importlib.import_module(module), attr), name=name, help=help_text)
+        except Exception as e:
+            logging.getLogger(__name__).warning("CLI group '%s' unavailable: %s", name, e)
 
 
 _mount_existing_clis()
@@ -103,6 +98,22 @@ def status():
     for label, n in rows.items():
         typer.echo(f"  {label:<18} {n}")
     typer.echo("\n  DB: healthy")
+
+
+@app.command()
+def seed(
+    targets: list[str] = typer.Argument(None, help="reference | skills | roles | goals | sources (default: all)"),
+):
+    """Load reference data from infra/seeds/v1/*.yaml (idempotent)."""
+    from careeros.knowledge.seeds import SEEDS, run
+
+    try:
+        counts = run(targets or None)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    for name in SEEDS:
+        if name in counts:
+            typer.echo(f"  {name:<10} {counts[name]}")
 
 
 # ---------------------------------------------------------------------------

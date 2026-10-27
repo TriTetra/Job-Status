@@ -1,0 +1,61 @@
+# Evidence source registry + which sources each role category is recommended.
+# Read by `career-os seed sources` (DB) and at runtime by careeros/evidence/sources.py.
+
+sources:
+- {id: github, label: GitHub, icon: github, category: code, status: available, oauth_provider: github, connect_kind: oauth,
+  sort_order: 10}
+- {id: portfolio, label: Portfolio, icon: globe, category: generic, status: available, oauth_provider: portfolio, connect_kind: url,
+  sort_order: 20}
+- {id: gitlab, label: GitLab, icon: gitlab, category: code, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 30}
+- {id: stackoverflow, label: Stack Overflow, icon: code, category: code, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 40}
+- {id: dribbble, label: Dribbble, icon: dribbble, category: visual_art, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 50}
+- {id: behance, label: Behance, icon: behance, category: visual_art, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 60}
+- {id: figma, label: Figma, icon: figma, category: visual_art, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 70}
+- {id: artstation, label: ArtStation, icon: palette, category: visual_art, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 75}
+- {id: kaggle, label: Kaggle, icon: database, category: data, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 80}
+- {id: scholar, label: Google Scholar, icon: graduation, category: academic, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 90}
+- {id: researchgate, label: ResearchGate, icon: flask, category: academic, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 100}
+- {id: orcid, label: ORCID, icon: fingerprint, category: academic, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 110}
+- {id: pubmed, label: PubMed, icon: book, category: medical, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 120}
+- {id: doximity, label: Doximity, icon: stethoscope, category: medical, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 130}
+- {id: archinect, label: Archinect, icon: building, category: architecture, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 140}
+- {id: houzz, label: Houzz, icon: home, category: architecture, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 150}
+- {id: medium, label: Medium, icon: pen, category: writing, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 160}
+- {id: substack, label: Substack, icon: layers, category: writing, status: coming_soon, oauth_provider: null, connect_kind: url,
+  sort_order: 170}
+- {id: linkedin, label: LinkedIn, icon: linkedin, category: generic, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+  sort_order: 180}
+category_sources:
+  Engineering: [github, portfolio, stackoverflow]
+  AI/ML: [github, kaggle, portfolio]
+  Data: [kaggle, github, portfolio]
+  Design: [dribbble, behance, portfolio]
+  Product: [linkedin, portfolio]
+  Management: [linkedin, portfolio]
+  DevOps: [github, portfolio]
+  Security: [github, portfolio]
+  Research: [scholar, researchgate, github]
+  QA: [github, portfolio]
+  medical: [pubmed, orcid, scholar, doximity]
+  academic: [scholar, researchgate, orcid, portfolio]
+  architecture: [archinect, houzz, behance, portfolio]
+  visual_art: [artstation, behance, dribbble, portfolio]
+  writing: [medium, substack, portfolio]
+  education: [linkedin, scholar, portfolio]
+  legal: [linkedin, portfolio]
+default_sources: [portfolio, linkedin]

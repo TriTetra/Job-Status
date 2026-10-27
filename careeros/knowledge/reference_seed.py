@@ -1,29 +1,28 @@
-﻿"""Seed knowledge DB tables from YAML files.
+"""Countries, visas and salary ranges from infra/seeds/v1/{countries,visa,salaries}/*.yaml.
 
-One-time migration. After this, DB is source of truth.
-YAML files remain as version-controlled backup.
-
-Usage:
-    python scripts/seed_knowledge_from_yaml.py
+Idempotent (merge / update-in-place). Run via `career-os seed reference`.
 """
 
-import sys
-from pathlib import Path
+import logging
 
-
+import sqlalchemy as sa
 import yaml
 
 from careeros.db.connection import db
+from careeros.shared.config import ROOT
 from careeros.knowledge.models.country import Country
 from careeros.knowledge.models.salary_range import SalaryRange
 from careeros.knowledge.models.visa import Visa
 
+logger = logging.getLogger(__name__)
+SEEDS = ROOT / "infra" / "seeds" / "v1"
+
 
 def seed_countries() -> int:
     count = 0
-    countries_dir = Path("infra/seeds/v1/countries")
+    countries_dir = SEEDS / "countries"
     if not countries_dir.exists():
-        print(f"  Directory not found: {countries_dir}")
+        logger.warning("Seed directory not found: %s", countries_dir)
         return 0
 
     with db.session_scope() as session:
@@ -61,15 +60,15 @@ def seed_countries() -> int:
             session.merge(country)
             count += 1
 
-    print(f"  Seeded {count} countries")
+    logger.info("Seeded %d countries", count)
     return count
 
 
 def seed_visas() -> int:
     count = 0
-    visas_dir = Path("infra/seeds/v1/visa")
+    visas_dir = SEEDS / "visa"
     if not visas_dir.exists():
-        print(f"  Directory not found: {visas_dir}")
+        logger.warning("Seed directory not found: %s", visas_dir)
         return 0
 
     country_map = {
@@ -106,15 +105,15 @@ def seed_visas() -> int:
             session.merge(visa)
             count += 1
 
-    print(f"  Seeded {count} visas")
+    logger.info("Seeded %d visas", count)
     return count
 
 
 def seed_salaries() -> int:
     count = 0
-    salaries_dir = Path("infra/seeds/v1/salaries")
+    salaries_dir = SEEDS / "salaries"
     if not salaries_dir.exists():
-        print(f"  Directory not found: {salaries_dir}")
+        logger.warning("Seed directory not found: %s", salaries_dir)
         return 0
 
     with db.session_scope() as session:
@@ -152,7 +151,6 @@ def seed_salaries() -> int:
                     max_s = salary_data.get("max", 0)
                     median = salary_data.get("median", (min_s + max_s) // 2)
 
-                    import sqlalchemy as sa
                     existing = session.execute(
                         sa.select(SalaryRange).where(
                             SalaryRange.role_family == role_family,
@@ -184,25 +182,5 @@ def seed_salaries() -> int:
                         ))
                     count += 1
 
-    print(f"  Seeded {count} salary ranges")
+    logger.info("Seeded %d salary ranges", count)
     return count
-
-
-def main():
-    print("=" * 60)
-    print("  Seed Knowledge from YAML")
-    print("=" * 60)
-
-    countries = seed_countries()
-    visas = seed_visas()
-    salaries = seed_salaries()
-
-    print(f"\n  Total: {countries + visas + salaries} records")
-    return 0
-
-
-if __name__ == "__main__":
-    from careeros.shared.logging import configure_logging
-
-    configure_logging()
-    sys.exit(main())

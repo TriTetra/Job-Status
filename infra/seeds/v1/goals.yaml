@@ -1,0 +1,145 @@
+# Goals catalog for the onboarding goals step.
+# applicable: role categories that see the goal · priority_for: categories it is suggested to.
+
+categories: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+  education, legal, medical, visual_art, writing]
+goals:
+- id: technical_depth
+  label: Technical depth
+  theme: growth
+  applicable: [AI/ML, Data, DevOps, Engineering, QA, Research, Security]
+  priority_for: [AI/ML, Data, DevOps, Engineering, QA, Security]
+  sort_order: 10
+- id: leadership
+  label: Leadership
+  theme: growth
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [Management, Product, education, legal, medical]
+  sort_order: 20
+- id: management
+  label: People management
+  theme: growth
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [Management]
+  sort_order: 30
+- id: continuous_learning
+  label: Continuous learning
+  theme: growth
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [AI/ML, Engineering, Research, academic, medical]
+  sort_order: 40
+- id: research
+  label: Research & discovery
+  theme: growth
+  applicable: [AI/ML, Data, Research, academic, medical]
+  priority_for: [Research, academic, medical]
+  sort_order: 50
+- id: remote_first
+  label: Remote-first
+  theme: lifestyle
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Security, academic, architecture, legal,
+    visual_art, writing]
+  priority_for: [Engineering, academic, legal, visual_art, writing]
+  sort_order: 60
+- id: flexibility
+  label: Schedule flexibility
+  theme: lifestyle
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: []
+  sort_order: 70
+- id: balance
+  label: Work-life balance
+  theme: lifestyle
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [education, legal, medical]
+  sort_order: 80
+- id: stability
+  label: Stability & security
+  theme: lifestyle
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [education, legal, medical]
+  sort_order: 90
+- id: autonomy
+  label: Autonomy
+  theme: lifestyle
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [legal, visual_art, writing]
+  sort_order: 100
+- id: high_compensation
+  label: High compensation
+  theme: compensation
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: []
+  sort_order: 110
+- id: equity
+  label: Equity / upside
+  theme: compensation
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Security]
+  priority_for: [Engineering, Management, Product]
+  sort_order: 120
+- id: benefits
+  label: Strong benefits
+  theme: compensation
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [education, legal, medical]
+  sort_order: 130
+- id: mission
+  label: Mission-driven work
+  theme: impact
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [Research, academic, education, legal, medical]
+  sort_order: 140
+- id: social_impact
+  label: Social impact
+  theme: impact
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [education, legal, medical]
+  sort_order: 150
+- id: open_source
+  label: Open source
+  theme: impact
+  applicable: [AI/ML, Data, DevOps, Engineering, QA, Security]
+  priority_for: [DevOps, Engineering]
+  sort_order: 160
+- id: innovation
+  label: Innovation
+  theme: impact
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, QA, Research, Security, academic, architecture, visual_art, writing]
+  priority_for: [AI/ML, Design, Research, academic, architecture, visual_art, writing]
+  sort_order: 170
+- id: creativity
+  label: Creative freedom
+  theme: impact
+  applicable: [Design, architecture, visual_art, writing]
+  priority_for: [Design, architecture, visual_art, writing]
+  sort_order: 180
+- id: recognition
+  label: Recognition & prestige
+  theme: impact
+  applicable: [Design, Research, academic, architecture, legal, medical, visual_art, writing]
+  priority_for: [Design, Research, academic, architecture, legal, medical, visual_art, writing]
+  sort_order: 190
+- id: startup_pace
+  label: Startup / fast pace
+  theme: environment
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Security, architecture, visual_art, writing]
+  priority_for: [Design, Engineering, architecture, visual_art, writing]
+  sort_order: 200
+- id: established_org
+  label: Established organization
+  theme: environment
+  applicable: [AI/ML, Data, Design, DevOps, Engineering, Management, Product, QA, Research, Security, academic, architecture,
+    education, legal, medical, visual_art, writing]
+  priority_for: [education, legal, medical]
+  sort_order: 210

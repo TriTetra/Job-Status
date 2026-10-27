@@ -11,28 +11,13 @@ from sqlalchemy.orm import Session
 from careeros.identity.models.connected_account import ConnectedAccount
 from careeros.evidence.models.evidence_source import EvidenceSource
 from careeros.identity.current_role import CurrentRole, get_current_role
+from careeros.knowledge.seeds import load_seed
 
-# Profession category → recommended sources, for roles without a seeded list
-CATEGORY_SOURCES: dict[str, list[str]] = {
-    "Engineering":   ["github", "portfolio", "stackoverflow"],
-    "AI/ML":         ["github", "kaggle", "portfolio"],
-    "Data":          ["kaggle", "github", "portfolio"],
-    "Design":        ["dribbble", "behance", "portfolio"],
-    "Product":       ["linkedin", "portfolio"],
-    "Management":    ["linkedin", "portfolio"],
-    "DevOps":        ["github", "portfolio"],
-    "Security":      ["github", "portfolio"],
-    "Research":      ["scholar", "researchgate", "github"],
-    "QA":            ["github", "portfolio"],
-    "medical":       ["pubmed", "orcid", "scholar", "doximity"],
-    "academic":      ["scholar", "researchgate", "orcid", "portfolio"],
-    "architecture":  ["archinect", "houzz", "behance", "portfolio"],
-    "visual_art":    ["artstation", "behance", "dribbble", "portfolio"],
-    "writing":       ["medium", "substack", "portfolio"],
-    "education":     ["linkedin", "scholar", "portfolio"],
-    "legal":         ["linkedin", "portfolio"],
-}
-DEFAULT_SOURCES = ["portfolio", "linkedin"]
+# Profession category → recommended sources, for roles without a seeded list.
+# Same data the seed writes into roles.metadata — one copy, in infra/seeds/v1/evidence_sources.yaml.
+_SEED = load_seed("evidence_sources")
+CATEGORY_SOURCES: dict[str, list[str]] = _SEED["category_sources"]
+DEFAULT_SOURCES: list[str] = _SEED["default_sources"]
 
 
 def suggested_source_ids(role: Optional[CurrentRole]) -> list[str]:
