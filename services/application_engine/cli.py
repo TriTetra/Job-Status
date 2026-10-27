@@ -10,7 +10,6 @@ Commands:
   migrate-from-markdown  -- import rows from docs/tracking/JOB_APPLICATIONS.md
 """
 
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -20,8 +19,6 @@ from rich.console import Console
 from rich.table import Table
 
 _ROOT = Path(__file__).parents[2]
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
 
 from core.db.connection import db
 from core.db.repositories import ApplicationRepository

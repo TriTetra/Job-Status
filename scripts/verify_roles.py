@@ -1,7 +1,5 @@
 """Verify roles seed — category distribution."""
-import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from sqlalchemy import text, create_engine
 
 env_path = Path(__file__).parent.parent / ".env"

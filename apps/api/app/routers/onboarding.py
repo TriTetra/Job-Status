@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
-from core.domain.identity.user import OnboardingState
+from core.domain.identity.onboarding import OnboardingState
 from core.db.repositories.user_repo import UserRepository
 
 router = APIRouter()
@@ -173,7 +173,7 @@ def save_identity(
     import re
     from datetime import date
     import sqlalchemy as sa
-    from core.domain.identity.custom_role import CustomRole
+    from core.db.models.custom_role import CustomRole
 
     repo = UserRepository(session)
     user = _require_user(repo, user_id)

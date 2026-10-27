@@ -119,11 +119,12 @@ $ career-os resume generate --company Anthropic --title "ML Engineer"
 
 ```bash
 # 1. Start PostgreSQL
-docker compose up -d
+docker compose -f infra/docker/docker-compose.yml up -d
 
-# 2. Install dependencies and apply migrations
-pip install -r requirements.txt
-alembic upgrade head
+# 2. Install dependencies + the project itself (editable), apply migrations
+pip install -r requirements-dev.txt
+pip install -e .            # makes core/services/plugins/apps importable everywhere
+alembic -c core/db/alembic.ini upgrade head
 
 # 3. Configure
 cp config.yaml.example config.yaml
@@ -133,7 +134,9 @@ cp config.yaml.example config.yaml
 python scripts/seed_knowledge_from_yaml.py
 
 # 5. Run
-career-os status
+career-os status                                       # CLI
+uvicorn apps.api.app.main:app --reload --port 8000     # API (from any directory)
+pytest                                                 # offline tests; -m integration for live ones
 ```
 
 > Your API key belongs in `.env`, never in `config.yaml`. Both files are gitignored.

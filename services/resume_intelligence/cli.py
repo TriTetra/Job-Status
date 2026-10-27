@@ -8,12 +8,10 @@ Usage:
         --template ml_research
 """
 
-import sys
 from pathlib import Path
 
 import typer
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from services.resume_intelligence.application.resume_generator import generate_resume
 

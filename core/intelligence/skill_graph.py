@@ -1,4 +1,4 @@
-﻿"""
+"""
 Skill taxonomy and transfer learning graph.
 """
 

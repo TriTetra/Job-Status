@@ -1,11 +1,11 @@
 """Database models package."""
 
 from .base import Base, TimestampMixin
-from core.domain.identity.user import User
-from core.domain.identity.role import Role
-from core.domain.identity.custom_role import CustomRole
-from core.domain.identity.user_role import UserRole
-from core.domain.identity.role_alias import RoleAlias
+from .user import User
+from .role import Role
+from .custom_role import CustomRole
+from .user_role import UserRole
+from .role_alias import RoleAlias
 from .career_score import CareerScore
 from .application import Application
 from .email import Email

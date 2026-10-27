@@ -161,7 +161,7 @@ class ResumeGenerator:
         return data.get("projects", [])
 
     def _default_candidate_info(self) -> dict:
-        from career_os.config_loader import load_config
+        from core.config import load_config
         config = load_config()
         c = config.get("candidate", {})
         return {

@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from core.domain import UserProfile, Job, MatchResult, Skill, SkillLevel
-from career_os.core.skill_graph import SkillGraph
+from .skill_graph import SkillGraph
 
 
 class SemanticMatcher:

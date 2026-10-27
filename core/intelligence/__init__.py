@@ -2,7 +2,6 @@
 CareerOS Intelligence Core
 
 Pure computational modules — no I/O, no DB, no external calls.
-Migrated from career_os/intelligence/ (Phase 2A, 2026-07-14).
 
 SemanticMatcher is deliberately NOT re-exported here: it pulls in
 sentence-transformers/torch at import time. Import it from

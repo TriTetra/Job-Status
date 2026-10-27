@@ -194,12 +194,7 @@ def _build_profile_from_evidence(user_id: str):
     import sqlalchemy as sa
     from core.db.connection import db as _db
     from core.domain import Skill, SkillLevel, UserProfile
-    from ..core.evidence.confidence_aggregator import aggregate_user_skills  # noqa: F401
-
-    try:
-        from app.core.evidence.confidence_aggregator import aggregate_user_skills
-    except ImportError:
-        return None
+    from ..core.evidence.confidence_aggregator import aggregate_user_skills
 
     with _db.session_scope() as s:
         # FIX: total_years is NOT a column — it lives inside profile_data JSONB

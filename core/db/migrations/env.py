@@ -1,15 +1,11 @@
 """Alembic environment — online + offline migration modes."""
 
 import os
-import sys
 from logging.config import fileConfig
-from pathlib import Path
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# Make project root importable
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from core.db.models.base import Base  # noqa: E402
 

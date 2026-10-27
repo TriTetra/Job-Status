@@ -10,7 +10,6 @@ Makes real GitHub API calls. Needs GITHUB_TOKEN in environment.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
 
 # Load .env so GITHUB_TOKEN / OPENROUTER_API_KEY are available
 try:

@@ -4,7 +4,8 @@ from typing import Optional
 
 from sqlalchemy.dialects.postgresql import insert
 
-from core.domain.identity.user import OnboardingState, User
+from core.db.models.user import User
+from core.domain.identity.onboarding import OnboardingState
 from .base import BaseRepository
 
 

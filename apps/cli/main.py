@@ -2,6 +2,7 @@
 CareerOS Unified CLI — single entry point.
 
 Usage:
+    career-os --help            (after `pip install -e .`)
     python -m apps.cli.main --help
     python -m apps.cli.main status
     python -m apps.cli.main scan --hours 720
@@ -11,7 +12,15 @@ Usage:
     python -m apps.cli.main market signals
 """
 
+import sys
+
 import typer
+
+# Rich output uses box-drawing chars and arrows; Windows consoles/pipes default
+# to cp1252 and crash on them. Force UTF-8 for this process's own streams.
+for _stream in (sys.stdout, sys.stderr):
+    if (_stream.encoding or "").lower() != "utf-8":
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 app = typer.Typer(
     name="career-os",

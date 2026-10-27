@@ -43,7 +43,7 @@ EXPECTED_PATHS = {
 
 @pytest.fixture(scope="module")
 def app():
-    from app.main import app as fastapi_app
+    from apps.api.app.main import app as fastapi_app
     return fastapi_app
 
 

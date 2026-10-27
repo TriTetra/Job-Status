@@ -6,9 +6,7 @@ Usage:
 """
 
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from sqlalchemy import inspect
 from core.db.connection import db

@@ -1,8 +1,30 @@
+# One installable package for the whole Python side of the repo.
+# Setup (once per venv):   pip install -r requirements-dev.txt && pip install -e .
+# After that every module is importable as core.*, services.*, plugins.*,
+# apps.cli.*, apps.api.app.* — from any directory, with no sys.path tweaks.
+#   API:  uvicorn apps.api.app.main:app --reload --port 8000
+#   CLI:  career-os <command>
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "careeros"
 version = "0.1.0"
 description = "Self-hosted career intelligence stack"
 requires-python = ">=3.11"
+
+[project.scripts]
+career-os = "apps.cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "services*", "plugins*", "apps*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.j2", "*.md"]
 
 # ── pytest ────────────────────────────────────────────────────────────────
 # Default run = fast, offline tests (tests/unit + tests/smoke).
@@ -10,7 +32,6 @@ requires-python = ">=3.11"
 #   pytest -m integration
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "apps/api"]
 addopts = "-ra --strict-markers -m 'not integration'"
 timeout = 120
 markers = [

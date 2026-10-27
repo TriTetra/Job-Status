@@ -8,9 +8,7 @@ Run once:  python scripts/backfill_job_metadata.py [--force]
 """
 
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from plugins.plugin_loader import load_job_source_plugin
 from core.db.connection import db

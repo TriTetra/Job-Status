@@ -7,7 +7,6 @@ Usage:
     python scripts/seed_roles_v1.py
 """
 
-import sys
 import os
 import json
 import uuid
@@ -15,7 +14,6 @@ from pathlib import Path
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy import text, create_engine
 

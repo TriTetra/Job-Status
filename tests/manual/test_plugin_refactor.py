@@ -9,11 +9,6 @@ Checks:
   5. EvidenceBuilder accepts plugin (structural test, no DB write)
 """
 
-import sys
-from pathlib import Path
-
-_ROOT = Path(__file__).parents[2]
-sys.path.insert(0, str(_ROOT))
 
 
 def main() -> None:

@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 2 — Single Package & Imports | Repo installable (`pip install -e .`), API imported as `apps.api.app`, `career-os` console script, all sys.path hacks removed, career_os retired into core, core.domain ↔ core.db.models cycle broken | ✅ Tamam | 2026-10-28 |
 | Security Fix — API Auth Hardening + Scan Fix | Router-level auth on all API routers, no anonymous "default" fallback, e2e bypass opt-in only, Clerk webhook fails closed, resume user from token, single in-flight market refresh, scan job_meta kwarg fix, market page sends Clerk token | ✅ Tamam | 2026-10-28 |
 | Refactor Step 1 — Dead Code Removal | Removed unused core/events, memory, timeline, 6 unused core/domain subpackages, career_os/data, GapAnalyzer, MatchingService, CareerDecisionEngine, 9 debug scripts, 9 unused web components, 4 unused npm deps; API import 28s → 1.7s | ✅ Tamam | 2026-10-28 |
 | Refactor Step 0 — Test Safety Net | pyproject.toml (pytest + ruff), tests split into unit/smoke/integration/manual, offline unit + smoke tests, known bugs pinned as strict xfail | ✅ Tamam | 2026-10-28 |
@@ -81,6 +82,41 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 2] — 2026-10-28 — Single Package & Imports ✅
+
+### Yapılan
+
+**One installable package** (`pyproject.toml`):
+- `[build-system]` + `[tool.setuptools.packages.find]` for `core*`, `services*`, `plugins*`, `apps*`. Install once per venv: `pip install -e .` — every module is then importable from any directory.
+- `[project.scripts] career-os = "apps.cli.main:app"` replaces the root `career-os` launcher (deleted). The launcher's `PYTHONUTF8` trick never worked (read only at interpreter start); `apps/cli/main.py` now reconfigures stdout/stderr to UTF-8, which fixes a pre-existing `UnicodeEncodeError` crash in `career-os --help` on Windows pipes.
+- API is now the package `apps.api.app` → start with `uvicorn apps.api.app.main:app --reload --port 8000` (works from any cwd; `.claude/launch.json` has an `api` config). Added `__init__.py` to `services/`, `apps/api/`, `apps/api/app/core/{,auth,evidence}`.
+- `jobs.py`: removed the dead `try: from app.core…` double import.
+- pytest `pythonpath` removed — tests import through the installed package.
+
+**sys.path hacks removed** from 27 files (scripts, service CLIs, alembic `env.py`, integration/manual/unit tests). Only the vendored `services/hiring-agent` still has its own.
+
+**Circular import fixed** (`core.domain` ↔ `core.db.models`):
+- ORM models `User`, `Role`, `CustomRole`, `UserRole`, `RoleAlias` moved `core/domain/identity/` → `core/db/models/` (git mv).
+- `OnboardingState` (pure enum) → `core/domain/identity/onboarding.py`. `core.domain` no longer imports the DB layer at all.
+- Updated importers: `core/db/models/__init__`, `role_repo`, `user_repo`, `routers/onboarding.py`, `routers/roles.py`.
+
+**career_os retired**:
+- `career_os/config_loader.py` → `core/config.py` (`load_config`, `load_dotenv`; same root-relative paths).
+- `career_os/core/skill_graph.py` → `core/intelligence/skill_graph.py`.
+- `career_os/` deleted (incl. stale README).
+
+**Docs**: README quickstart — `pip install -e .`, `alembic -c core/db/alembic.ini`, compose file path, API/test commands.
+
+### Doğrulama
+- `pytest`: 211 passed, 3 xfailed (circular-import xfail removed → now a regular cold-import test run from a neutral cwd for API, CLI, `core.domain`, `core.db.models`, scoring service)
+- `ruff`: clean · `career-os --help`: all 8 command groups load · `alembic heads`: OK
+
+### Dikkat
+- **New start command for the API**: `uvicorn apps.api.app.main:app` (the old `app.main:app` no longer exists).
+- Every venv needs `pip install -e .` once.
 
 ---
 

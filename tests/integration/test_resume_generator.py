@@ -8,9 +8,6 @@ Note: Tests 1, 2, 4, 5 make real OpenRouter API calls (~$0.01-0.02 total)
 """
 
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parents[2]))
 
 
 def test_llm_client():

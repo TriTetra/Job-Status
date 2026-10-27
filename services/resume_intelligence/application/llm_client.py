@@ -11,7 +11,7 @@ from typing import Optional
 
 import requests
 
-from career_os.config_loader import load_config
+from core.config import load_config
 
 
 class LLMClient:

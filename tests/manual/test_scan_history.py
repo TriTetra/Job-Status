@@ -5,11 +5,8 @@ Kullanım:
     python scripts/test_scan_history.py
 """
 
-import sys
-from pathlib import Path
 from datetime import datetime, timedelta
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from sqlalchemy import Integer, cast, func, select
 

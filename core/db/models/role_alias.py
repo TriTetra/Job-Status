@@ -7,7 +7,7 @@ from uuid import uuid4
 from sqlalchemy import String, DateTime, ForeignKey, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from core.db.models.base import Base
+from .base import Base
 
 
 class RoleAlias(Base):

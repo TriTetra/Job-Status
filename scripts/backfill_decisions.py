@@ -4,11 +4,8 @@ Rules-only (no LLM): criteria + next_action + template reasoning.
 Run: python scripts/backfill_decisions.py
 """
 
-import sys
 from datetime import datetime
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.db.connection import db
 from core.db.models.career_score import CareerScore

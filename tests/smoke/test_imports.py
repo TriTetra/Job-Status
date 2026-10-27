@@ -16,8 +16,7 @@ PACKAGES = [
     ("core", "core"),
     ("services", "services"),
     ("plugins", "plugins"),
-    ("career_os", "career_os"),
-    ("apps/api/app", "app"),
+    ("apps/api/app", "apps.api.app"),
     ("apps/cli", "apps.cli"),
 ]
 SKIP_PARTS = {"hiring-agent", "migrations", "__pycache__"}
@@ -49,19 +48,23 @@ def test_module_imports(module):
 
 
 def _cold_import(module):
+    # Run from a neutral directory: the import must work through the installed
+    # package (`pip install -e .`), not because the repo root happens to be cwd.
     return subprocess.run(
-        [sys.executable, "-c", f"import sys; sys.path[:0] = ['.', 'apps/api']; import {module}"],
-        cwd=ROOT, capture_output=True, text=True, timeout=120,
+        [sys.executable, "-c", f"import {module}"],
+        cwd=ROOT / "tests", capture_output=True, text=True, timeout=120,
     )
 
 
-@pytest.mark.parametrize("module", ["app.main", "apps.cli.main"])
-def test_entry_point_cold_import(module):
+# Entry points, plus modules whose import order used to matter
+# (core.domain <-> core.db.models was circular).
+@pytest.mark.parametrize("module", [
+    "apps.api.app.main",
+    "apps.cli.main",
+    "core.domain",
+    "core.db.models",
+    "services.job_intelligence.application.scoring_service",
+])
+def test_cold_import(module):
     result = _cold_import(module)
-    assert result.returncode == 0, result.stderr[-2000:]
-
-
-@pytest.mark.xfail(strict=True, reason="known bug: core.domain <-> core.db.models circular import on cold start")
-def test_core_domain_cold_import():
-    result = _cold_import("core.domain")
     assert result.returncode == 0, result.stderr[-2000:]

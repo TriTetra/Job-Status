@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
-from app.dependencies import E2E_BYPASS_ENV, get_db_session, get_user_id
+from apps.api.app.dependencies import E2E_BYPASS_ENV, get_db_session, get_user_id
 
 # Deliberately unauthenticated (see apps/api/app/main.py)
 PUBLIC_ROUTES = {
@@ -24,7 +24,7 @@ PUBLIC_ROUTES = {
 
 @pytest.fixture(scope="module")
 def app():
-    from app.main import app as fastapi_app
+    from apps.api.app.main import app as fastapi_app
 
     def _no_db():
         raise AssertionError("request reached the database without authentication")
@@ -106,14 +106,14 @@ def webhook_client(app, client):
 
 
 def test_webhook_rejected_when_secret_missing(webhook_client, monkeypatch):
-    from app.routers import webhooks
+    from apps.api.app.routers import webhooks
 
     monkeypatch.setattr(webhooks, "CLERK_WEBHOOK_SECRET", None)
     assert webhook_client.post("/api/webhooks/clerk", content=b"{}").status_code == 503
 
 
 def test_webhook_rejects_bad_signature(webhook_client, monkeypatch):
-    from app.routers import webhooks
+    from apps.api.app.routers import webhooks
 
     monkeypatch.setattr(webhooks, "CLERK_WEBHOOK_SECRET", "whsec_dGVzdHNlY3JldA==")
     resp = webhook_client.post(
@@ -151,7 +151,7 @@ def test_e2e_header_accepted_with_opt_in(monkeypatch):
 
 
 def test_invalid_bearer_token_is_rejected(monkeypatch):
-    from app.core.auth.clerk_auth import ClerkAuthenticator
+    from apps.api.app.core.auth.clerk_auth import ClerkAuthenticator
 
     def _boom(token):
         raise ValueError("bad token")
@@ -163,14 +163,14 @@ def test_invalid_bearer_token_is_rejected(monkeypatch):
 
 
 def test_valid_cookie_resolves_user(monkeypatch):
-    from app.core.auth.clerk_auth import ClerkAuthenticator
+    from apps.api.app.core.auth.clerk_auth import ClerkAuthenticator
 
     monkeypatch.setattr(ClerkAuthenticator, "verify_token", staticmethod(lambda t: "user_123"))
     assert get_user_id(_request(cookies={"__session": "tok"}), x_user_id=None) == "user_123"
 
 
 def test_bearer_takes_precedence_over_e2e_header(monkeypatch):
-    from app.core.auth.clerk_auth import ClerkAuthenticator
+    from apps.api.app.core.auth.clerk_auth import ClerkAuthenticator
 
     monkeypatch.setenv(E2E_BYPASS_ENV, "1")
     monkeypatch.setattr(ClerkAuthenticator, "verify_token", staticmethod(lambda t: "user_real"))

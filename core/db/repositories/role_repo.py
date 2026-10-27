@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from core.domain.identity.role import Role
+from core.db.models.role import Role
 from core.db.repositories.base import BaseRepository
 
 

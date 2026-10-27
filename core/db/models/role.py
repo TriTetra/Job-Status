@@ -8,7 +8,7 @@ from sqlalchemy import String, Integer, DateTime, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import JSONB
 
-from core.db.models.base import Base
+from .base import Base
 
 
 class Role(Base):

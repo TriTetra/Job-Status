@@ -11,9 +11,6 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-_ROOT = Path(__file__).parents[3]
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
 
 from core.config import load_plugin_config
 from core.db.connection import db

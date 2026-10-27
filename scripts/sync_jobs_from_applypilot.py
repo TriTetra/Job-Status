@@ -12,9 +12,7 @@ unless new jobs are scanned by ApplyPilot.
 import argparse
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from core.db.connection import db
 from core.db.repositories import JobRepository

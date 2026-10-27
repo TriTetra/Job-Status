@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session
-from core.domain.identity.role import Role
+from core.db.models.role import Role
 
 
 router = APIRouter(prefix="/api/roles", tags=["roles"])
