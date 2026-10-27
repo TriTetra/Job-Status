@@ -131,48 +131,6 @@ def test_scorer_weights():
     print(f"  PASS — default={score_default.career_score:.1f}, fit_only={score_fit_only.career_score:.1f}")
 
 
-def test_create_user_profile_from_db():
-    print("\n[TEST 6] create_user_profile_from_db builds UserProfile from DB")
-    test_user = "test_profile_from_db"
-
-    with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
-        repo = UserSettingsRepository(s)
-        repo.upsert(
-            test_user,
-            profile={
-                "name": "DB User",
-                "email": "db@test.com",
-                "years_experience": 4.0,
-                "target_role": "ML Engineer, Backend Engineer",
-            },
-            skills=[
-                {"name": "Python", "level": "INDEPENDENT", "ai_multiplier": 0.9},
-                {"name": "FastAPI", "level": "WORKING", "ai_multiplier": 0.7},
-            ],
-            preferences={"remote": True, "work_visa_required": True},
-        )
-
-    with db.session_scope() as s:
-        from career_os.data.applypilot_loader import create_user_profile_from_db
-        profile = create_user_profile_from_db(test_user, s)
-        assert profile is not None
-        assert profile.name == "DB User"
-        assert profile.has_skill("Python")
-        assert profile.has_skill("FastAPI")
-        assert len(profile.target_roles) == 2
-        assert profile.preferences.work_visa_required is True
-
-    # Cleanup
-    with db.session_scope() as s:
-        from core.db.repositories import UserSettingsRepository
-        row = UserSettingsRepository(s).get_settings(test_user)
-        if row:
-            s.delete(row)
-
-    print("  PASS")
-
-
 def main():
     print("=" * 60)
     print("  User Settings Test Suite")
@@ -184,7 +142,6 @@ def main():
         test_upsert_and_weights,
         test_custom_skills,
         test_scorer_weights,
-        test_create_user_profile_from_db,
     ]
 
     passed = failed = 0

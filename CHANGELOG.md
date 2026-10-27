@@ -8,6 +8,8 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 1 — Dead Code Removal | Removed unused core/events, memory, timeline, 6 unused core/domain subpackages, career_os/data, GapAnalyzer, MatchingService, CareerDecisionEngine, 9 debug scripts, 9 unused web components, 4 unused npm deps; API import 28s → 1.7s | ✅ Tamam | 2026-10-28 |
+| Refactor Step 0 — Test Safety Net | pyproject.toml (pytest + ruff), tests split into unit/smoke/integration/manual, offline unit + smoke tests, known bugs pinned as strict xfail | ✅ Tamam | 2026-10-28 |
 | Phase D — Opportunities Gating Fix | Removed min_score filtering on backend list_jobs, showing all scored opportunities (strong/look/low fit) with collapsible low fit groups | ✅ Tamam | 2026-08-09 |
 | Phase D — Opportunities LinkedIn UI | Split-panel layout for Opportunities (/inbox) with compact cards, detail view panel, operational buttons, and enriched backend scoring explanation JSONB metadata | ✅ Tamam | 2026-08-08 |
 | Phase D — Market Intelligence Hybrid | 3-layer hybrid extraction engine (Regex keywords + learnable registry + LLM OpenRouter fallback) for HackerNews and TechCrunch feeds | ✅ Tamam | 2026-08-08 |
@@ -78,6 +80,48 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 1] — 2026-10-28 — Dead Code Removal ✅
+
+### Yapılan
+
+Each removal was verified with grep (zero importers outside the module itself and its own test) and the import-all smoke test.
+
+**Backend — removed (never wired into API/CLI/services):**
+- `core/events/`, `core/memory/`, `core/timeline/` (+ their tests `test_event_bus`, `test_memory_layer`, `test_timeline_layer`)
+- `core/domain/{analytics,application,company,learning,market,resume}/`; `core/domain/__init__.py` now exports only identity, job and intelligence entities
+- `career_os/data/` (legacy ApplyPilot loader) and its integration test case
+- `core/intelligence/gap_analyzer.py` (duplicated SkillGap/LearningRoadmap; depended on legacy `career_os`), `CareerDecisionEngine` in `opportunity_scorer.py`, `services/job_intelligence/application/matching_service.py`
+- Debug scripts: `scripts/test_*.py` (6), `clear_and_test_db.py`, `check_user_evidence.py`, `diagnose_scan.py`
+- Empty leftover `infrastructure/` directory
+
+**Performance side effect:** `core/intelligence/__init__.py` no longer re-exports `SemanticMatcher`, so importing the API no longer loads sentence-transformers/torch. `app.main` import: **28s → 1.7s**. The semantic path imports it from `core.intelligence.semantic_matcher` (`scoring_service.py`).
+
+**Web — removed:**
+- 9 unused components in `components/ui/` (brief-sentence, company-organism-view, evidence-surface, insight-row, market-pulse, metric-card, opportunity-item, pipeline-stage, todays-focus-item)
+- Unused deps: `@tanstack/react-query`, `date-fns`, `sonner`, `@neondatabase/serverless`
+
+### Doğrulama
+- `pytest`: 194 passed, 7 xfailed (offline suite) · `ruff check .`: clean · `tsc --noEmit`: clean · `npm run lint`: 77 problems (was 78, pre-existing)
+
+### Bilinen / sonraki adım
+- `docs/usage/*`, `career_os/README.md` still describe removed modules (were already stale) — to be rewritten in the docs step.
+
+---
+
+## [Refactor Step 0] — 2026-10-28 — Test Safety Net ✅
+
+### Yapılan
+
+- `pyproject.toml`: pytest config (`testpaths`, `pythonpath = [".", "apps/api"]`, `integration` marker deselected by default, 120s timeout) and ruff (`E9` + `F` rules; excludes `_archive`, vendored `services/hiring-agent`, migration versions)
+- `requirements-dev.txt`: pytest, pytest-timeout, ruff
+- `tests/` reorganized: `unit/` (pure), `smoke/` (wiring), `integration/` (live DB/network/LLM, auto-marked via `tests/conftest.py`), `manual/` (standalone scripts, not collected). Root `pytest` no longer crashes on `_archive/`.
+- New offline tests: `unit/test_decision_builder.py`, `unit/test_hn_parser.py`, `unit/test_applypilot_adapter.py`, `smoke/test_api_wiring.py` (56-route inventory guard, auth dependency), `smoke/test_imports.py` (every backend module imports + cold entry-point imports)
+- Known bugs pinned as `xfail(strict=True)` so fixing them forces the marker off: scan `job_dicts`/`job_meta` mismatch, anonymous → `"default"` user, e2e header bypass, `sponsors_visa = remote`, HN substring skill matching, HN "no visa sponsorship" negation, `core.domain` circular cold import
+- `ruff --fix`: unused imports / placeholder-less f-strings removed; `TYPE_CHECKING` imports for `Application` ↔ `Email` forward refs
+- Baseline commit of previously uncommitted Phase C/D work (`e1210d6`)
 
 ---
 

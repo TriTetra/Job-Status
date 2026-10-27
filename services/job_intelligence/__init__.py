@@ -1,6 +1,5 @@
-"""Job Intelligence Service — scoring and semantic matching."""
+"""Job Intelligence Service — scoring."""
 
 from .application.scoring_service import ScoringService
-from .application.matching_service import MatchingService
 
-__all__ = ["ScoringService", "MatchingService"]
+__all__ = ["ScoringService"]

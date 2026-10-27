@@ -38,7 +38,7 @@ class ScoringService:
         weights: Optional[Dict[str, float]] = None,
     ) -> List[OpportunityScore]:
         """Score jobs with full semantic matching (triggers model download on first call)."""
-        from core.intelligence import SemanticMatcher
+        from core.intelligence.semantic_matcher import SemanticMatcher
         if self._scorer.matcher is None:
             self._scorer.matcher = SemanticMatcher()
         return self.score_jobs(jobs, profile, weights=weights)

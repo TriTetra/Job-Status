@@ -3,18 +3,12 @@ CareerOS Intelligence Core
 
 Pure computational modules — no I/O, no DB, no external calls.
 Migrated from career_os/intelligence/ (Phase 2A, 2026-07-14).
+
+SemanticMatcher is deliberately NOT re-exported here: it pulls in
+sentence-transformers/torch at import time. Import it from
+core.intelligence.semantic_matcher only where the semantic path is used.
 """
 
-from .semantic_matcher import SemanticMatcher
-from .opportunity_scorer import OpportunityScorer, CareerDecisionEngine
-from .gap_analyzer import GapAnalyzer, SkillGap, LearningRoadmap, LearningTask
+from .opportunity_scorer import OpportunityScorer
 
-__all__ = [
-    "SemanticMatcher",
-    "OpportunityScorer",
-    "CareerDecisionEngine",
-    "GapAnalyzer",
-    "SkillGap",
-    "LearningRoadmap",
-    "LearningTask",
-]
+__all__ = ["OpportunityScorer"]
