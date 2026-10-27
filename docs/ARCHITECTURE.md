@@ -47,7 +47,7 @@ Enforced by `tests/smoke/test_architecture.py`:
 | `identity` | users, roles (catalog + search), preferences, current role → profession category, GitHub account linking (OAuth) |
 | `onboarding` | the wizard state machine, identity/goals steps, CV upload job, Career Graph build job, goals catalog |
 | `evidence` | `evidence_items` from GitHub repos, the CV (PDF → LLM) and a portfolio site; skill matching; cross-source aggregation; source registry |
-| `jobs` | job sources (ApplyPilot), scoring (`scoring/`), Decision Contract v1, scan job, opportunities + reasoning |
+| `jobs` | company boards (`sources/ats/`) + sync, ApplyPilot import, text extraction, scoring (`scoring/`), Decision Contract v1, incremental scan, scheduler, opportunities + reasoning |
 | `applications` | the application pipeline (`to_apply → applied → interview → offer`) |
 | `companies` | company profiles, hiring trends, interview memory |
 | `market` | HN "Who is hiring" + TechCrunch signals (`sources/`), skill registry, refresh job |
@@ -98,6 +98,34 @@ Private, invite-only — there is no sign-up page. `careeros/identity/auth/`:
 `apps/web/proxy.ts` only checks that the cookie exists (fast redirect to `/sign-in`); the
 API is the authority on every request.
 
+## Jobs pipeline
+
+```
+infra/config/companies.yaml ──► ingest.sync_all ──► jobs ──► scan.run_scan ──► career_scores ──► inbox
+  74 boards: Greenhouse,         fetch (6 boards       shared    the user's titles,   one row per
+  Lever, Ashby, Workday          at a time), keep      by all    rescore only what    (user, job)
+                                 relevant titles,      users     changed
+                                 close what vanished
+```
+
+- **Sources** (`careeros/jobs/sources/ats/`): one module per ATS, public JSON APIs only.
+  Greenhouse, Lever and Ashby return a whole board in one request. Workday pages 20 at a
+  time without descriptions, so it searches server-side (`workday_search`), skips detail
+  requests for stored or irrelevant postings and caps details per run (`MAX_DETAILS`).
+- **Sync** (`ingest.py`): postings whose title matches `titles.include` (plus every
+  user's target roles) and no `titles.exclude` phrase are upserted into `jobs`. Unchanged
+  postings only get `last_seen_at`; changed ones get a new `content_hash`; postings gone
+  from a fully read board get `closed_at` (a partial read closes nothing). Each board's
+  outcome is kept in `job_board_runs`. A Postgres advisory lock serializes syncs.
+- **Extraction** (`extraction.py`): skills, seniority, remote, salary range, visa
+  stance from the posting text — deterministic, shared with the ApplyPilot import.
+- **Scan** (`scan.py`): open jobs whose title has every word of one of the user's roles
+  (any order), scored only when `input_hash` = posting content + profile fingerprint +
+  `SCORER_VERSION` changed. Scores are upserted; closed jobs drop out of every list.
+- **Scheduler** (`scheduler.py`): with `JOB_SYNC_INTERVAL_HOURS` > 0 the API runs sync +
+  rescore-everyone on that interval in a daemon thread.
+- **Apply**: every posting links to the company's own page (`application_url`).
+
 ## Background work
 
 Long operations (job scan, CV extraction, Career Graph build, market refresh) run as
@@ -115,7 +143,8 @@ FastAPI background tasks tracked by `careeros/shared/background.py`:
 |---|---|---|
 | OpenRouter (LLM) | `careeros/shared/llm.py` | retries 429/5xx/timeouts; `LLMNotConfiguredError` lets callers fall back (reasoning → template) |
 | GitHub | `careeros/evidence/github.py`, `careeros/identity/github_account.py` | user's OAuth token, encrypted at rest (`careeros/shared/crypto.py`) |
-| ApplyPilot | `careeros/jobs/sources/applypilot/` | local SQLite job source, column mapping in `infra/config/plugins.yaml` |
+| Company job boards | `careeros/jobs/sources/ats/` | public Greenhouse / Lever / Ashby APIs and Workday's site JSON; retries 429/5xx |
+| ApplyPilot | `careeros/jobs/sources/applypilot/` | optional import from a local SQLite file (`career-os jobs import-applypilot`) |
 
 ## Web app
 
@@ -130,5 +159,6 @@ FastAPI background tasks tracked by `careeros/shared/background.py`:
 
 - In-process background jobs and OAuth state (single worker).
 - Portfolio crawler fetches user-supplied URLs without blocking private addresses (SSRF).
-- Known bugs pinned as strict `xfail` tests: ApplyPilot `sponsors_visa` heuristic,
-  HN parser substring matching and visa negation.
+- Known bugs pinned as strict `xfail` tests: HN parser substring matching and visa negation.
+- Job requirements come from keyword matching (`extraction.py`); scores inherit its blind
+  spots until extraction moves to the LLM layer.

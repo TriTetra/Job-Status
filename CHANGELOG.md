@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Phase 2 — Company Career Boards | 74 verified company boards (Greenhouse, Lever, Ashby, Workday) read directly, ~9k relevant postings; incremental sync (new/changed/closed) with per-board run log and advisory lock; scores upserted one per (user, job) and rescored only when posting or profile changes; scheduler in the API; `career-os jobs` CLI; apply links to the company site; visa negation + Go/AI keyword bugs fixed | ✅ Tamam | 2026-10-28 |
 | Phase 1 — Own Auth + Coolify Deploy | Clerk removed: invite-only accounts (`career-os user`), argon2id passwords, hashed server-side sessions in an httpOnly cookie, login throttling, CSRF header, no CORS; users.clerk_id → users.id (data kept); Coolify compose stack (db + internal api + public web, /api proxied); DB connect timeout; torch made optional | ✅ Tamam | 2026-10-28 |
 | Refactor Step 8 — Seeds, Scripts, Docs | All seed data in infra/seeds/v1/*.yaml (roles, skills, goals, evidence sources) + one idempotent `career-os seed`; no more killing DB connections; role metadata merge; scripts/ = 3 ops scripts; new docs/ARCHITECTURE.md + DEVELOPMENT.md, stale docs archived | ✅ Tamam | 2026-10-28 |
 | Refactor Step 7 — Web: One Data Path | Web reads only through FastAPI (lib/db + postgres removed; new /api/briefing, GET /api/onboarding/identity); one apiFetch (client + server-only); 4 dashboard pages → server page + client view with loading/error; ESLint 78 → 0; badge/notes/reasoning bugs fixed | ✅ Tamam | 2026-10-28 |
@@ -90,6 +91,57 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Phase 2] — 2026-10-28 — Company career boards ✅
+
+**Neden:** CareerOS kendi başına hiçbir şey taramıyordu — 562 iş tek bir ApplyPilot
+çalıştırmasından geliyordu ve her scan aynı satırları yeniden puanlayıp
+`career_scores`'a yeni satır ekliyordu. Şimdi büyük şirketlerin kendi kariyer
+sayfaları doğrudan okunuyor, başvuru şirketin sitesinde yapılıyor.
+
+### Kaynaklar (`careeros/jobs/sources/ats/`)
+- Greenhouse, Lever, Ashby: herkese açık JSON API'ler, tek istekte tüm board + açıklamalar.
+- Workday: `*.myworkdayjobs.com` JSON uçları; sunucu tarafı arama (`workday_search`), saklanan veya alakasız ilanlar için detay isteği yok, run başına detay sınırı (150) → sınıra takılan board "partial" sayılır ve hiçbir şey kapatılmaz.
+- Paylaşılan HTTP oturumu: 429/5xx için retry + backoff, `Retry-After`'a uyar.
+- `infra/config/companies.yaml`: 85 aday denendi, **74'ü canlı yanıt verdi** ve listede (45 Greenhouse, 3 Lever, 15 Ashby, 11 Workday). Yanıt vermeyenler (HubSpot, DoorDash, Plaid, Netflix, Snowflake…) eklenmedi.
+
+### Sync (`careeros/jobs/ingest.py`)
+- Başlık filtresi: `titles.include` (+ tüm kullanıcıların hedef rolleri) / `titles.exclude`.
+- Artımlı: değişmeyen ilan sadece `last_seen_at`; değişen → yeni `content_hash`; board'dan kalkan → `closed_at`; geri gelen → yeniden açılır.
+- Her board'un son sonucu `job_board_runs` tablosunda (hata, sayılar, süre). Postgres advisory lock: scheduler ve CLI aynı anda çalışmaz.
+- Sadece http(s) linkler saklanır (board verisi güvenilmez — `javascript:` href yok); web tarafında da aynı kontrol.
+
+### Scan (`careeros/jobs/scan.py`)
+- Kaynak artık `jobs` tablosu. Kullanıcının rollerinin tüm kelimelerini (sıra fark etmez) içeren açık ilanlar seçilir: "Backend Engineer" → "Software Engineer, Backend".
+- `input_hash` = ilan içeriği + profil parmak izi + `SCORER_VERSION`; değişmeyen iş yeniden puanlanmaz.
+- `career_scores` artık (user_id, url) başına tek satır, upsert; kapanan işler listelerden düşer.
+- Scheduler: `JOB_SYNC_INTERVAL_HOURS` (compose'da 6) → API içinde sync + herkesi yeniden puanla.
+
+### Düzeltilen hatalar
+- numpy bool'ları explanation JSON'a sızıp skor kaydını düşürüyordu (her scan'i etkileyebilirdi) → JSON-safe.
+- `sponsors_visa = remote` heuristiği → ilan metninden okunur, olumsuzluk dahil ("unable to sponsor" = False, sessiz = bilinmiyor). Scorer "bilinmiyor"u artık "hayır" saymıyor.
+- "Go"/"AI" gibi iki harfli beceriler büyük/küçük harfe duyarlı ("ready to go" ≠ Go).
+
+### API / CLI / Web
+- `GET /api/jobs/boards`, `POST /api/jobs/sync` (tek seferde bir sync), `GET /api/jobs/sync/{id}/status`.
+- `career-os jobs sync | boards | scan EMAIL | import-applypilot`; eski `scan`/`strategy` komutları ve `scripts/sync_jobs_from_applypilot.py` kaldırıldı.
+- Inbox detay paneli: "Apply on <şirket>'s site ↗" linki.
+- Metin çıkarımı tek yerde (`careeros/jobs/extraction.py`), ApplyPilot adapter'ı da onu kullanıyor; config `plugins.yaml → extraction:`.
+
+### Migration `job_boards_001`
+- `jobs`: company_key, ats, external_id, content_hash, posted_at, last_seen_at, closed_at, remote_region, sponsors_visa, salary_currency, department, employment_type.
+- `career_scores`: eski kopyalar silinir (en yenisi kalır, ilk puanlanma zamanı `first_scored_at`'ta), PK (user_id, url).
+
+### Doğrulama
+- 402 test geçti (yeni: parser'lar, extraction, board config, sync mantığı, scheduler, artımlı scan), ruff temiz, web tsc + eslint + build temiz.
+- Geçici bir Postgres'te (canlı DB'ye dokunulmadı): tüm migration zinciri sıfırdan + downgrade/upgrade; 74 board tam sync **4 dk 20 sn, 0 hata, 9.123 ilgili ilan, 48 MB**; 2. sync'te tüm ilanlar "unchanged"; backend/full-stack bir kullanıcı için 434 eşleşme 0,8 sn'de puanlandı, tekrar scan 0,1 sn ve 0 puanlama; kapanan iş listeden düştü; yinelenen skor satırı 0.
+
+### Bilinen açıklar
+- Gereksinimler hâlâ anahtar kelime eşleşmesi → skor kalitesi sınırlı (ör. Python/TS/PG'li 5 yıllık bir backend profili Spotify "Senior Backend Engineer"e SKIP). Faz 3: LLM ile çıkarım.
+- Palantir (Lever) bir run'da 210 sn sürdü; Workday board'ları 40–130 sn. Toplam süre ~4–5 dk, 6 saatte bir için sorun değil.
+- Canlı DB'de migration henüz çalıştırılmadı.
 
 ---
 

@@ -162,10 +162,12 @@ class OpportunityScorer:
 
         # Factor 4: Visa sponsorship
         if user.preferences.work_visa_required:
-            if job.sponsors_visa:
+            if job.sponsors_visa is True:
                 prob *= 0.9  # Slight penalty (still harder)
+            elif job.sponsors_visa is None:
+                prob *= 0.7  # Posting is silent: unknown, not a no
             else:
-                prob *= 0.4  # Major penalty (possible but unlikely)
+                prob *= 0.4  # Posting rules sponsorship out
 
         # Factor 5: Competition estimate
         competition = self._estimate_competition(job)

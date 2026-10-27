@@ -56,6 +56,9 @@ export interface OpportunityExplanation {
   remote?: boolean;
   remote_region?: string;
   source?: string;
+  /** The company's own posting / application page */
+  application_url?: string;
+  posted_at?: string | null;
   matched_skills?: Array<{ name: string; confidence: number }>;
   [key: string]: unknown;
 }

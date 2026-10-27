@@ -5,9 +5,12 @@ the Next.js origin, which forwards /api/* to this service on the internal
 network. There is no CORS — cross-origin browser requests are simply refused.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from careeros.shared.config import get_settings
 from careeros.shared.logging import configure_logging
 
 from .dependencies import get_user_id
@@ -18,7 +21,23 @@ from .routers import (
 
 configure_logging()
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    scheduler = None
+    hours = get_settings().job_sync_interval_hours
+    if hours > 0:
+        from careeros.jobs.scheduler import JobScheduler
+
+        scheduler = JobScheduler(hours)
+        scheduler.start()
+    yield
+    if scheduler:
+        scheduler.stop()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="CareerOS API",
     description="Private career intelligence API",
     version="1.0.0",

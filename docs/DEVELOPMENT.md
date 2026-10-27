@@ -10,6 +10,7 @@ cp .env.example .env                                 # fill in DATABASE_URL, OPE
 alembic -c careeros/db/alembic.ini upgrade head
 career-os seed                                       # reference data from infra/seeds/v1
 career-os user add you@example.com                   # your login (prompts for a password)
+career-os jobs sync                                  # read the company boards (~5 min the first time)
 cd apps/web && npm install                           # web app
 ```
 
@@ -41,6 +42,7 @@ Notable ones:
 | `TOKEN_ENCRYPTION_KEY` | Fernet key for stored OAuth tokens |
 | `GITHUB_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | GitHub OAuth |
 | `WEB_APP_URL` | where OAuth sends the browser back (default http://localhost:3000) |
+| `JOB_SYNC_INTERVAL_HOURS` | API re-reads every company board and rescores everyone this often; `0` (default) = off |
 | `LOG_LEVEL` | default `INFO` |
 | `CAREEROS_E2E_AUTH_BYPASS` | `1` only for local e2e scripts — never deployed |
 
@@ -58,6 +60,21 @@ career-os user list | disable | enable | signout
 Users created under Clerk keep their rows and data — give each one a password with
 `career-os user passwd <email>`.
 
+## Jobs
+
+```bash
+career-os jobs sync                        # all boards (or --company stripe --company nvidia)
+career-os jobs sync --company acme --dry-run   # check a new board without writing
+career-os jobs boards                      # open postings + last sync per company
+career-os jobs scan you@example.com        # score what changed for one user
+career-os jobs import-applypilot           # optional: copy a local ApplyPilot DB in
+```
+
+Add a company: one line in `infra/config/companies.yaml` (the file explains the four
+ATS formats), then `career-os jobs sync --company <key> --dry-run`. Only boards that
+answer with jobs belong there. Tune what gets stored with `titles.include/exclude`;
+each user's target roles (Settings) are added automatically.
+
 ## Deploy (Coolify)
 
 1. New resource → **Docker Compose** → this repo, compose file `docker-compose.prod.yml`.
@@ -66,7 +83,8 @@ Users created under Clerk keep their rows and data — give each one a password 
    (`GITHUB_REDIRECT_URI=https://your-domain/api/oauth/github/callback`).
 3. Give the domain to the **web** service only (port 3000). `api` and `db` stay internal.
 4. Deploy. The API container runs `alembic upgrade head` on every start.
-5. Once, in the api container's terminal: `career-os seed && career-os user add you@example.com`.
+5. Once, in the api container's terminal: `career-os seed && career-os user add you@example.com && career-os jobs sync`.
+   After that the API refreshes boards every `JOB_SYNC_INTERVAL_HOURS` (6 in the compose file).
 
 Moving an existing database in: `pg_dump --no-owner` from the old one, `psql` into the
 `db` service, then redeploy (migrations bring it to head).
@@ -120,7 +138,6 @@ To change reference data, edit the YAML and re-run the seed — not the code.
 
 | Script | Use |
 |---|---|
-| `sync_jobs_from_applypilot.py` | import ApplyPilot's SQLite jobs into PostgreSQL |
 | `backfill_job_metadata.py` | enrich old `career_scores.explanation` rows with job metadata |
 | `backfill_decisions.py` | add Decision Contract v1 to old score rows (rules only, no LLM) |
 

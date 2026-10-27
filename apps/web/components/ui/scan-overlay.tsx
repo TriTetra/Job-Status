@@ -14,7 +14,7 @@ interface ScanOverlayProps {
 const PHASE_COPY: Record<ScanPhase, string> = {
   starting: "Reading your career graph.",
   profile: "Reading your career graph.",
-  fetch: "Scanning live sources.",
+  fetch: "Picking open jobs that match your roles.",
   score: "Weighing every opportunity.",
 };
 

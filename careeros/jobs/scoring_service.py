@@ -5,6 +5,7 @@ created eagerly. SemanticMatcher is only created when match() is needed
 (via MatchingService lazy init).
 """
 
+import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -20,10 +21,21 @@ from careeros.jobs.decision_builder import build_decision
 logger = logging.getLogger(__name__)
 
 
+def _builtin(value):
+    """numpy scalars (the scorer computes with numpy) → plain Python for JSONB."""
+    if hasattr(value, "item"):
+        return value.item()
+    raise TypeError(f"{type(value).__name__} is not JSON serializable")
+
+
+def json_safe(data):
+    return json.loads(json.dumps(data, default=_builtin))
+
+
 class ScoringService:
     """Orchestrates the job-scoring pipeline."""
 
-    def __init__(self, user_id: str = "default"):
+    def __init__(self, user_id: str):
         self.user_id = user_id
         self._scorer = OpportunityScorer(matcher=None)
 
@@ -117,8 +129,9 @@ class ScoringService:
         profile: Optional[UserProfile] = None,
         job_dicts: Optional[Dict[str, Dict]] = None,
         prefs: Optional[Dict] = None,
+        input_hashes: Optional[Dict[str, str]] = None,
     ) -> int:
-        """Persist OpportunityScore list to career_scores table."""
+        """Upsert each score as the user's current score for that job."""
         skill_gaps_map = skill_gaps_map or {}
         scanned_at = scanned_at or datetime.utcnow()
         saved = 0
@@ -154,13 +167,12 @@ class ScoringService:
                         gap_skills=gaps,
                     )
 
-                    # Keep root level source/remote_region for UI backward compatibility
-                    if job_meta_data.get("source") and job_meta_data["source"] != "unknown":
-                        explanation["source"] = job_meta_data["source"]
-                    if job_meta_data.get("remote_region"):
-                        explanation["remote_region"] = job_meta_data["remote_region"]
+                    # Root-level fields the UI reads directly
+                    for key in ("source", "remote_region", "application_url", "company_key", "posted_at"):
+                        if job_meta_data.get(key) and job_meta_data[key] != "unknown":
+                            explanation[key] = job_meta_data[key]
 
-                    repo.save_score(
+                    repo.upsert_score(
                         user_id=self.user_id,
                         url=opp.job.url,
                         scanned_at=scanned_at,
@@ -171,8 +183,9 @@ class ScoringService:
                         market_demand=opp.market_demand,
                         expected_value=opp.expected_value,
                         recommendation=rec_normalized,
-                        skill_gaps=gaps,
-                        explanation=explanation,
+                        skill_gaps=json_safe(gaps),
+                        explanation=json_safe(explanation),
+                        input_hash=(input_hashes or {}).get(opp.job.url),
                     )
                     saved += 1
                 except Exception as e:
@@ -180,7 +193,7 @@ class ScoringService:
 
         return saved
 
-    def _load_prefs(self) -> Dict:
+    def load_prefs(self) -> Dict:
         from careeros.identity.repositories.career_preferences_repo import CareerPreferencesRepository
         try:
             with db.session_scope() as s:
@@ -204,9 +217,10 @@ class ScoringService:
         weights: Optional[Dict[str, float]] = None,
         semantic: bool = False,
         job_meta: Optional[Dict[str, Dict]] = None,
+        input_hashes: Optional[Dict[str, str]] = None,
     ) -> Dict:
         """Score + save + return summary dict."""
-        prefs = self._load_prefs()
+        prefs = self.load_prefs()
         job_dicts = {
             j.url: {
                 "title": j.title,
@@ -228,7 +242,7 @@ class ScoringService:
             else self.score_jobs(jobs, profile, weights)
         )
         saved = self.save_scores(
-            scores, profile=profile, job_dicts=job_dicts, prefs=prefs
+            scores, profile=profile, job_dicts=job_dicts, prefs=prefs, input_hashes=input_hashes
         )
 
         def clean_rec(r):

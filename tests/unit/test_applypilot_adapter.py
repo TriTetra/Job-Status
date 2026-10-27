@@ -47,7 +47,6 @@ def test_missing_values_do_not_crash(adapter):
     assert job["location"] == "Unknown"
 
 
-@pytest.mark.xfail(strict=True, reason="known bug: sponsors_visa is copied from `remote` (adapter.py heuristic)")
 def test_visa_is_unknown_when_posting_does_not_say(adapter, cols):
     job = adapter.normalize(_row(cols, url="u", title="Engineer", company="Acme", location="Remote"))
     assert job["sponsors_visa"] is None

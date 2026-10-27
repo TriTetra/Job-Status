@@ -7,7 +7,7 @@ export const ALL_OPPORTUNITIES = "/api/jobs/?recommendation=ALL&limit=500";
 export const opportunitiesApi = {
   list: () => apiFetch<OpportunityListResponse>(ALL_OPPORTUNITIES),
   preferences: () => apiFetch<InboxPreferences>("/api/preferences"),
-  startScan: () => apiFetch<{ job_id: string }>("/api/jobs/scan?limit=200", { method: "POST" }),
+  startScan: () => apiFetch<{ job_id: string }>("/api/jobs/scan", { method: "POST" }),
   scanStatus: (jobId: string) => apiFetch<ScanStatusResponse>(`/api/jobs/scan/${jobId}/status`),
   /** Records the user's decision as an application status (to_apply | applied | skipped …). */
   decide: (url: string, status: UserDecisionStatus | string) =>

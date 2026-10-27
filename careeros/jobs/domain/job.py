@@ -26,7 +26,7 @@ class Job:
     company_size: str = "unknown"
     industry: str = "unknown"
     funding_stage: str = "unknown"
-    sponsors_visa: bool = False
+    sponsors_visa: Optional[bool] = None  # None = the posting doesn't say
     posted_date: Optional[datetime] = None
     source: str = "unknown"
     fit_score: Optional[float] = None

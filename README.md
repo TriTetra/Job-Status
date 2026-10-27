@@ -36,16 +36,19 @@ $ career-os status
   Applications       4 in pipeline · 1 at phone screen
   Market Signals     42 signals · last scan Jul 2026
 
-$ career-os strategy
+$ career-os jobs sync
 
-  [1]  Anthropic          ML Engineer          91  ██████████  APPLY
-  [2]  Cohere             Backend Engineer      87  ████████░░  APPLY
-  [3]  Hugging Face       Research Engineer     84  ████████░░  APPLY
-  [4]  Modal              Platform Engineer     79  ███████░░░  CONSIDER
-  [5]  Mistral AI         AI Engineer           76  ███████░░░  CONSIDER
+  company         ats         board  kept  new  upd closed  time
+  anthropic       greenhouse    681   380  380    0      0  7.9s
+  openai          ashby         799   495  495    0      0  8.1s
+  nvidia          workday       157   150  150    0      0  133.7s  (partial)
+  ...
+  74 boards · 9123 relevant · 8964 new · 1 updated · 0 closed · 0 failed
 
-  Top skill gap:  distributed inference  (ROI: 2.4×, est. 40 hrs)
-  Next:           open source commit to vllm or triton
+$ career-os jobs scan you@example.com
+
+  ✓ 434 matching open jobs · 434 to score · 0 unchanged
+  ✓ Done — 45 APPLY · 101 CONSIDER · 288 SKIP
 
 $ career-os resume generate --company Anthropic --title "ML Engineer"
 
@@ -109,6 +112,7 @@ cp config.yaml.example config.yaml
 # 4. Seed reference data (countries, visas, salaries, skills, roles, goals, evidence sources)
 career-os seed
 career-os user add you@example.com   # your login; set SESSION_COOKIE_SECURE=false for http://localhost
+career-os jobs sync                  # read 74 company career boards
 
 # 5. Run
 career-os status                                       # CLI
@@ -189,8 +193,12 @@ career-os market trend --skill rust
 career-os
   version                    Print version
   status                     Evidence, scores, pipeline, market summary
-  scan                       Run a full job discovery + scoring pass
-  strategy                   Ranked opportunities + top skill gap
+
+  jobs
+    sync [--company KEY] [--dry-run]   Read company career boards
+    boards                             Open postings + last sync per company
+    scan EMAIL                         Score what changed for one user
+    import-applypilot                  Copy a local ApplyPilot DB in
 
   track
     add --url --title --company --status
@@ -247,7 +255,7 @@ applypilot-jobs/
 │   ├── identity/         users, roles, preferences, GitHub account linking
 │   ├── onboarding/       sign-up wizard → Career Graph
 │   ├── evidence/         evidence_items from GitHub, CV (PDF+LLM), portfolio; aggregation
-│   ├── jobs/             sources (ApplyPilot), scoring, decisions, scan, opportunities
+│   ├── jobs/             company boards + sync, scoring, decisions, incremental scan, scheduler
 │   ├── applications/     application pipeline (+ CLI)
 │   ├── companies/        company profiles, interview memory (+ CLI)
 │   ├── market/           HN + TechCrunch signals, refresh job (+ CLI)

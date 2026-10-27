@@ -68,49 +68,6 @@ job_sources:
         - our team
         - our company
 
-    # Skill extraction settings
-    skill_extraction:
-      prefer_requirements_section: true
-      max_section_chars: 1500
-      keywords:
-        - Python
-        - Java
-        - JavaScript
-        - TypeScript
-        - Go
-        - Rust
-        - "C++"
-        - PyTorch
-        - TensorFlow
-        - scikit-learn
-        - Keras
-        - React
-        - Vue
-        - Angular
-        - Next.js
-        - FastAPI
-        - Django
-        - Flask
-        - Spring Boot
-        - Express.js
-        - AWS
-        - GCP
-        - Azure
-        - Docker
-        - Kubernetes
-        - PostgreSQL
-        - MySQL
-        - MongoDB
-        - Redis
-        - Machine Learning
-        - Deep Learning
-        - Computer Vision
-        - NLP
-        - LLM
-        - AI
-        - MLOps
-        - Data Engineering
-
     # Salary parsing patterns (Python re syntax)
     salary_patterns:
       - pattern: '\$?(\d+)k?-\$?(\d+)k?'
@@ -120,34 +77,80 @@ job_sources:
       - pattern: '(\d+),?000-(\d+),?000'
         multiplier: 1
 
-    # Company size classification
-    company_sizes:
-      big_tech:
-        - google
-        - meta
-        - amazon
-        - apple
-        - microsoft
-        - netflix
-        - openai
-        - anthropic
-        - facebook
-      large:
-        - stripe
-        - databricks
-        - snowflake
-        - confluent
-        - elastic
-        - mongodb
 
-    # Seniority extraction
-    seniority:
-      title_patterns:
-        - pattern: "senior|sr\\."
-          years: 5.0
-        - pattern: "junior|jr\\."
-          years: 1.0
-        - pattern: "lead|principal"
-          years: 7.0
-      description_pattern: '(\d+)\+?\s*years?\s+(?:of\s+)?experience'
-      default_years: 2.0
+# Shared by every job source (careeros/jobs/extraction.py)
+extraction:
+  # Skill extraction settings
+  skill_extraction:
+    prefer_requirements_section: true
+    max_section_chars: 1500
+    keywords:
+      - Python
+      - Java
+      - JavaScript
+      - TypeScript
+      - Go
+      - Rust
+      - "C++"
+      - PyTorch
+      - TensorFlow
+      - scikit-learn
+      - Keras
+      - React
+      - Vue
+      - Angular
+      - Next.js
+      - FastAPI
+      - Django
+      - Flask
+      - Spring Boot
+      - Express.js
+      - AWS
+      - GCP
+      - Azure
+      - Docker
+      - Kubernetes
+      - PostgreSQL
+      - MySQL
+      - MongoDB
+      - Redis
+      - Machine Learning
+      - Deep Learning
+      - Computer Vision
+      - NLP
+      - LLM
+      - AI
+      - MLOps
+      - Data Engineering
+
+  # Company size classification
+  company_sizes:
+    big_tech:
+      - google
+      - meta
+      - amazon
+      - apple
+      - microsoft
+      - netflix
+      - openai
+      - anthropic
+      - facebook
+    large:
+      - stripe
+      - databricks
+      - snowflake
+      - confluent
+      - elastic
+      - mongodb
+
+  # Seniority extraction
+  seniority:
+    title_patterns:
+      - pattern: "senior|sr\\."
+        years: 5.0
+      - pattern: "junior|jr\\."
+        years: 1.0
+      - pattern: "lead|principal"
+        years: 7.0
+    description_pattern: '(\d+)\+?\s*years?\s+(?:of\s+)?experience'
+    default_years: 2.0

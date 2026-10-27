@@ -8,15 +8,14 @@ from sqlalchemy.orm import Session
 from careeros.jobs.models.career_score import CareerScore
 from careeros.applications.repositories.application_repo import ApplicationRepository
 from careeros.jobs import opportunities
-from careeros.jobs.scan import run_scan, scan_jobs
+from careeros.jobs import ingest
+from careeros.jobs.scan import ALL_TIME_HOURS, run_scan, scan_jobs
 from careeros.shared.background import JobForbidden, JobNotFound
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.job import JobListResponse, JobWithScore
 
 router = APIRouter()
-
-ALL_TIME_HOURS = 99999
 
 
 def _serialize(s: CareerScore, user_decision: Optional[dict] = None) -> JobWithScore:
@@ -74,10 +73,10 @@ def get_reasoning(url: str, user_id: str = Depends(get_user_id), session: Sessio
 def start_scan(
     background_tasks: BackgroundTasks,
     hours: int = Query(ALL_TIME_HOURS, ge=0, le=ALL_TIME_HOURS, description="Hours to look back"),
-    limit: int = Query(200, ge=1, le=500),
+    limit: int = Query(500, ge=1, le=5000, description="Max jobs to (re)score in this run"),
     user_id: str = Depends(get_user_id),
 ):
-    """Start a background scan → score → save run. Poll GET /scan/{job_id}/status."""
+    """Score open jobs that changed since your last scan. Poll GET /scan/{job_id}/status."""
     job = scan_jobs.create(user_id, label="scan")
     background_tasks.add_task(run_scan, job, user_id, hours, limit)
     return {"job_id": job.job_id, "status": job.status}
@@ -92,6 +91,32 @@ def scan_status(job_id: str, user_id: str = Depends(get_user_id)):
         raise HTTPException(404, "Job not found")
     except JobForbidden:
         raise HTTPException(403, "Unauthorized")
+
+
+# ── company boards ────────────────────────────────────────────────────────
+
+@router.get("/boards", summary="Company boards and their last sync")
+def list_boards(session: Session = Depends(get_db_session)):
+    return {"boards": ingest.board_status(session)}
+
+
+@router.post("/sync")
+def start_sync(background_tasks: BackgroundTasks, user_id: str = Depends(get_user_id)):
+    """Refresh every company board now, then rescore you. One sync at a time; poll GET /sync/{job_id}/status."""
+    job, created = ingest.sync_jobs.create_unless_active(user_id, ingest.SYNC_LABEL)
+    if created:
+        background_tasks.add_task(ingest.run_sync_job, job, user_id)
+    return {"job_id": job.job_id, "status": job.status, "already_running": not created}
+
+
+@router.get("/sync/{job_id}/status")
+def sync_status(job_id: str):
+    """Sync progress. Shared across users: a sync holds no personal data until its final scan step."""
+    try:
+        job = ingest.sync_jobs.get(job_id)
+    except JobNotFound:
+        raise HTTPException(404, "Job not found")
+    return job.to_dict()
 
 
 @router.get("/{url:path}", response_model=JobWithScore)

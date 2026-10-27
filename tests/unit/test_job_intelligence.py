@@ -19,24 +19,68 @@ def test_skill_level_for(conf, level):
     assert skill_level_for(conf) == level
 
 
-def test_to_scoring_input_respects_limit_and_keeps_metadata():
-    raw = [
-        {"url": f"https://x/{i}", "title": f"T{i}", "remote_region": "Europe", "source": "linkedin",
-         "required_skills": ["Python"], "required_years": 3}
-        for i in range(5)
-    ]
-    jobs, meta = to_scoring_input(raw, limit=2)
-    assert [j.url for j in jobs] == ["https://x/0", "https://x/1"]
-    assert jobs[0].required_years == 3.0
-    assert set(meta) == {"https://x/0", "https://x/1"}
-    assert meta["https://x/0"]["remote_region"] == "Europe"
-    assert meta["https://x/0"]["source"] == "linkedin"
+def _row(url="https://x/1", **kw):
+    from careeros.jobs.models.job import Job as JobRow
+    base = dict(url=url, title="Backend Engineer", company="Acme", location="Remote", description="Python",
+                content_hash="h-" + url, required_skills=["Python"], required_years=3.0, remote=True,
+                remote_region="Europe", ats="greenhouse", source="greenhouse", company_key="acme",
+                application_url=url + "/apply", sponsors_visa=None)
+    base.update(kw)
+    return JobRow(**base)
+
+
+def test_to_scoring_input_maps_rows_and_keeps_metadata():
+    jobs, meta = to_scoring_input([_row()])
+    assert jobs[0].required_years == 3.0 and jobs[0].remote is True and jobs[0].sponsors_visa is None
+    m = meta["https://x/1"]
+    assert m["remote_region"] == "Europe" and m["source"] == "greenhouse"
+    assert m["application_url"] == "https://x/1/apply" and m["company_key"] == "acme"
 
 
 def test_to_scoring_input_defaults():
-    jobs, meta = to_scoring_input([{"url": "u"}], limit=10)
-    assert jobs[0].required_years == 2.0
-    assert meta["u"]["source"] == "unknown" and meta["u"]["remote"] is False
+    jobs, meta = to_scoring_input([_row(required_years=None, remote=None, ats=None, source=None, application_url=None)])
+    assert jobs[0].required_years == 2.0 and jobs[0].remote is False
+    assert meta["https://x/1"]["source"] == "unknown"
+    assert meta["https://x/1"]["application_url"] == "https://x/1"  # the posting page itself
+
+
+def test_only_changed_jobs_are_rescored():
+    from careeros.jobs.scan import input_hash, pick_changed
+
+    a, b, c = _row("a"), _row("b"), _row("c")
+    known = {"a": input_hash(a, "fp1"), "b": "stale"}  # a unchanged, b changed, c new
+    rows, hashes, unchanged = pick_changed([a, b, c], known, "fp1", limit=10)
+    assert [r.url for r in rows] == ["b", "c"] and unchanged == 1
+    assert hashes["c"] == input_hash(c, "fp1")
+
+
+def test_profile_change_rescores_everything_and_limit_applies_in_order():
+    from careeros.jobs.scan import input_hash, pick_changed
+
+    rows_in = [_row(u) for u in "abcd"]
+    known = {r.url: input_hash(r, "old-profile") for r in rows_in}
+    rows, hashes, unchanged = pick_changed(rows_in, known, "new-profile", limit=2)
+    assert [r.url for r in rows] == ["a", "b"] and set(hashes) == {"a", "b"} and unchanged == 0
+
+
+def test_posting_edit_changes_input_hash():
+    from careeros.jobs.scan import input_hash
+
+    assert input_hash(_row(content_hash="v1"), "fp") != input_hash(_row(content_hash="v2"), "fp")
+    # imports without a content hash still hash their text
+    assert input_hash(_row(content_hash=None, description="x"), "fp") != input_hash(_row(content_hash=None, description="y"), "fp")
+
+
+def test_profile_fingerprint_tracks_skills_and_prefs():
+    from careeros.identity.domain.profile import UserProfile
+    from careeros.identity.domain.skill import Skill
+    from careeros.jobs.scan import profile_fingerprint
+
+    p1 = UserProfile(name="A", email="", years_experience=3, skills=[Skill("Python", SkillLevel.EXPERT)])
+    p2 = UserProfile(name="A", email="", years_experience=3, skills=[Skill("Python", SkillLevel.WORKING)])
+    assert profile_fingerprint(p1, {}) == profile_fingerprint(p1, {})
+    assert profile_fingerprint(p1, {}) != profile_fingerprint(p2, {})
+    assert profile_fingerprint(p1, {}) != profile_fingerprint(p1, {"salary_min": 100000})
 
 
 def test_rejected_and_withdrawn_count_as_skipped():
@@ -67,9 +111,9 @@ def _sql(**kwargs):
     return str(session.stmt.compile(dialect=postgresql.dialect()))
 
 
-def test_opportunities_query_without_filters_is_latest_per_url_only():
+def test_opportunities_query_hides_closed_jobs_and_has_no_filters_by_default():
     sql = _sql(min_score=None, recommendation=None)
-    assert "max(career_scores.scanned_at)" in sql
+    assert "LEFT OUTER JOIN jobs" in sql and "jobs.closed_at IS NULL" in sql
     assert "career_scores.recommendation LIKE" not in sql
     assert "career_scores.career_score >=" not in sql
     assert "LIMIT" in sql
@@ -81,44 +125,7 @@ def test_opportunities_query_with_filters():
     assert "career_scores.career_score >=" in sql
 
 
-# ── scan job (sources and scorer faked) ───────────────────────────────────
-
-def test_run_scan_happy_path(monkeypatch):
-    from types import SimpleNamespace
-
-    import careeros.jobs.sources.loader as loader
-    import careeros.jobs.scoring_service as scoring
-    from careeros.jobs import scan
-    from careeros.shared.background import JobStore
-
-    profile = SimpleNamespace(skills=["Python"], years_experience=3)
-    monkeypatch.setattr(scan, "load_profile", lambda uid: profile)
-
-    seen = {}
-
-    class Source:
-        def scan_and_normalize(self, hours_old, min_score):
-            seen["source"] = (hours_old, min_score)
-            return [{"url": "u1"}, {"url": "u2"}, {"url": "u3"}]
-
-    class Scorer:
-        def __init__(self, user_id):
-            seen["user"] = user_id
-
-        def run_pipeline(self, jobs, prof, semantic, job_meta):
-            seen["scored"] = [j.url for j in jobs]
-            return {"scored": len(jobs), "apply": 1, "consider": 1, "skip": 0}
-
-    monkeypatch.setattr(loader, "load_job_source_plugin", lambda name: Source())
-    monkeypatch.setattr(scoring, "ScoringService", Scorer)
-
-    job = JobStore().create("user_1")
-    scan.run_scan(job, "user_1", hours=48, limit=2)
-
-    assert job.status == "completed" and job.result["apply"] == 1
-    assert seen == {"source": (48, scan.SOURCE_MIN_FIT_SCORE), "user": "user_1", "scored": ["u1", "u2"]}
-    assert "1 APPLY" in job.logs[-1]["message"]
-
+# ── scan job ──────────────────────────────────────────────────────────────
 
 def test_run_scan_without_profile_fails_with_guidance(monkeypatch):
     from careeros.jobs import scan
@@ -144,5 +151,5 @@ def test_count_latest_counts_all_matches_without_limit():
     session = _CountSession()
     assert CareerScoreRepository(session).count_latest("u1", recommendation="APPLY") == 7
     sql = str(session.stmt.compile(dialect=postgresql.dialect()))
-    assert "count(*)" in sql and "LIMIT" not in sql
+    assert "count(*)" in sql and "LIMIT" not in sql and "jobs.closed_at IS NULL" in sql
     assert "career_scores.recommendation LIKE" in sql

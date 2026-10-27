@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from careeros.applications.models.application import Application
@@ -12,6 +12,7 @@ from careeros.identity.models.career_preferences import CareerPreferences
 from careeros.identity.models.connected_account import ConnectedAccount
 from careeros.identity.models.user import User
 from careeros.jobs.models.career_score import CareerScore
+from careeros.jobs.repositories.career_score_repo import CareerScoreRepository
 
 TOP_OPPORTUNITIES = 2
 HIRING_COMPANIES = 3
@@ -20,24 +21,10 @@ TONES = {"warm", "direct", "analytical"}
 
 
 def _top_opportunities(session: Session, user_id: str) -> list[dict]:
-    """Latest score per URL, APPLY/CONSIDER only, best first."""
-    latest = (
-        select(CareerScore.url, func.max(CareerScore.scanned_at).label("latest"))
-        .where(CareerScore.user_id == user_id)
-        .group_by(CareerScore.url)
-        .subquery()
+    """Open APPLY/CONSIDER opportunities, best first."""
+    rows = CareerScoreRepository(session).get_top_opportunities(
+        min_score=None, recommendations=("APPLY", "CONSIDER"), limit=TOP_OPPORTUNITIES, user_id=user_id,
     )
-    rows = session.execute(
-        select(CareerScore)
-        .join(latest, and_(CareerScore.url == latest.c.url, CareerScore.scanned_at == latest.c.latest))
-        .where(
-            CareerScore.user_id == user_id,
-            # prefix: older rows store the full scorer text ("APPLY - Good fit")
-            or_(CareerScore.recommendation.startswith("APPLY"), CareerScore.recommendation.startswith("CONSIDER")),
-        )
-        .order_by(CareerScore.career_score.desc())
-        .limit(TOP_OPPORTUNITIES)
-    ).scalars()
     return [
         {
             "url": s.url,
@@ -100,7 +87,7 @@ def get_briefing_facts(session: Session, user_id: str) -> dict:
                 EvidenceItem.user_id == user_id, EvidenceItem.created_at > since
             ).count(),
             "new_scores": session.query(CareerScore).filter(
-                CareerScore.user_id == user_id, CareerScore.scanned_at > since
+                CareerScore.user_id == user_id, CareerScore.first_scored_at > since
             ).count(),
         },
         "live_applications": [{"company": c, "title": t, "status": s} for c, t, s in live_apps],

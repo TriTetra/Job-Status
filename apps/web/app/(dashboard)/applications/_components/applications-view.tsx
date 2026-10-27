@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { Button } from "@/components/shared/button";
+import { safeHttpUrl } from "@/lib/utils";
 import { Plus, Search, ExternalLink, Loader2, X, Check } from "lucide-react";
 import {
   applicationsApi,
@@ -327,6 +328,7 @@ function ApplicationCard({
   compact?: boolean;
 }) {
   const displayCompany = app.company || hostFromUrl(app.url);
+  const link = safeHttpUrl(app.url);
   const transitions = STATUS_TRANSITIONS[app.status] ?? [];
 
   return (
@@ -351,18 +353,20 @@ function ApplicationCard({
               {displayCompany} · {formatDate(app.applied_at)}
             </div>
           </div>
-          <a
-            href={app.url}
-            target="_blank"
-            rel="noreferrer"
-            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <ExternalLink
-              className="h-3.5 w-3.5"
-              strokeWidth={1.75}
-              style={{ color: "var(--text-muted)" }}
-            />
-          </a>
+          {link && (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ExternalLink
+                className="h-3.5 w-3.5"
+                strokeWidth={1.75}
+                style={{ color: "var(--text-muted)" }}
+              />
+            </a>
+          )}
         </div>
 
         {/* Status transition buttons */}

@@ -1,7 +1,9 @@
-"""Career score model — per-scan scoring results stored as time series."""
+"""Career score model — one current score per (user, job)."""
 
 from datetime import datetime
-from sqlalchemy import Float, Index, String
+from typing import Optional
+
+from sqlalchemy import DateTime, Float, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -10,15 +12,17 @@ from careeros.db.base import Base, TimestampMixin
 
 class CareerScore(Base, TimestampMixin):
     """
-    Every scan inserts a new row (url, scanned_at) composite PK.
-    user_id isolates rows per user; existing rows default to 'default'.
+    Upserted on (user_id, url). A job is rescored only when its input_hash
+    (posting content + the user's profile fingerprint + scorer version) changes.
     """
 
     __tablename__ = "career_scores"
 
+    user_id: Mapped[str] = mapped_column(String(100), primary_key=True)
     url: Mapped[str] = mapped_column(String(2048), primary_key=True)
-    scanned_at: Mapped[datetime] = mapped_column(primary_key=True, default=datetime.utcnow)
-    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
+    scanned_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)  # last scored
+    first_scored_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    input_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
 
     # Scores (0–100)
     career_score: Mapped[float] = mapped_column(Float, nullable=False)
@@ -28,10 +32,9 @@ class CareerScore(Base, TimestampMixin):
     market_demand: Mapped[float] = mapped_column(Float, nullable=False)
     expected_value: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # APPLY | CONSIDER | SKIP (full text from OpportunityScorer)
+    # APPLY | CONSIDER | SKIP
     recommendation: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    # JSONB: native indexing, not TEXT blobs
     skill_gaps: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     explanation: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 

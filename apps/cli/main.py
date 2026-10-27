@@ -5,7 +5,7 @@ Usage:
     career-os --help            (after `pip install -e .`)
     python -m apps.cli.main --help
     python -m apps.cli.main status
-    python -m apps.cli.main scan --hours 720
+    python -m apps.cli.main jobs sync
     python -m apps.cli.main track list
     python -m apps.cli.main resume generate -c Google -t "ML Engineer"
     python -m apps.cli.main company list
@@ -40,6 +40,7 @@ app = typer.Typer(
 _SUB_CLIS = [
     # (module, Typer attribute, command name, help)
     ("careeros.identity.cli", "app", "user", "Manage who can sign in"),
+    ("careeros.jobs.cli", "app", "jobs", "Company boards, sync and scoring"),
     ("careeros.applications.cli", "app", "track", "Application tracking pipeline"),
     ("careeros.resume.cli", "app", "resume", "Target-aware resume generation"),
     ("careeros.companies.cli", "app", "company", "Company intelligence and memory"),
@@ -115,93 +116,6 @@ def seed(
     for name in SEEDS:
         if name in counts:
             typer.echo(f"  {name:<10} {counts[name]}")
-
-
-# ---------------------------------------------------------------------------
-# scan
-# ---------------------------------------------------------------------------
-
-@app.command()
-def scan(
-    hours: int = typer.Option(72, "--hours", "-h", help="Hours to look back"),
-    min_score: int = typer.Option(7, "--min-score", help="Minimum ApplyPilot fit score"),
-):
-    """Scan jobs from ApplyPilot and store results."""
-    try:
-        from careeros.jobs.sources.loader import load_job_source_plugin
-        plugin = load_job_source_plugin("applypilot")
-        jobs = plugin.scan_and_normalize(hours_old=hours, min_score=min_score)
-        typer.echo(f"Found {len(jobs)} jobs (last {hours}h, min_score={min_score})")
-    except NotImplementedError as e:
-        typer.echo(f"[scan] ApplyPilot plugin not yet implemented: {e}", err=True)
-        raise typer.Exit(code=1)
-    except Exception as e:
-        typer.echo(f"[scan] Error: {e}", err=True)
-        raise typer.Exit(code=1)
-
-
-# ---------------------------------------------------------------------------
-# strategy
-# ---------------------------------------------------------------------------
-
-@app.command()
-def strategy(
-    user_id: str = typer.Option("default", "--user", "-u", help="User ID"),
-    hours: int = typer.Option(720, "--hours", help="Hours to look back for jobs"),
-    limit: int = typer.Option(50, "--limit", help="Max jobs to score"),
-    semantic: bool = typer.Option(False, "--semantic", help="Use semantic matcher (slow, downloads model)"),
-):
-    """Run full career strategy: scan → score → save → print summary."""
-    from careeros.identity.profile_service import ProfileService
-    from careeros.jobs.scoring_service import ScoringService
-
-    typer.echo(f"Loading profile for user: {user_id}")
-    profile_svc = ProfileService(user_id=user_id)
-    profile = profile_svc.get_profile()
-    if profile is None:
-        typer.echo(
-            "  No profile found in DB. Run `career-os track add` or seed user_settings first.",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-    typer.echo(f"  Profile: {profile.name or '(unnamed)'}, {profile.years_experience}y experience, {len(profile.skills)} skills")
-
-    typer.echo(f"\nLoading jobs (last {hours}h)...")
-    try:
-        from careeros.jobs.sources.loader import load_job_source_plugin
-        plugin = load_job_source_plugin("applypilot")
-        raw_jobs = plugin.scan_and_normalize(hours_old=hours, min_score=7)
-    except Exception as e:
-        typer.echo(f"  [strategy] Job source error: {e}", err=True)
-        raise typer.Exit(code=1)
-
-    from careeros.jobs.domain.job import Job
-    jobs = [
-        Job(
-            id=j["url"],
-            title=j.get("title", ""),
-            company=j.get("company", ""),
-            description=j.get("description", ""),
-            url=j["url"],
-            location=j.get("location", ""),
-            remote=j.get("remote", False),
-            required_skills=j.get("required_skills", []),
-            required_years=float(j.get("required_years", 2.0)),
-        )
-        for j in raw_jobs[:limit]
-    ]
-    typer.echo(f"  Loaded {len(jobs)} jobs")
-
-    typer.echo(f"\nScoring ({'semantic' if semantic else 'fast'})...")
-    scoring_svc = ScoringService(user_id=user_id)
-    result = scoring_svc.run_pipeline(jobs, profile, semantic=semantic)
-
-    typer.echo("\nResults:")
-    typer.echo(f"  Scored:      {result['scored']}")
-    typer.echo(f"  Saved to DB: {result['saved_to_db']}")
-    typer.echo(f"  APPLY:       {result['apply']}")
-    typer.echo(f"  CONSIDER:    {result['consider']}")
-    typer.echo(f"  SKIP:        {result['skip']}")
 
 
 if __name__ == "__main__":

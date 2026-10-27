@@ -1,0 +1,140 @@
+# Company career boards CareerOS reads directly (careeros/jobs/boards.py).
+# Postings link straight to the company's own page — you apply there.
+#
+# Add a company: find its board on the careers page URL and add one line.
+#   greenhouse  boards.greenhouse.io/<board>  or  job-boards.greenhouse.io/<board>
+#   lever       jobs.lever.co/<board>
+#   ashby       jobs.ashbyhq.com/<board>
+#   workday     <tenant>.wdN.myworkdayjobs.com/<site>   → host, tenant, site
+# Check it with:  career-os jobs sync --company <key> --dry-run
+#
+# Every board here answered with open jobs on 2026-10-28.
+
+# Only postings whose title matches are stored. Users' target roles (Settings →
+# preferences) are added to `include` automatically.
+titles:
+  include:
+    - engineer
+    - engineering
+    - developer
+    - software
+    - data
+    - machine learning
+    - ML
+    - AI
+    - scientist
+    - research
+    - SRE
+    - site reliability
+    - devops
+    - platform
+    - infrastructure
+    - security
+    - architect
+    - backend
+    - frontend
+    - full stack
+    - fullstack
+    - mobile
+    - iOS
+    - Android
+    - cloud
+    - analytics
+  exclude:
+    - recruiter
+    - recruiting
+    - sourcer
+    - account executive
+    - account manager
+    - counsel
+    - attorney
+    - paralegal
+    - accountant
+    - payroll
+    - executive assistant
+
+# Workday has no cheap "list everything": search server-side for these terms
+workday_search: [software, engineer, data, machine learning]
+
+companies:
+  # ── Greenhouse ──────────────────────────────────────────────────────────
+  - {key: affirm, name: Affirm, ats: greenhouse, board: affirm}
+  - {key: airbnb, name: Airbnb, ats: greenhouse, board: airbnb}
+  - {key: airtable, name: Airtable, ats: greenhouse, board: airtable}
+  - {key: anduril, name: Anduril, ats: greenhouse, board: andurilindustries}
+  - {key: anthropic, name: Anthropic, ats: greenhouse, board: anthropic}
+  - {key: asana, name: Asana, ats: greenhouse, board: asana}
+  - {key: brex, name: Brex, ats: greenhouse, board: brex}
+  - {key: canonical, name: Canonical, ats: greenhouse, board: canonical}
+  - {key: carta, name: Carta, ats: greenhouse, board: carta}
+  - {key: checkr, name: Checkr, ats: greenhouse, board: checkr}
+  - {key: chime, name: Chime, ats: greenhouse, board: chime}
+  - {key: cloudflare, name: Cloudflare, ats: greenhouse, board: cloudflare}
+  - {key: coinbase, name: Coinbase, ats: greenhouse, board: coinbase}
+  - {key: databricks, name: Databricks, ats: greenhouse, board: databricks}
+  - {key: datadog, name: Datadog, ats: greenhouse, board: datadog}
+  - {key: discord, name: Discord, ats: greenhouse, board: discord}
+  - {key: dropbox, name: Dropbox, ats: greenhouse, board: dropbox}
+  - {key: duolingo, name: Duolingo, ats: greenhouse, board: duolingo}
+  - {key: elastic, name: Elastic, ats: greenhouse, board: elastic}
+  - {key: figma, name: Figma, ats: greenhouse, board: figma}
+  - {key: flexport, name: Flexport, ats: greenhouse, board: flexport}
+  - {key: gitlab, name: GitLab, ats: greenhouse, board: gitlab}
+  - {key: gusto, name: Gusto, ats: greenhouse, board: gusto}
+  - {key: instacart, name: Instacart, ats: greenhouse, board: instacart}
+  - {key: intercom, name: Intercom, ats: greenhouse, board: intercom}
+  - {key: lyft, name: Lyft, ats: greenhouse, board: lyft}
+  - {key: mercury, name: Mercury, ats: greenhouse, board: mercury}
+  - {key: mongodb, name: MongoDB, ats: greenhouse, board: mongodb}
+  - {key: nuro, name: Nuro, ats: greenhouse, board: nuro}
+  - {key: okta, name: Okta, ats: greenhouse, board: okta}
+  - {key: pinterest, name: Pinterest, ats: greenhouse, board: pinterest}
+  - {key: reddit, name: Reddit, ats: greenhouse, board: reddit}
+  - {key: robinhood, name: Robinhood, ats: greenhouse, board: robinhood}
+  - {key: roblox, name: Roblox, ats: greenhouse, board: roblox}
+  - {key: samsara, name: Samsara, ats: greenhouse, board: samsara}
+  - {key: scaleai, name: Scale AI, ats: greenhouse, board: scaleai}
+  - {key: sofi, name: SoFi, ats: greenhouse, board: sofi}
+  - {key: squarespace, name: Squarespace, ats: greenhouse, board: squarespace}
+  - {key: stripe, name: Stripe, ats: greenhouse, board: stripe}
+  - {key: toast, name: Toast, ats: greenhouse, board: toast}
+  - {key: twilio, name: Twilio, ats: greenhouse, board: twilio}
+  - {key: twitch, name: Twitch, ats: greenhouse, board: twitch}
+  - {key: vercel, name: Vercel, ats: greenhouse, board: vercel}
+  - {key: waymo, name: Waymo, ats: greenhouse, board: waymo}
+  - {key: zscaler, name: Zscaler, ats: greenhouse, board: zscaler}
+
+  # ── Lever ───────────────────────────────────────────────────────────────
+  - {key: palantir, name: Palantir, ats: lever, board: palantir}
+  - {key: spotify, name: Spotify, ats: lever, board: spotify}
+  - {key: zoox, name: Zoox, ats: lever, board: zoox}
+
+  # ── Ashby ───────────────────────────────────────────────────────────────
+  - {key: clickhouse, name: ClickHouse, ats: ashby, board: clickhouse}
+  - {key: cohere, name: Cohere, ats: ashby, board: cohere}
+  - {key: elevenlabs, name: ElevenLabs, ats: ashby, board: elevenlabs}
+  - {key: harvey, name: Harvey, ats: ashby, board: harvey}
+  - {key: linear, name: Linear, ats: ashby, board: linear}
+  - {key: modal, name: Modal, ats: ashby, board: modal}
+  - {key: notion, name: Notion, ats: ashby, board: notion}
+  - {key: openai, name: OpenAI, ats: ashby, board: openai}
+  - {key: perplexity, name: Perplexity, ats: ashby, board: perplexity}
+  - {key: posthog, name: PostHog, ats: ashby, board: posthog}
+  - {key: ramp, name: Ramp, ats: ashby, board: ramp}
+  - {key: replit, name: Replit, ats: ashby, board: replit}
+  - {key: runway, name: Runway, ats: ashby, board: runway}
+  - {key: supabase, name: Supabase, ats: ashby, board: supabase}
+  - {key: vanta, name: Vanta, ats: ashby, board: vanta}
+
+  # ── Workday ─────────────────────────────────────────────────────────────
+  - {key: adobe, name: Adobe, ats: workday, host: adobe.wd5.myworkdayjobs.com, tenant: adobe, site: external_experienced}
+  - {key: autodesk, name: Autodesk, ats: workday, host: autodesk.wd1.myworkdayjobs.com, tenant: autodesk, site: Ext}
+  - {key: intel, name: Intel, ats: workday, host: intel.wd1.myworkdayjobs.com, tenant: intel, site: External}
+  - {key: mastercard, name: Mastercard, ats: workday, host: mastercard.wd1.myworkdayjobs.com, tenant: mastercard, site: CorporateCareers}
+  - {key: moderna, name: Moderna, ats: workday, host: modernatx.wd1.myworkdayjobs.com, tenant: modernatx, site: M_tx}
+  - {key: motorola, name: Motorola Solutions, ats: workday, host: motorolasolutions.wd5.myworkdayjobs.com, tenant: motorolasolutions, site: Careers}
+  - {key: nvidia, name: NVIDIA, ats: workday, host: nvidia.wd5.myworkdayjobs.com, tenant: nvidia, site: NVIDIAExternalCareerSite}
+  - {key: paypal, name: PayPal, ats: workday, host: paypal.wd1.myworkdayjobs.com, tenant: paypal, site: jobs}
+  - {key: salesforce, name: Salesforce, ats: workday, host: salesforce.wd12.myworkdayjobs.com, tenant: salesforce, site: External_Career_Site}
+  - {key: thomsonreuters, name: Thomson Reuters, ats: workday, host: thomsonreuters.wd5.myworkdayjobs.com, tenant: thomsonreuters, site: External_Career_Site}
+  - {key: workday, name: Workday, ats: workday, host: workday.wd5.myworkdayjobs.com, tenant: workday, site: Workday}

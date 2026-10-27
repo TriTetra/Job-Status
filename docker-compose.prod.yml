@@ -6,7 +6,8 @@
 #   db   — PostgreSQL 16 with a persistent volume. Not exposed.
 #
 # Set the variables marked "required" in Coolify → Environment Variables.
-# First deploy, then in the api container terminal:  career-os seed && career-os user add you@example.com
+# First deploy, then in the api container terminal:
+#   career-os seed && career-os user add you@example.com && career-os jobs sync
 
 services:
   db:
@@ -42,6 +43,7 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}    # ${WEB_APP_URL}/api/oauth/github/callback
       SESSION_COOKIE_SECURE: "true"
+      JOB_SYNC_INTERVAL_HOURS: ${JOB_SYNC_INTERVAL_HOURS:-6}   # company boards refresh
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - uploads:/app/personal                          # uploaded CVs

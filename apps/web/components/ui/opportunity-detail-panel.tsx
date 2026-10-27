@@ -3,9 +3,10 @@
 import type { Opportunity, Criterion } from "@/features/opportunities/types";
 import { Button } from "@/components/shared/button";
 import { NarrativeText } from "@/components/shared/narrative-text";
-import { Check, X, Minus, Loader2 } from "lucide-react";
+import { Check, X, Minus, Loader2, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api/client";
+import { safeHttpUrl } from "@/lib/utils";
 import { WhyModal } from "./why-modal";
 
 interface OpportunityDetailPanelProps {
@@ -47,6 +48,7 @@ export function OpportunityDetailPanel({
   const region = explanation?.remote_region;
   const source = explanation?.source;
   const scannedAt = opp.scanned_at;
+  const postingUrl = safeHttpUrl(explanation?.application_url) ?? safeHttpUrl(opp.url);
 
   const criteria = decision?.criteria ?? [];
   const reasoning = decision?.reasoning;
@@ -243,6 +245,18 @@ export function OpportunityDetailPanel({
           <Button variant="ghost" onClick={onSkip}>
             Skip
           </Button>
+          {postingUrl && (
+            <a
+              href={postingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto text-sm font-medium inline-flex items-center gap-1"
+              style={{ color: "var(--accent)" }}
+            >
+              Apply on {company}&apos;s site
+              <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </a>
+          )}
         </div>
 
         <button

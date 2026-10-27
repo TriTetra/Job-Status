@@ -27,6 +27,7 @@ EXPECTED_PATHS = {
     "/api/goals/catalog",
     "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan",
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",
+    "/api/jobs/boards", "/api/jobs/sync", "/api/jobs/sync/{job_id}/status",
     "/api/market/refresh", "/api/market/refresh/{job_id}/status", "/api/market/signals",
     "/api/market/summary", "/api/market/trend/{skill}",
     "/api/oauth/github", "/api/oauth/github/authorize", "/api/oauth/github/callback",
