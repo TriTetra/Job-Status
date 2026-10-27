@@ -1,9 +1,12 @@
 """Plugin interfaces for CareerOS extensions."""
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -109,5 +112,5 @@ class JobSourcePlugin(ABC):
             try:
                 result.append(self.normalize(raw))
             except Exception as exc:
-                print(f"[{name}] normalize failed: {exc}")
+                logger.warning("[%s] normalize failed: %s", name, exc)
         return result

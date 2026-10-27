@@ -1,17 +1,8 @@
 """CLI for Market Intelligence."""
 
 from datetime import datetime
-from pathlib import Path
 
 
-try:
-    from dotenv import load_dotenv
-    for _env in [Path(".env"), Path("services/hiring-agent/.env")]:
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
 
 import typer
 
@@ -96,4 +87,7 @@ def summary(days: int = typer.Option(7)):
 
 
 if __name__ == "__main__":
+    from shared.logging import configure_logging
+
+    configure_logging()
     app()

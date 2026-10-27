@@ -11,11 +11,14 @@ All config (paths, CSV columns, enrichment keys) comes from
 config/plugins.yaml via the HiringAgentPlugin.
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
 from plugins.plugin_interface import ResumeData
 from plugins.resume_parsers.hiring_agent import HiringAgentPlugin
+
+logger = logging.getLogger(__name__)
 
 
 class HiringAgentAdapter:
@@ -50,21 +53,21 @@ def build_and_enrich(pdf_path: str | Path, session) -> ResumeData:
     pdf_path = Path(pdf_path).resolve()
     basename = pdf_path.stem
 
-    print("Parsing resume...")
+    logger.info("Parsing resume")
     resume_data = plugin.parse(pdf_path, basename)
 
-    print("Building Evidence Graph...")
+    logger.info("Building Evidence Graph")
     from services.resume_intelligence.application.evidence_builder import (
         EvidenceBuilder,
     )
     builder = EvidenceBuilder(plugin)
     confidences = builder._write_to_db(builder._extract_records(resume_data))
 
-    print("Enriching career_scores...")
+    logger.info("Enriching career_scores")
     payload = plugin.get_enrichment_payload(resume_data)
     payload["skill_confidence"] = confidences
     n = _enrich_db(session, payload)
-    print(f"Updated {n} career_score rows")
+    logger.info("Updated %d career_score rows", n)
 
     return resume_data
 

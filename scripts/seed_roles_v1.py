@@ -7,29 +7,14 @@ Usage:
     python scripts/seed_roles_v1.py
 """
 
-import os
 import json
 import uuid
-from pathlib import Path
-
-# Add project root to path
-PROJECT_ROOT = Path(__file__).parent.parent
 
 from sqlalchemy import text, create_engine
 
+from shared.config import get_settings
 
-def get_db_url():
-    """Read DATABASE_URL from .env file."""
-    env_path = PROJECT_ROOT / ".env"
-    if env_path.exists():
-        for line in open(env_path):
-            line = line.strip()
-            if line.startswith("DATABASE_URL="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
-    return os.environ.get("DATABASE_URL")
-
-
-engine = create_engine(get_db_url(), pool_pre_ping=True)
+engine = create_engine(get_settings().database_url, pool_pre_ping=True)
 
 # ─── 180 Curated Role Definitions ──────────────────────────────────
 ROLES_SEED = [

@@ -5,6 +5,7 @@ created eagerly. SemanticMatcher is only created when match() is needed
 (via MatchingService lazy init).
 """
 
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -13,6 +14,8 @@ from core.db.repositories import CareerScoreRepository
 from core.domain import Job, OpportunityScore, UserProfile
 from core.intelligence import OpportunityScorer
 from .decision_builder import build_decision
+
+logger = logging.getLogger(__name__)
 
 
 class ScoringService:
@@ -171,7 +174,7 @@ class ScoringService:
                     )
                     saved += 1
                 except Exception as e:
-                    print(f"  [ScoringService] save failed for {opp.job.url}: {e}")
+                    logger.warning("Saving score failed for %s: %s", opp.job.url, e)
 
         return saved
 

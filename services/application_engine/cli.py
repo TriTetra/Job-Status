@@ -330,4 +330,7 @@ def migrate_from_markdown(
 
 
 if __name__ == "__main__":
+    from shared.logging import configure_logging
+
+    configure_logging()
     app()

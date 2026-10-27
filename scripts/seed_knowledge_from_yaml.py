@@ -11,15 +11,6 @@ import sys
 from pathlib import Path
 
 
-try:
-    from dotenv import load_dotenv
-    for _env in [Path(".env"), Path("services/hiring-agent/.env")]:
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
-
 import yaml
 
 from core.db.connection import db
@@ -209,4 +200,7 @@ def main():
 
 
 if __name__ == "__main__":
+    from shared.logging import configure_logging
+
+    configure_logging()
     sys.exit(main())

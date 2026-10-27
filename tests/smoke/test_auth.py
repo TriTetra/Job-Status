@@ -11,7 +11,10 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
-from apps.api.app.dependencies import E2E_BYPASS_ENV, get_db_session, get_user_id
+from apps.api.app.dependencies import get_db_session, get_user_id
+from shared.config import get_settings
+
+E2E_BYPASS_ENV = "CAREEROS_E2E_AUTH_BYPASS"
 
 # Deliberately unauthenticated (see apps/api/app/main.py)
 PUBLIC_ROUTES = {
@@ -20,6 +23,14 @@ PUBLIC_ROUTES = {
     ("POST", "/api/webhooks/clerk"),             # Svix signature instead
     ("GET", "/api/oauth/github/callback"),       # single-use OAuth state instead
 }
+
+
+@pytest.fixture(autouse=True)
+def _fresh_settings():
+    """Settings are cached per process; tests below change env vars."""
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture(scope="module")
@@ -106,16 +117,12 @@ def webhook_client(app, client):
 
 
 def test_webhook_rejected_when_secret_missing(webhook_client, monkeypatch):
-    from apps.api.app.routers import webhooks
-
-    monkeypatch.setattr(webhooks, "CLERK_WEBHOOK_SECRET", None)
+    monkeypatch.delenv("CLERK_WEBHOOK_SECRET", raising=False)
     assert webhook_client.post("/api/webhooks/clerk", content=b"{}").status_code == 503
 
 
 def test_webhook_rejects_bad_signature(webhook_client, monkeypatch):
-    from apps.api.app.routers import webhooks
-
-    monkeypatch.setattr(webhooks, "CLERK_WEBHOOK_SECRET", "whsec_dGVzdHNlY3JldA==")
+    monkeypatch.setenv("CLERK_WEBHOOK_SECRET", "whsec_dGVzdHNlY3JldA==")
     resp = webhook_client.post(
         "/api/webhooks/clerk",
         content=b"{}",

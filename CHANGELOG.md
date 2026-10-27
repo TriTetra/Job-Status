@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 3 — shared/ Infrastructure | New `shared/` package: one settings object, one LLM client (retries, JSON parsing), one logging setup; 4 OpenRouter clients → 1, 4 .env loaders → 1, library prints → logging, architecture guard tests | ✅ Tamam | 2026-10-28 |
 | Refactor Step 2 — Single Package & Imports | Repo installable (`pip install -e .`), API imported as `apps.api.app`, `career-os` console script, all sys.path hacks removed, career_os retired into core, core.domain ↔ core.db.models cycle broken | ✅ Tamam | 2026-10-28 |
 | Security Fix — API Auth Hardening + Scan Fix | Router-level auth on all API routers, no anonymous "default" fallback, e2e bypass opt-in only, Clerk webhook fails closed, resume user from token, single in-flight market refresh, scan job_meta kwarg fix, market page sends Clerk token | ✅ Tamam | 2026-10-28 |
 | Refactor Step 1 — Dead Code Removal | Removed unused core/events, memory, timeline, 6 unused core/domain subpackages, career_os/data, GapAnalyzer, MatchingService, CareerDecisionEngine, 9 debug scripts, 9 unused web components, 4 unused npm deps; API import 28s → 1.7s | ✅ Tamam | 2026-10-28 |
@@ -82,6 +83,43 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 3] — 2026-10-28 — shared/ Infrastructure ✅
+
+### Yapılan
+
+New top-level package **`shared/`** — cross-cutting infrastructure, no domain knowledge:
+
+**`shared/config.py` — one config**
+- `load_env()`: the only `.env` loader (process env wins, idempotent). Replaced 4 others: `core/db/connection._load_dotenv`, `core/config.load_dotenv`, python-dotenv in `services/market_intelligence/cli.py`, ad-hoc parsers in `scripts/seed_roles_v1.py`, `seed_skills.py`, `verify_roles.py`, `enrich_github_evidence.py`, `seed_knowledge_from_yaml.py`. (The old fallback to `services/hiring-agent/.env` is gone — everything reads the root `.env`.)
+- `get_settings()`: frozen, typed `Settings` (DB pool, LLM, GitHub, Clerk, token key, e2e flag, log level), read once per process. Every former `os.getenv` in app code now goes through it: `core/db/connection.py`, alembic `env.py`, `clerk_auth.py`, `token_encryption.py`, `routers/oauth.py`, `routers/webhooks.py`, `dependencies.py`, `plugins/enrichment/github/client.py`.
+- `load_plugin_config()` / `load_config()` moved here from `core/config.py` (deleted).
+- `.env.example` documents every variable `Settings` reads.
+
+**`shared/llm.py` — one LLM client**
+- `LLMClient.complete()` / `complete_json()` + `get_llm_client()` (cached, from settings).
+- Retries timeouts, connection errors, HTTP 429/5xx with exponential backoff (2 retries); 4xx fail fast.
+- `parse_json()` tolerates ```json fences; `LLMError` / `LLMNotConfiguredError` (subclass `RuntimeError`, so existing `except RuntimeError` callers keep working).
+- Replaced 4 hand-rolled OpenRouter clients: `services/resume_intelligence/application/llm_client.py` (deleted), `plugins/market_signals/hackernews/llm_extractor.py`, `services/job_intelligence/application/decision_builder.py`, `apps/api/app/evidence/resume_extractor.py`. Model is now uniformly `DEFAULT_MODEL` (the resume path used to read `config.yaml → llm.model`; both were `openai/gpt-4o-mini`).
+
+**`shared/logging.py` — one logging setup**
+- `configure_logging()` (format, `LOG_LEVEL`, quiets httpx/urllib3/github), called by the API app, the unified CLI, each service CLI's `__main__`, and the scripts that call library code.
+- 41 `print()` calls in library code → `logger.info/warning` (DB connection, semantic matcher, GitHub enricher, HN + TechCrunch extractors, plugin interface, scoring service, evidence builder, resume generator, hiring-agent adapter). CLI/script/`__main__` output stays as `print` — that is user-facing UI, not logging.
+- `build_evidence_graph()` returns data; its confidence table moved into the module's `__main__` block.
+
+### Testler
+- `tests/unit/test_shared_llm.py` (17): payload shape, retries (429/503/timeouts), no retry on 4xx, response-shape errors, fence-tolerant JSON, factory/not-configured.
+- `tests/unit/test_shared_config.py` (7): env precedence, defaults, typed parsing, empty secrets → None, immutability, `${VAR}` substitution.
+- `tests/smoke/test_architecture.py` (5) — rules enforced from now on: config only via `shared.config`; LLM HTTP only in `shared.llm`; no `sys.path` tweaks; no `print` in library code outside `__main__`; `core.domain` never imports the DB layer. Rules sanity-checked against sample violations.
+- `test_auth.py` adapted to cached settings (env + `cache_clear`).
+- `pytest`: 237 passed, 3 xfailed (8.6s) · `ruff`: clean · API import 0.9s
+
+### Dikkat
+- Re-run `pip install -e .` once (new top-level package `shared`).
+- `config.yaml → llm.*` is no longer read; LLM settings come from `.env` (`OPENROUTER_API_KEY`, `DEFAULT_MODEL`, `LLM_BASE_URL`).
+- No live LLM call was made in this step (integration tests do that; not run).
 
 ---
 

@@ -7,16 +7,19 @@ Confidence weights come from config/plugins.yaml.
 Nothing is hardcoded here.
 """
 
+import logging
 import sys
 from pathlib import Path
 from typing import Dict, List
 
 
-from core.config import load_plugin_config
+from shared.config import load_plugin_config
 from core.db.connection import db
 from core.db.repositories import EvidenceRepository
 from core.knowledge import SkillLoader
 from plugins.plugin_interface import ResumeData, ResumeParserPlugin
+
+logger = logging.getLogger(__name__)
 
 
 class EvidenceBuilder:
@@ -115,7 +118,7 @@ class EvidenceBuilder:
                 skill: repo.calculate_skill_confidence(skill, user_id=user_id)
                 for skill in skills_seen
             }
-        print(f"Wrote {len(records)} evidence rows ({len(skills_seen)} skills)")
+        logger.info("Wrote %d evidence rows (%d skills)", len(records), len(skills_seen))
         return confidences
 
 
@@ -140,15 +143,7 @@ def build_evidence_graph(
 
     parser = load_parser_plugin(parser_name)
     builder = EvidenceBuilder(parser)
-    confidences = builder.build(pdf_path, basename)
-
-    print("\nSkill Confidence Scores:")
-    print("-" * 44)
-    for skill, conf in sorted(confidences.items(), key=lambda x: -x[1]):
-        bar = "#" * int(conf * 20)
-        print(f"  {skill:<24} {conf:.2f}  {bar}")
-
-    return confidences
+    return builder.build(pdf_path, basename)
 
 
 if __name__ == "__main__":
@@ -159,4 +154,10 @@ if __name__ == "__main__":
     _pdf = Path(sys.argv[1])
     _base = sys.argv[2]
     _parser = sys.argv[3] if len(sys.argv) > 3 else "hiring-agent"
-    build_evidence_graph(_pdf, _base, _parser)
+    _confidences = build_evidence_graph(_pdf, _base, _parser)
+
+    print("\nSkill Confidence Scores:")
+    print("-" * 44)
+    for skill, conf in sorted(_confidences.items(), key=lambda x: -x[1]):
+        bar = "#" * int(conf * 20)
+        print(f"  {skill:<24} {conf:.2f}  {bar}")

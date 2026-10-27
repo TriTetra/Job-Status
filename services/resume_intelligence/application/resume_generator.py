@@ -5,6 +5,7 @@ Evidence > Claim in action: generates a resume tailored to a specific
 target job, using evidence-backed skills from the Evidence Graph.
 """
 
+import logging
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -13,7 +14,12 @@ from core.db.connection import db
 from core.db.repositories import EvidenceRepository
 from core.prompts import template_loader
 
-from .llm_client import get_llm_client
+from shared.llm import get_llm_client
+
+logger = logging.getLogger(__name__)
+
+_JSON_SYSTEM = "You are a career strategist. Always respond with valid JSON."
+_TEXT_SYSTEM = "You are a career strategist applying the Evidence > Claim principle."
 
 
 class ResumeGenerator:
@@ -57,38 +63,37 @@ class ResumeGenerator:
         Returns:
             Path to generated Markdown file
         """
-        print(f"\n[ResumeGenerator] {target_title} @ {target_company}  template={template_name}")
-        print("-" * 60)
+        logger.info("Generating resume: %s @ %s (template=%s)", target_title, target_company, template_name)
 
-        print("[1/5] Loading Evidence Graph + GitHub projects...")
+        logger.info("[1/5] Loading Evidence Graph + GitHub projects")
         evidence = self._load_evidence()
         projects = self._load_github_projects()
-        print(f"  {len(evidence)} skills, {len(projects)} projects")
+        logger.info("  %d skills, %d projects", len(evidence), len(projects))
 
-        print("[2/5] Extracting job priorities (LLM)...")
+        logger.info("[2/5] Extracting job priorities (LLM)")
         priorities = self._extract_priorities(target_title, target_company, job_description)
-        print(f"  must_have={priorities.get('must_have', [])}")
+        logger.info("  must_have=%s", priorities.get("must_have", []))
 
-        print("[3/5] Tailoring evidence for target (LLM)...")
+        logger.info("[3/5] Tailoring evidence for target (LLM)")
         tailoring = self._tailor_evidence(target_company, target_title, priorities, evidence, projects)
-        print(f"  emphasized={tailoring.get('emphasized_skills', [])}")
+        logger.info("  emphasized=%s", tailoring.get("emphasized_skills", []))
 
-        print("[4/5] Selecting best projects (LLM)...")
+        logger.info("[4/5] Selecting best projects (LLM)")
         project_selection = self._select_projects(target_company, target_title, projects)
         selected = project_selection.get("selected", [])
         for p in selected:
-            print(f"  - {p.get('name')}: {p.get('score', 0):.1f}")
+            logger.info("  - %s: %s", p.get("name"), p.get("score", 0))
 
-        print("[5/5] Generating 2-line summary (LLM)...")
+        logger.info("[5/5] Generating 2-line summary (LLM)")
         candidate_info = candidate_info or self._default_candidate_info()
         summary = self._generate_summary(
             target_company, target_title, candidate_info,
             tailoring.get("emphasized_skills", []),
             selected,
         )
-        print(f"  {summary[:80]}...")
+        logger.info("  %s...", summary[:80])
 
-        print("Rendering Markdown...")
+        logger.info("Rendering Markdown")
         markdown = self._render_template(
             template_name=template_name,
             target_company=target_company,
@@ -109,7 +114,7 @@ class ResumeGenerator:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(markdown, encoding="utf-8")
 
-        print(f"\nResume saved: {output_path} ({len(markdown)} chars)")
+        logger.info("Resume saved: %s (%d chars)", output_path, len(markdown))
         return output_path
 
     # ------------------------------------------------------------------
@@ -161,7 +166,7 @@ class ResumeGenerator:
         return data.get("projects", [])
 
     def _default_candidate_info(self) -> dict:
-        from core.config import load_config
+        from shared.config import load_config
         config = load_config()
         c = config.get("candidate", {})
         return {
@@ -213,7 +218,10 @@ class ResumeGenerator:
             job_company=company,
             job_description=description,
         )
-        return self.llm.generate_json(prompt)
+        return self._llm_json(prompt)
+
+    def _llm_json(self, prompt: str) -> dict:
+        return self.llm.complete_json(prompt, system=_JSON_SYSTEM, json_mode=True, max_tokens=2000)
 
     def _tailor_evidence(self, company, title, priorities, evidence, projects) -> dict:
         prompt = template_loader.render(
@@ -229,7 +237,7 @@ class ResumeGenerator:
             projects=projects,
             available_skills=list(evidence.keys()),
         )
-        result = self.llm.generate_json(prompt)
+        result = self._llm_json(prompt)
         return self._normalize_skill_names(result, evidence)
 
     def _normalize_skill_names(self, tailoring: dict, evidence: dict) -> dict:
@@ -278,7 +286,7 @@ class ResumeGenerator:
             max_projects=4,
             projects=projects,
         )
-        return self.llm.generate_json(prompt)
+        return self._llm_json(prompt)
 
     def _generate_summary(self, company, title, candidate, emphasized_skills, selected_projects) -> str:
         top_skills = {skill: 0.85 for skill in emphasized_skills[:4]}
@@ -301,7 +309,7 @@ class ResumeGenerator:
             top_skills=top_skills,
             featured_projects=featured,
         )
-        return self.llm.generate(prompt, json_mode=False, temperature=0.5, max_tokens=200).strip()
+        return self.llm.complete(prompt, system=_TEXT_SYSTEM, temperature=0.5, max_tokens=200)
 
     # ------------------------------------------------------------------
     # Template rendering

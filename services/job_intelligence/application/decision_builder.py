@@ -8,17 +8,14 @@ reasoning (serif narrator) is filled on-demand by /api/jobs/reasoning/{url}
 with an LLM, falling back to template_reasoning().
 """
 
-import os
 import re
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-import requests
+from shared.llm import get_llm_client
 
 logger = logging.getLogger(__name__)
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = os.environ.get("DEFAULT_MODEL", "openai/gpt-4o-mini")
 
 # ── Vocabulary lock (English product voice) ──────────────────────────────
 TIER_LABELS = {"strong": "Strong match", "look": "Worth a look", "low": "Low fit"}
@@ -251,10 +248,6 @@ def template_reasoning(
 
 
 def _llm_reasoning(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[Any], gaps: List[str]) -> str:
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENROUTER_API_KEY not set")
-
     names = [m.get("name") if isinstance(m, dict) else str(m) for m in matched[:3]]
     crit_lines = "\n".join(f"- {c['label']}: {c['state']} ({c['detail']})" for c in decision["criteria"])
     prompt = (
@@ -268,27 +261,12 @@ def _llm_reasoning(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[A
         f"Gaps: {', '.join(gaps) or 'none'}\n"
         f"Career value: {ex.get('career_value')} / Market demand: {ex.get('market_demand')}"
     )
-    resp = requests.post(
-        OPENROUTER_URL,
-        json={
-            "model": MODEL,
-            "messages": [
-                {"role": "system", "content": "You write calm, precise, editorial prose. Return plain text only."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.3,
-            "max_tokens": 220,
-        },
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://applypilot.local",
-            "X-Title": "Aplio",
-        },
-        timeout=60,
+    return get_llm_client().complete(
+        prompt,
+        system="You write calm, precise, editorial prose. Return plain text only.",
+        temperature=0.3,
+        max_tokens=220,
     )
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"].strip()
 
 
 def reasoning_for(ex: Dict[str, Any], decision: Dict[str, Any], matched: List[Any], gaps: List[str]) -> Tuple[str, str]:

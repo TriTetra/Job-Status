@@ -1,16 +1,17 @@
 """Rate-limited GitHub API client wrapper."""
 
-import os
 from typing import Optional
 
 from github import Github, Repository
+
+from shared.config import get_settings
 
 
 class GitHubClient:
     """Thin wrapper around PyGithub with rate-limit reporting."""
 
     def __init__(self, token: Optional[str] = None):
-        token = token or os.environ.get("GITHUB_TOKEN")
+        token = token or get_settings().github_token
         if not token:
             raise ValueError("GITHUB_TOKEN required for GitHub enrichment")
         self._client = Github(token)

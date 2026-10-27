@@ -2,12 +2,15 @@
 Semantic job matching with multi-aspect scoring.
 """
 
+import logging
 from typing import List
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from core.domain import UserProfile, Job, MatchResult, Skill, SkillLevel
 from .skill_graph import SkillGraph
+
+logger = logging.getLogger(__name__)
 
 
 class SemanticMatcher:
@@ -31,10 +34,10 @@ class SemanticMatcher:
                 - 'all-mpnet-base-v2': Best quality (420MB)
                 - 'all-MiniLM-L6-v2': Faster, smaller (80MB)
         """
-        print(f"Loading embedding model: {model_name}...")
+        logger.info("Loading embedding model %s", model_name)
         self.encoder = SentenceTransformer(model_name)
         self.skill_graph = SkillGraph()
-        print("Semantic matcher ready")
+        logger.info("Semantic matcher ready")
 
     def match(self, user: UserProfile, job: Job) -> MatchResult:
         """

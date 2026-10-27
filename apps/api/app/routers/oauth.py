@@ -1,6 +1,5 @@
 """OAuth endpoints for third-party integrations (GitHub, etc.)."""
 
-import os
 import secrets
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
@@ -10,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+
+from shared.config import get_settings
 
 from ..dependencies import get_db_session, get_user_id
 from ..core.auth.token_encryption import token_encryption
@@ -37,8 +38,8 @@ def github_authorize(
     user_id: str = Depends(get_user_id),
 ):
     """Start GitHub OAuth flow — redirect user to GitHub."""
-    client_id = os.getenv("GITHUB_CLIENT_ID")
-    redirect_uri = os.getenv("GITHUB_REDIRECT_URI")
+    client_id = get_settings().github_client_id
+    redirect_uri = get_settings().github_redirect_uri
     
     if not client_id or not redirect_uri:
         raise HTTPException(
@@ -86,9 +87,9 @@ def github_callback(
     del oauth_states[state]
     
     # Exchange code for access token
-    client_id = os.getenv("GITHUB_CLIENT_ID")
-    client_secret = os.getenv("GITHUB_CLIENT_SECRET")
-    redirect_uri = os.getenv("GITHUB_REDIRECT_URI")
+    client_id = get_settings().github_client_id
+    client_secret = get_settings().github_client_secret
+    redirect_uri = get_settings().github_redirect_uri
     
     token_response = requests.post(
         GITHUB_TOKEN_URL,

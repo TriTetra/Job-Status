@@ -12,14 +12,10 @@ import sys
 
 def test_llm_client():
     print("\n[TEST 1] LLM Client")
-    from services.resume_intelligence.application.llm_client import get_llm_client
+    from shared.llm import get_llm_client
 
     client = get_llm_client()
-    response = client.generate(
-        "Say 'CareerOS' and nothing else.",
-        json_mode=False,
-        max_tokens=20,
-    )
+    response = client.complete("Say 'CareerOS' and nothing else.", max_tokens=20)
     assert "CareerOS" in response, f"Unexpected response: {response}"
     print(f"  Response: {response.strip()}")
     print("  PASS")
@@ -27,10 +23,12 @@ def test_llm_client():
 
 def test_llm_json_mode():
     print("\n[TEST 2] LLM JSON mode")
-    from services.resume_intelligence.application.llm_client import get_llm_client
+    from shared.llm import get_llm_client
 
     client = get_llm_client()
-    result = client.generate_json('Return JSON with keys "test" (value "ok") and "value" (integer 42)')
+    result = client.complete_json(
+        'Return JSON with keys "test" (value "ok") and "value" (integer 42)', json_mode=True
+    )
     assert result.get("test") == "ok"
     assert result.get("value") == 42
     print(f"  Parsed: {result}")

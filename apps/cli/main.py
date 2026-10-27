@@ -16,11 +16,15 @@ import sys
 
 import typer
 
+from shared.logging import configure_logging
+
 # Rich output uses box-drawing chars and arrows; Windows consoles/pipes default
 # to cp1252 and crash on them. Force UTF-8 for this process's own streams.
 for _stream in (sys.stdout, sys.stderr):
     if (_stream.encoding or "").lower() != "utf-8":
         _stream.reconfigure(encoding="utf-8", errors="replace")
+
+configure_logging()
 
 app = typer.Typer(
     name="career-os",

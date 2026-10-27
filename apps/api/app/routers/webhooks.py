@@ -1,6 +1,5 @@
 """Clerk webhook — sync user.created / user.updated to DB."""
 
-import os
 import hashlib
 import hmac
 import time
@@ -12,11 +11,9 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session
 from core.db.repositories.user_repo import UserRepository
+from shared.config import get_settings
 
 router = APIRouter()
-
-CLERK_WEBHOOK_SECRET: Optional[str] = os.getenv("CLERK_WEBHOOK_SECRET")
-
 
 # ─── Payload schemas ──────────────────────────────────────────────────────────
 
@@ -46,7 +43,8 @@ def _verify_svix_signature(request_headers: dict, body: bytes) -> bool:
     Header format: svix-id, svix-timestamp, svix-signature
     Signed string: "{svix_id}.{svix_timestamp}.{body}"
     """
-    if not CLERK_WEBHOOK_SECRET:
+    secret = get_settings().clerk_webhook_secret
+    if not secret:
         return False  # fail closed: unsigned webhooks are never trusted
 
     svix_id = request_headers.get("svix-id", "")
@@ -65,7 +63,7 @@ def _verify_svix_signature(request_headers: dict, body: bytes) -> bool:
 
     # Strip "whsec_" prefix and base64-decode the secret
     import base64
-    secret_bytes = base64.b64decode(CLERK_WEBHOOK_SECRET.removeprefix("whsec_"))
+    secret_bytes = base64.b64decode(secret.removeprefix("whsec_"))
     signed_content = f"{svix_id}.{svix_ts}.".encode() + body
     expected = hmac.new(secret_bytes, signed_content, hashlib.sha256).digest()
     expected_b64 = base64.b64encode(expected).decode()
@@ -85,7 +83,7 @@ async def clerk_webhook(
     request: Request,
     session: Session = Depends(get_db_session),
 ):
-    if not CLERK_WEBHOOK_SECRET:
+    if not get_settings().clerk_webhook_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Webhook secret not configured",

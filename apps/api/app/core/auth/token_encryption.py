@@ -1,9 +1,10 @@
 """Encrypt/decrypt OAuth tokens at rest."""
 
-import os
 from cryptography.fernet import Fernet
 from cryptography.fernet import InvalidToken
 import logging
+
+from shared.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class TokenEncryption:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            key = os.getenv('TOKEN_ENCRYPTION_KEY')
+            key = get_settings().token_encryption_key
             if not key:
                 raise ValueError("TOKEN_ENCRYPTION_KEY not set in environment")
             cls._instance._fernet = Fernet(key.encode())

@@ -1,5 +1,6 @@
 ﻿"""Enrich evidence table rows with real GitHub metrics."""
 
+import logging
 from typing import Any, Dict, Optional
 
 from core.db.connection import db
@@ -7,6 +8,8 @@ from core.db.repositories import EvidenceRepository
 
 from .client import GitHubClient
 from .repo_analyzer import RepoAnalyzer
+
+logger = logging.getLogger(__name__)
 
 
 class EvidenceEnricher:
@@ -57,15 +60,14 @@ class EvidenceEnricher:
                         ev.confidence = self._calc_confidence(ev, metrics)
 
                     enriched += 1
-                    print(
-                        f"  OK  {url.split('/')[-1]}: "
-                        f"{metrics['loc_count']:,} LOC, "
-                        f"{metrics['language']}, "
-                        f"{len(metrics['topics'])} topics"
+                    logger.info(
+                        "Enriched %s: %s LOC, %s, %d topics",
+                        url.split("/")[-1], f"{metrics['loc_count']:,}",
+                        metrics["language"], len(metrics["topics"]),
                     )
 
                 except Exception as e:
-                    print(f"  ERR {url}: {e}")
+                    logger.warning("GitHub enrichment failed for %s: %s", url, e)
 
             return enriched
 

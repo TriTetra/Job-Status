@@ -1,5 +1,6 @@
 """Extract funding/layoff/hiring signals from TechCrunch articles."""
 
+import logging
 import re
 from datetime import datetime
 from typing import Dict, Optional
@@ -8,6 +9,8 @@ from core.db.connection import db
 from core.db.repositories import MarketSignalRepository
 
 from .rss_client import TechCrunchClient
+
+logger = logging.getLogger(__name__)
 
 # ── Funding patterns ──────────────────────────────────────────────────────────
 # Covers: raises / secures / closes / lands / bags / gets / nets + $50M / $1.2B
@@ -94,7 +97,7 @@ class TechCrunchSignalExtractor:
 
             for feed_name in feeds_to_scan:
                 articles = self.client.get_recent_articles(feed_name, hours=hours)
-                print(f"  [{feed_name}] {len(articles)} articles")
+                logger.info("[%s] %d articles", feed_name, len(articles))
 
                 for article in articles:
                     url = article.get("url", "")
@@ -112,7 +115,7 @@ class TechCrunchSignalExtractor:
                     except Exception:
                         pass  # duplicate source_id → skip
 
-        print(f"  Signals created: {signals_created}")
+        logger.info("TechCrunch signals created: %d", signals_created)
         return signals_created
 
     def _analyze(self, article: Dict, slug: str) -> Optional[Dict]:

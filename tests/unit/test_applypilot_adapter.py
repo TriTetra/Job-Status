@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.config import load_plugin_config
+from shared.config import load_plugin_config
 from plugins.job_sources.applypilot.adapter import ApplyPilotAdapter
 
 

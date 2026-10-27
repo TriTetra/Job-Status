@@ -1,18 +1,18 @@
 """Alembic environment — online + offline migration modes."""
 
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 
-from core.db.models.base import Base  # noqa: E402
+from core.db.models.base import Base
+from shared.config import get_settings
 
 config = context.config
 
-# DATABASE_URL from .env overrides alembic.ini
-database_url = os.getenv("DATABASE_URL")
+# DATABASE_URL (env / .env) overrides alembic.ini
+database_url = get_settings().database_url
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

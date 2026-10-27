@@ -1,19 +1,19 @@
 """FastAPI dependencies — DB session and user identity."""
 
 import logging
-import os
 from typing import Generator, Optional
 
 from fastapi import Header, HTTPException, Request
 
 from core.db.connection import db
+from shared.config import get_settings
 from .core.auth.clerk_auth import ClerkAuthenticator
 
 logger = logging.getLogger(__name__)
 
-# Opt-in only (local e2e scripts): lets `X-User-Id: user_e2e_*` act as a user
-# without a Clerk token. Must never be set in a deployed environment.
-E2E_BYPASS_ENV = "CAREEROS_E2E_AUTH_BYPASS"
+# Opt-in only (local e2e scripts): CAREEROS_E2E_AUTH_BYPASS=1 lets
+# `X-User-Id: user_e2e_*` act as a user without a Clerk token.
+# Must never be set in a deployed environment.
 E2E_USER_PREFIX = "user_e2e_"
 
 
@@ -50,7 +50,7 @@ def get_user_id(
     if (
         x_user_id
         and x_user_id.startswith(E2E_USER_PREFIX)
-        and os.getenv(E2E_BYPASS_ENV) == "1"
+        and get_settings().e2e_auth_bypass
     ):
         return x_user_id
 

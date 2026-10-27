@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from plugins.plugin_interface import ResumeData, ResumeParserPlugin
-from core.config import load_plugin_config
+from shared.config import load_plugin_config
 
 _ROOT = Path(__file__).parents[3]  # project root
 

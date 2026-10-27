@@ -6,18 +6,8 @@ Usage:
 """
 
 import argparse
-from pathlib import Path
 
 
-try:
-    from dotenv import load_dotenv
-    _root = Path(__file__).parent.parent
-    for _env in [_root / ".env", _root / "services" / "hiring-agent" / ".env"]:
-        if _env.exists():
-            load_dotenv(_env)
-            break
-except ImportError:
-    pass
 
 from core.db.connection import db
 from core.db.repositories import EvidenceRepository
@@ -64,4 +54,7 @@ def main():
 
 
 if __name__ == "__main__":
+    from shared.logging import configure_logging
+
+    configure_logging()
     main()

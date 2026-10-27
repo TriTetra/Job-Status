@@ -107,4 +107,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    from shared.logging import configure_logging
+
+    configure_logging()
     sys.exit(main())

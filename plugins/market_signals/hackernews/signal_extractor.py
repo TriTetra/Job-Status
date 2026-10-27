@@ -7,6 +7,7 @@ Hybrid skill detection:
              so the next scan recognizes them without another LLM call.
 """
 
+import logging
 import re as _re
 from collections import Counter
 from datetime import datetime
@@ -17,6 +18,8 @@ from core.db.repositories import MarketSignalRepository
 
 from .client import HackerNewsClient
 from .who_is_hiring_parser import WhoIsHiringParser
+
+logger = logging.getLogger(__name__)
 
 
 class HNSignalExtractor:
@@ -34,7 +37,7 @@ class HNSignalExtractor:
     ) -> int:
         thread = self.client.find_who_is_hiring_thread(year, month)
         if not thread:
-            print(f"  No thread found for {year}-{month:02d}")
+            logger.info("No HN who-is-hiring thread for %d-%02d", year, month)
             return 0
 
         thread_id = thread["objectID"]
@@ -42,10 +45,10 @@ class HNSignalExtractor:
         thread_url = f"https://news.ycombinator.com/item?id={thread_id}"
         thread_date = datetime.fromtimestamp(thread.get("created_at_i", 0))
 
-        print(f"  Thread: {thread_title}")
+        logger.info("HN thread: %s", thread_title)
 
         comments = self.client.get_top_level_comments(int(thread_id))
-        print(f"  Comments: {len(comments)}")
+        logger.info("HN comments: %d", len(comments))
         if not comments:
             return 0
 
@@ -71,7 +74,7 @@ class HNSignalExtractor:
                 # no company → LLM might still recover it
                 weak_comments.append(c.get("text") or "")
 
-        print(f"  Layer-1: {len(parsed)} postings parsed, {len(weak_comments)} weak")
+        logger.info("Layer-1: %d postings parsed, %d weak", len(parsed), len(weak_comments))
 
         # ── Layer 2: LLM on capped sample of weak comments ───────────────
         llm_skills: List[str] = []
@@ -94,7 +97,7 @@ class HNSignalExtractor:
                 try:
                     jobs = extract_batch(batch)
                 except Exception as e:
-                    print(f"  [llm] batch {i // batch_size + 1} failed: {e}")
+                    logger.warning("LLM batch %d failed: %s", i // batch_size + 1, e)
                     continue
 
                 llm_count += len(jobs)
@@ -114,7 +117,7 @@ class HNSignalExtractor:
                     )
                     llm_skills.extend(j.skills)
 
-            print(f"  Layer-2: LLM recovered {llm_count} postings")
+            logger.info("Layer-2: LLM recovered %d postings", llm_count)
 
         # ── Learning: promote into registry, get canonical names ──────────
         from plugins.market_signals.skill_registry import record_mentions
@@ -195,5 +198,5 @@ class HNSignalExtractor:
                 )
                 signals_created += 1
 
-        print(f"  Signals created: {signals_created}")
+        logger.info("HN signals created: %d", signals_created)
         return signals_created

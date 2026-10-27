@@ -1,17 +1,13 @@
 """LLM-based structured resume extraction via OpenRouter."""
 
-import json
 import logging
-import os
 from typing import Any, Optional
 
-import requests
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
+from shared.llm import get_llm_client
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = os.environ.get("DEFAULT_MODEL", "openai/gpt-4o-mini")
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = "You are a precise resume parser. Return only valid JSON, no markdown."
 
@@ -104,39 +100,11 @@ def extract_resume(text: str) -> StructuredResume:
     Returns a StructuredResume with validated achievements.
     Falls back gracefully if the LLM omits the achievements key.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENROUTER_API_KEY not set")
-
     prompt = EXTRACT_PROMPT.format(text=text[:12000])  # stay within context window
 
-    payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": prompt},
-        ],
-        "temperature": 0.1,
-        "max_tokens": 3500,
-    }
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type":  "application/json",
-        "HTTP-Referer":  "https://applypilot.local",
-        "X-Title":       "ApplyPilot",
-    }
-
-    resp = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
-    resp.raise_for_status()
-    content = resp.json()["choices"][0]["message"]["content"].strip()
-
-    # Strip markdown code block if present
-    if content.startswith("```"):
-        content = content.split("```")[1]
-        if content.startswith("json"):
-            content = content[4:]
-
-    raw: dict[str, Any] = json.loads(content)
+    raw: dict[str, Any] = get_llm_client().complete_json(
+        prompt, system=SYSTEM_PROMPT, temperature=0.1, max_tokens=3500, timeout=120
+    )
 
     # Normalise achievement entries: accept both "category" and "type" keys
     # (some models return "category" despite the prompt saying "type")

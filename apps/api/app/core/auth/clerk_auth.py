@@ -1,18 +1,13 @@
 """Clerk JWT token verification helper using JWKS."""
 
 import logging
-import os
 import requests
 import jwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
 logger = logging.getLogger(__name__)
 
-# Clerk JWKS endpoint for public key discovery
-CLERK_JWKS_URL = os.getenv(
-    "CLERK_JWKS_URL",
-    "https://fond-grizzly-40.clerk.accounts.dev/.well-known/jwks.json"
-)
+from shared.config import get_settings
 
 class ClerkAuthenticator:
     _jwks_keys = {}
@@ -21,7 +16,7 @@ class ClerkAuthenticator:
     def fetch_jwks(cls):
         """Fetch and cache Clerk public keys."""
         try:
-            response = requests.get(CLERK_JWKS_URL, timeout=5)
+            response = requests.get(get_settings().clerk_jwks_url, timeout=5)
             response.raise_for_status()
             jwks = response.json()
             cls._jwks_keys = {key["kid"]: key for key in jwks.get("keys", [])}

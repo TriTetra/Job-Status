@@ -1,18 +1,13 @@
 """LLM job extraction — hybrid Layer-2, profession-agnostic."""
 
-import json
 import logging
-import os
-import re
 from typing import List
 
-import requests
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
+from shared.llm import get_llm_client
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = os.environ.get("DEFAULT_MODEL", "openai/gpt-4o-mini")
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = "You are a precise job-posting parser. Return only valid JSON, no markdown."
 
@@ -44,46 +39,20 @@ def extract_batch(comment_texts: List[str]) -> List[LLMJob]:
     """
     One LLM call for a batch of job-posting comments.
     Returns one LLMJob per comment (same order, empty objects for unparseable).
-    Raises on HTTP errors or JSON parse failures.
+    Raises shared.llm.LLMError (incl. LLMNotConfiguredError) on failure.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENROUTER_API_KEY not set — set it to enable LLM extraction")
-
     n = len(comment_texts)
     blocks = "\n\n".join(
         f"---COMMENT {i + 1}---\n{t[:1500]}" for i, t in enumerate(comment_texts)
     )
 
-    payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": EXTRACT_PROMPT.format(n=n, blocks=blocks),
-            },
-        ],
-        "temperature": 0.1,
-        "max_tokens": 2500,
-    }
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://applypilot.local",
-        "X-Title": "ApplyPilot",
-    }
-
-    resp = requests.post(OPENROUTER_URL, json=payload, headers=headers, timeout=120)
-    resp.raise_for_status()
-
-    content = resp.json()["choices"][0]["message"]["content"].strip()
-
-    # Strip markdown fences if present
-    content = re.sub(r"^```(?:json)?\s*", "", content)
-    content = re.sub(r"\s*```$", "", content)
-
-    raw = json.loads(content)
+    raw = get_llm_client().complete_json(
+        EXTRACT_PROMPT.format(n=n, blocks=blocks),
+        system=SYSTEM_PROMPT,
+        temperature=0.1,
+        max_tokens=2500,
+        timeout=120,
+    )
     if not isinstance(raw, list):
         raw = [raw]
 

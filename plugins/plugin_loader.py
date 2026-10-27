@@ -2,7 +2,7 @@
 
 from typing import Any, Dict
 
-from core.config import load_plugin_config
+from shared.config import load_plugin_config
 from plugins.plugin_interface import JobSourcePlugin, ResumeParserPlugin
 
 

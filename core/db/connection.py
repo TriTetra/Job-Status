@@ -1,8 +1,7 @@
 """PostgreSQL connection pool manager (singleton)."""
 
-import os
+import logging
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Generator
 
 from sqlalchemy import create_engine
@@ -10,27 +9,11 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool
 
+from shared.config import get_settings
+
 from .models import Base
 
-
-def _load_dotenv() -> None:
-    """Load .env from project root into os.environ (no external deps)."""
-    env_path = Path(__file__).parent.parent.parent / ".env"
-    if not env_path.exists():
-        return
-    with open(env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key = key.strip()
-            val = val.strip().strip('"').strip("'")
-            if key and key not in os.environ:
-                os.environ[key] = val
-
-
-_load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class DatabaseConnection:
@@ -53,7 +36,8 @@ class DatabaseConnection:
         return cls._instance
 
     def _initialize(self) -> None:
-        url = os.getenv("DATABASE_URL")
+        settings = get_settings()
+        url = settings.database_url
         if not url:
             raise ValueError(
                 "DATABASE_URL not set — check your .env file.\n"
@@ -63,12 +47,12 @@ class DatabaseConnection:
         self._engine = create_engine(
             url,
             poolclass=QueuePool,
-            pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-            max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
-            pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
+            pool_size=settings.db_pool_size,
+            max_overflow=settings.db_max_overflow,
+            pool_timeout=settings.db_pool_timeout,
             pool_pre_ping=True,
             pool_recycle=3600,
-            echo=os.getenv("DB_ECHO", "false").lower() == "true",
+            echo=settings.db_echo,
         )
 
         self._session_factory = sessionmaker(
@@ -101,12 +85,12 @@ class DatabaseConnection:
     def create_all_tables(self) -> None:
         """Development helper — prefer Alembic in production."""
         Base.metadata.create_all(self._engine)
-        print("All tables created")
+        logger.info("All tables created")
 
     def drop_all_tables(self) -> None:
         """DANGER: development only."""
         Base.metadata.drop_all(self._engine)
-        print("WARNING: all tables dropped")
+        logger.warning("All tables dropped")
 
 
 # Module-level singleton

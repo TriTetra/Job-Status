@@ -17,7 +17,7 @@ def main() -> None:
     print("=" * 60)
 
     # 1. Config loads
-    from core.config import load_plugin_config
+    from shared.config import load_plugin_config
     cfg = load_plugin_config()
     assert "resume_parsers" in cfg, "Missing resume_parsers in plugins.yaml"
     assert "hiring-agent" in cfg["resume_parsers"], "Missing hiring-agent config"

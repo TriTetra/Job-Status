@@ -1,19 +1,11 @@
 """Seed canonical skills taxonomy into the skills table."""
 
-import os
-
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    try:
-        from core.db.connection import get_db_url
-        DATABASE_URL = get_db_url()
-    except Exception:
-        from dotenv import load_dotenv
-        load_dotenv()
-        DATABASE_URL = os.environ.get("DATABASE_URL")
+from shared.config import get_settings
+
+DATABASE_URL = get_settings().database_url
 
 SKILLS = [
     # ── Engineering ──────────────────────────────────────────────────────────
