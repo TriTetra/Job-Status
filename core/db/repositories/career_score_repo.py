@@ -65,12 +65,12 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
 
     def get_top_opportunities(
         self,
-        min_score: float = 60.0,
-        recommendation: str = "APPLY",
+        min_score: Optional[float] = 60.0,
+        recommendation: Optional[str] = "APPLY",
         limit: int = 20,
         user_id: str = "default",
     ) -> List[CareerScore]:
-        """Latest score per job, filtered and ranked."""
+        """Latest score per job URL, filtered and ranked. None for min_score/recommendation = no filter."""
         latest_subq = (
             select(
                 self.model.url,
@@ -91,11 +91,13 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
                 ),
             )
             .where(self.model.user_id == user_id)
-            .where(self.model.career_score >= min_score)
-            .where(self.model.recommendation == recommendation)
             .order_by(self.model.career_score.desc())
             .limit(limit)
         )
+        if min_score is not None:
+            stmt = stmt.where(self.model.career_score >= min_score)
+        if recommendation is not None:
+            stmt = stmt.where(self.model.recommendation == recommendation)
         return list(self.session.execute(stmt).scalars().all())
 
     def get_trends(self, url: str, days: int = 30, user_id: str = "default") -> List[CareerScore]:

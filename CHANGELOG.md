@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 5 — Thin Routers (onboarding, jobs) | onboarding router 726 → 115 lines, jobs 390 → 102; logic in services/onboarding and job_intelligence (opportunities, scan); one shared/background JobStore replaces 2 ad-hoc job dicts; upload size checked before write | ✅ Tamam | 2026-10-28 |
 | Refactor Step 4 — Unified Evidence | One evidence store (`evidence_items`) and one module (`services/evidence/`); GitHub analysis 3 → 1 (with tests/docs/releases signals), resume parsing 2 → 1; vendored hiring-agent + PyGithub enricher + legacy evidence code removed; resume generator reads evidence_items (fixes cross-user cache leak) | ✅ Tamam | 2026-10-28 |
 | Refactor Step 3 — shared/ Infrastructure | New `shared/` package: one settings object, one LLM client (retries, JSON parsing), one logging setup; 4 OpenRouter clients → 1, 4 .env loaders → 1, library prints → logging, architecture guard tests | ✅ Tamam | 2026-10-28 |
 | Refactor Step 2 — Single Package & Imports | Repo installable (`pip install -e .`), API imported as `apps.api.app`, `career-os` console script, all sys.path hacks removed, career_os retired into core, core.domain ↔ core.db.models cycle broken | ✅ Tamam | 2026-10-28 |
@@ -84,6 +85,39 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 5] — 2026-10-28 — Thin Routers: onboarding + jobs ✅
+
+### Yapılan
+
+Router = HTTP only (schemas, status codes, serialization). Business logic moved to services.
+
+**`apps/api/app/routers/onboarding.py`: 726 → 115 lines**
+- `services/onboarding/profile.py` — `ensure_user`, `get_state`, `save_identity` (role resolution: canonical UUID / catalog slug / custom role, role history), `save_goals` (+ `validate_goals`), `advance`, `complete`, `get_career_graph`.
+- `services/onboarding/career_graph.py` — pure `split_evidence` / `build_career_graph` (nodes, edges, stats, rows to persist) + `run_graph_building` job. The staged pauses the wizard animates are kept, named `_STAGE_PAUSE_SECONDS` and injectable (`pause=`), so tests run instantly.
+- `services/onboarding/resume_upload.py` — `store_resume_pdf` (type + size check **before** anything is written; reads at most limit+1 bytes; path anchored at repo root instead of the process cwd) + `run_extraction` job.
+- Schemas → `apps/api/app/schemas/onboarding.py`.
+
+**`apps/api/app/routers/jobs.py`: 390 → 102 lines**
+- `services/job_intelligence/application/opportunities.py` — `user_decisions`, `list_opportunities`, `get_opportunity`, `get_or_create_reasoning` (decision backfill + LLM/template reasoning cache).
+- `services/job_intelligence/application/scan.py` — `load_profile`, `build_profile_from_evidence`, pure `skill_level_for` and `to_scoring_input`, `run_scan` job; magic numbers named (`SOURCE_MIN_FIT_SCORE`, `DEFAULT_YEARS_EXPERIENCE`, `ALL_TIME_HOURS`).
+- The duplicated "latest score per URL" SQL in the router is gone: `CareerScoreRepository.get_top_opportunities` now accepts `min_score=None` / `recommendation=None` (no filter).
+
+**`shared/background.py`** — `BackgroundJob` + `JobStore` (owner check, thread-safe create, prunes finished jobs after 6h so memory no longer grows forever). Replaces the onboarding `ExtractionJob` dict and the scan `scan_jobs` dict. Wire format unchanged for the fields the web reads (`status`, `progress`, `logs`, `result`, `error`); scan status no longer echoes `user_id` and now includes `created_at`.
+
+Handlers that were `async def` but did blocking work (upload, status) are plain `def` again (run in the threadpool).
+
+### Testler
+- `tests/unit/test_background.py` (6), `tests/unit/test_onboarding.py` (16), `tests/unit/test_job_intelligence.py` (16): role-id classification, goals validation, upload validation (nothing written on reject), Career Graph build (dedupe, averaged confidence, case-insensitive edges, stats, rows), graph job with fake DB (success + no-evidence failure), skill levels, scan input mapping, scan job with faked source/scorer (success + no-profile), opportunities SQL with/without filters (compiled for PostgreSQL).
+- `test_api_wiring`: kwargs check now scans all `run_pipeline` callers in app code (was hard-wired to the router file).
+- `pytest`: 280 passed, 3 xfailed · `ruff`: temiz · route inventory + auth sweep unchanged
+
+### Dikkat
+- Not run against the live DB/LLM; the web onboarding wizard and the Opportunities scan were not clicked through.
+- Remaining fat routers: `evidence.py` (sources/category inference), `oauth.py`, `market.py` (its own refresh job dict — next candidate for `JobStore`).
+- Pre-existing, unchanged: filtering by `recommendation` is an exact match, so rows stored as "APPLY - …" don't match `?recommendation=APPLY` (the default `ALL` is unaffected).
 
 ---
 

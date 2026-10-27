@@ -51,19 +51,24 @@ def test_route_inventory_unchanged(app):
     assert set(app.openapi()["paths"]) == EXPECTED_PATHS
 
 
-def test_scan_router_calls_run_pipeline_with_valid_kwargs():
-    """The scan background task must only pass keywords run_pipeline accepts."""
+def test_run_pipeline_callers_pass_valid_kwargs():
+    """Every ScoringService.run_pipeline(...) call in app code uses keywords it accepts."""
     from services.job_intelligence.application.scoring_service import ScoringService
 
     accepted = set(inspect.signature(ScoringService.run_pipeline).parameters)
-    source = (ROOT / "apps/api/app/routers/jobs.py").read_text(encoding="utf-8")
-    calls = [
-        node for node in ast.walk(ast.parse(source))
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "run_pipeline"
-    ]
-    assert calls, "run_pipeline call not found in jobs router"
-    for call in calls:
+    calls = []
+    for d in ("apps", "services", "scripts"):
+        for path in (ROOT / d).rglob("*.py"):
+            if "node_modules" in path.parts:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8-sig"))
+            calls += [
+                (path.relative_to(ROOT).as_posix(), node) for node in ast.walk(tree)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "run_pipeline"
+            ]
+    assert any(p.endswith("job_intelligence/application/scan.py") for p, _ in calls), "scan no longer calls run_pipeline"
+    for path, call in calls:
         passed = {kw.arg for kw in call.keywords if kw.arg}
-        assert passed <= accepted, f"unexpected kwargs: {passed - accepted}"
+        assert passed <= accepted, f"{path}:{call.lineno} unexpected kwargs: {passed - accepted}"
