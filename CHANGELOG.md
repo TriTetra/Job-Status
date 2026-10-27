@@ -8,7 +8,15 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
-|-------|---------|-------|-------|
+| Phase D — Opportunities Gating Fix | Removed min_score filtering on backend list_jobs, showing all scored opportunities (strong/look/low fit) with collapsible low fit groups | ✅ Tamam | 2026-08-09 |
+| Phase D — Opportunities LinkedIn UI | Split-panel layout for Opportunities (/inbox) with compact cards, detail view panel, operational buttons, and enriched backend scoring explanation JSONB metadata | ✅ Tamam | 2026-08-08 |
+| Phase D — Market Intelligence Hybrid | 3-layer hybrid extraction engine (Regex keywords + learnable registry + LLM OpenRouter fallback) for HackerNews and TechCrunch feeds | ✅ Tamam | 2026-08-08 |
+| Phase C — Settings Sidebar Navigation UI | Upgraded settings interface (/settings) to use Notion/Linear-style Sol Sidebar navigation, removed emojis in favor of Lucide icons, and integrated compact grid systems | ✅ Tamam | 2026-08-07 |
+| Phase C — Settings UI/UX Refactoring | Refactored Settings layout into premium card-based containers, added Recharts scoring weights pie chart with dynamic client loading, and built a profile strength completion progress bar | ✅ Tamam | 2026-08-07 |
+| Phase C — Settings Page Integration | Implemented a 4-tab Settings dashboard (/settings) enabling users to modify their profiles, work preferences, scoring weights, and connected accounts with secure Clerk JWT token forwarding | ✅ Tamam | 2026-08-07 |
+| Phase C — Database connection pool caching | Created centralized global postgres client caching on globalThis in development, preventing connection leaks (Error 53300) during hot reloads | ✅ Tamam | 2026-08-07 |
+| Phase C — Briefing Smart Templates | Implemented rule-based greeting logic, contextual day-of-week subtitles, active verbs for brief lines, momentum-based progress narratives, and dynamic day/night closings | ✅ Tamam | 2026-08-07 |
+| Phase C — Briefing Database Integration | Connected Briefing page server-side to direct PostgreSQL database, replacing mock static data with live user profiles, top opportunities, and evidence counts | ✅ Tamam | 2026-08-07 |
 | Onboarding UI Bug Fixes & State Recovery | StepEvidence mount state recovery check to retrieve resume_doc_id from onboarding state on load, preventing loss of upload status after GitHub OAuth redirects | ✅ Tamam | 2026-07-16 |
 | Onboarding E2E Validation | E2E integration test script (test_onboarding_e2e_wizard.py); full wizard verification (Identity -> Goals -> Evidence CV/GitHub/Portfolio -> Building -> READY state transitions); DB integrity check (Evidence items, prefs, graph nodes count) | ✅ Tamam | 2026-07-16 |
 | Phase 6 — Portfolio Crawler | BeautifulSoup portfolio website crawler (portfolio_crawler.py); keyword technology heuristics; POST /portfolio/crawl, GET /portfolio/status, DELETE /portfolio routes; client API & ExtractionResult UI URL connect input form | ✅ Tamam | 2026-07-16 |
@@ -70,6 +78,132 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Phase C Step 6] — 2026-08-07 — Settings Sidebar Navigation UI ✅
+
+### Yapılan
+
+**Linear/Notion Sidebar Navigation** (`apps/web/app/(dashboard)/settings/_components/settings-shell.tsx`):
+- Replaced the horizontal tabs navigation with a modern, sticky left sidebar layout.
+- Configured state-aware styling (`var(--surface)`, `var(--text-primary)`, and `var(--accent)`) with smooth transitions.
+
+**Emoji Removal & Icon Upgrades** (`apps/web/app/(dashboard)/settings/_components/scoring-tab.tsx`):
+- Removed all emoticons in favor of clean Lucide React icons (`Target`, `Award`, `TrendingUp`, `Flame`).
+- Wrapped Recharts inside a dynamic subcomponent to bypass React 19 server rendering hydration conflicts.
+
+**API Parameter Alignment & Input Polish**:
+- Adapted `profile-tab.tsx`, `preferences-tab.tsx`, and `scoring-tab.tsx` to call API client endpoints without passing redundant `userId` parameters (token is extracted securely server-side).
+- Improved grid alignment and form inputs height.
+
+---
+
+## [Phase C Step 5] — 2026-08-07 — Settings UI/UX Refactoring ✅
+
+### Yapılan
+
+**Interactive Scoring Visualizer** (`apps/web/app/(dashboard)/settings/_components/scoring-chart.tsx` & `scoring-tab.tsx`):
+- Installed `recharts` library with React 19 legacy dependency flag.
+- Created `scoring-chart.tsx` subcomponent rendering a radial donut pie chart of matching weights.
+- Dynamically imported the chart inside `scoring-tab.tsx` with `{ ssr: false }` to avoid SSR hydration mismatches.
+
+**Profile Strength Tracker** (`apps/web/app/(dashboard)/settings/_components/profile-tab.tsx`):
+- Added `calculateProfileCompletion` progress indicator evaluating field completeness.
+- Displayed progress bar with gradient fills reflecting profile strength.
+
+**Layout & Styling Polish**:
+- Upgraded all tabs to premium `rounded-xl` card containers.
+- Standardized typography with bold titles, descriptive captions, and clean margins.
+- Expanded input paddings (`px-4 py-3`) and configured active ring focus states.
+
+---
+
+## [Phase C Step 4] — 2026-08-07 — Settings Page Integration ✅
+
+### Yapılan
+
+**Settings API Client** (`apps/web/features/settings/api.ts` & `index.ts`):
+- Implemented `getSettings()`, `updateSettings()`, `getWeights()`, and `updateWeights()` methods.
+- Built a secure `settingsFetch` helper to fetch the Clerk session token dynamically and inject the `Authorization: Bearer <token>` header, mapping to the backend's token-dependent user endpoints.
+
+**Settings Page Router** (`apps/web/app/(dashboard)/settings/page.tsx`):
+- Created a server-side route wrapper with an authentication check to redirect unauthenticated users to `/sign-in`.
+
+**Settings Components** (`apps/web/app/(dashboard)/settings/_components/`):
+- `settings-shell.tsx`: Designed the main tab wrapper supporting transitions between Profile, Preferences, Scoring, and Account.
+- `profile-tab.tsx`: Created the form to edit candidate name, email, titles, years of experience, and target roles.
+- `preferences-tab.tsx`: Implemented arrangement checkboxes, salary limit inputs, and preferred company size options.
+- `scoring-tab.tsx`: Designed 4 interactive weight sliders (Fit, Acceptance, Career, Market) with live validation ensuring total weights sum up to exactly 100%.
+- `account-tab.tsx`: Configured integrations view supporting Clerk accounts, dynamic GitHub and Portfolio deletions, and JSON backup exports carrying Clerk JWT credentials.
+
+---
+
+## [Phase C Step 3] — 2026-08-07 — Database Connection Leak Fix ✅
+
+### Yapılan
+
+**Global Database Client** (`apps/web/lib/db/client.ts`):
+- Created a centralized postgres connection pool client that caches the `sql` instance on `globalThis` in development.
+- Configured max connections limit to 10 and idle timeout to 20s to safeguard local postgres limits.
+
+**Database Connection Cleanups** (`apps/web/lib/db/onboarding.ts` & `dashboard.ts`):
+- Removed duplicate local instantiations of `postgres(DATABASE_URL)` and replaced them with imports of `sql` from `client.ts`. This resolves the `PostgresError: sorry, too many clients already` error during Next.js hot reloads.
+
+---
+
+## [Phase C Step 2] — 2026-08-07 — Briefing Smart Templates ✅
+
+### Yapılan
+
+**Rule-Based Greeting Helper** (`apps/web/lib/db/dashboard.ts`):
+- Added `buildGreeting` defining hourly greetings ("Still up", "Good morning", "Good afternoon", "Good evening").
+- Built contextual day-based subtitles (e.g. "The week starts with X strong matches waiting" on Monday, "Wrapping up the week with..." on Friday, "Planning the week ahead" on Sunday).
+
+**Active Brief Lines Heuristics** (`apps/web/lib/db/dashboard.ts`):
+- Modified `buildBriefLines` to prioritize active opportunity counts followed by skills and projects, using strong active verbs.
+
+**Momentum-Based Progress Narratives** (`apps/web/lib/db/dashboard.ts`):
+- Rewrote `buildProgressSummary` to grade the profile depth by total evidence count (>=20: "rich and well-defined", >=10: "gaining depth", >0: "taking shape").
+
+**Contextual Day/Time Closings** (`apps/web/lib/db/dashboard.ts`):
+- Configured `buildClosing` to present weekend-aware and late-night-aware closing copy lines.
+
+**Greeting Propagations** (`apps/web/app/(dashboard)/briefing/_components/briefing-greeting.tsx` & `page.tsx`):
+- Updated type definitions to include `subtitle` and passed it from server component to the greeting layout.
+
+---
+
+## [Phase C Step 1] — 2026-08-07 — Briefing Direct DB Integration ✅
+
+### Yapılan
+
+**Direct DB Query Helper** (`apps/web/lib/db/dashboard.ts`):
+- Created a new database layer to query users, career_scores, evidence_items, connected_accounts, and companies in parallel.
+- Calculated briefing details dynamically (greeting name, evidence counts, opportunities, hiring companies).
+- Handled the empty state gracefully with a list of items we are watching, and included stats (skills, projects, honors, experiences) inside the payload.
+
+**Briefing API & Types Update** (`apps/web/features/briefing/api.ts` & `types.ts`):
+- Retrieved the Clerk user ID using `auth()` from `@clerk/nextjs/server`.
+- Replaced the hardcoded `MOCK_BRIEFING` static return with `getBriefingData(userId)`.
+- Updated `BriefingEmptyData` type to accept optional `stats` dictionary.
+
+**Empty State UI Component** (`apps/web/app/(dashboard)/briefing/_components/briefing-empty.tsx`):
+- Rewrote the `BriefingEmpty` component to render dynamic stats cards (Skills, Projects, Honors, Experiences) matching user graph data.
+- Configured CTA text to react to profile completeness (hasCompanies vs hasEvidence vs default).
+- Connected the "Scan for new opportunities" button to navigate to `/inbox` using Next.js `useRouter`.
+
+**Briefing Page & Layout Polish** (`apps/web/app/(dashboard)/briefing/page.tsx` & subcomponents):
+- Computed dynamic daypart greetings on the server (`Good morning` / `Good afternoon` / `Good evening` / `Good night`) and propagated them to `<BriefingGreeting />` and `<BriefingEmpty />`.
+- Wrote opportunities visibility check to hide the section header when there are no jobs matched (`opportunities.length === 0`), resolving white space issues.
+- Connected CTA buttons in `<BriefingFocus />` and `<BriefingEvidenceProgress />` to execute Next.js router transitions using `ctaHref`.
+
+**Evidence Summary Heuristics** (`apps/web/lib/db/dashboard.ts`):
+- Filtered out empty metrics (e.g. "0 achievements captured") from the summary signals array, dynamically showing only populated categories.
+
+**Legacy Code Cleanup**:
+- Deleted the unused duplicate component directory `apps/web/components/narrative/`.
+- Removed `mock.ts` file from `apps/web/features/briefing/` and clean-exported types from `index.ts`.
 
 ---
 

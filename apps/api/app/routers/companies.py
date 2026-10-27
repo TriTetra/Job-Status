@@ -1,4 +1,4 @@
-﻿"""Companies router."""
+"""Companies router."""
 
 from typing import List, Optional
 
@@ -56,3 +56,16 @@ def get_company(
     if not company:
         raise HTTPException(status_code=404, detail=f"Company '{name}' not found")
     return CompanyResponse.model_validate(company)
+
+
+@router.post("/track", response_model=CompanyResponse, status_code=201)
+def track_company(
+    name: str = Query(..., min_length=1, max_length=200),
+    session: Session = Depends(get_db_session),
+):
+    """Add a company to the watchlist (idempotent — returns existing if already tracked)."""
+    repo = CompanyRepository(session)
+    company = repo.get_or_create(name=name)
+    session.commit()
+    return CompanyResponse.model_validate(company)
+

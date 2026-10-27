@@ -1,158 +1,201 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { Button } from "@/components/shared/button";
-import { OpportunityItem, OpportunityFeed } from "@/components/ui/opportunity-item";
-import { Search, SlidersHorizontal, Zap } from "lucide-react";
+import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact";
+import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel";
+import { ScanOverlay } from "@/components/ui/scan-overlay";
+import { Search, Zap, Settings2, ChevronDown } from "lucide-react";
+import type { Opportunity, ScanJob, Tier } from "@/features/opportunities/types";
 
-type FilterRec = "ALL" | "APPLY" | "CONSIDER" | "SKIP";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-interface MockOpportunity {
-  id: string;
-  score: number;
-  recommendation: "APPLY" | "CONSIDER" | "SKIP";
-  company: { name: string; tier: string };
-  role: string;
-  location: string;
-  remote?: boolean;
-  visaSponsorship?: boolean;
-  deadline?: string;
-  matchedSkills: { name: string; confidence: number }[];
-  gapSkills: string[];
-  whyHighlights: string[];
-  breakdown: { label: string; value: number; positive: boolean; description?: string }[];
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (typeof window !== "undefined") {
+    const clerk = (window as any).Clerk;
+    const token = await clerk?.session?.getToken?.();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
+  const res = await fetch(`${API_BASE}${path}`, { credentials: "include", ...init, headers });
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.json() as Promise<T>;
 }
 
-const MOCK_OPPORTUNITIES: MockOpportunity[] = [
-  {
-    id: "1",
-    score: 87,
-    recommendation: "APPLY" as const,
-    company: { name: "Stripe", tier: "Unicorn" },
-    role: "Backend Engineer",
-    location: "Remote",
-    remote: true,
-    visaSponsorship: true,
-    deadline: "5 days",
-    matchedSkills: [
-      { name: "Rust", confidence: 82 },
-      { name: "Go", confidence: 75 },
-      { name: "Kubernetes", confidence: 70 },
-    ],
-    gapSkills: ["Kafka"],
-    whyHighlights: [
-      "Strong Rust match (+28)",
-      "Unicorn tier matches preference (+12)",
-      "Remote fits your preference (+8)",
-    ],
-    breakdown: [
-      { label: "Rust experience", value: 28, positive: true, description: "You: 82%, they need: high" },
-      { label: "Kubernetes", value: 15, positive: true },
-      { label: "OSS activity", value: 12, positive: true },
-      { label: "Unicorn tier", value: 10, positive: true },
-      { label: "Missing Kafka", value: -8, positive: false },
-    ],
-  },
-  {
-    id: "2",
-    score: 82,
-    recommendation: "APPLY" as const,
-    company: { name: "Anthropic", tier: "Unicorn" },
-    role: "Research Engineer",
-    location: "San Francisco, CA",
-    visaSponsorship: true,
-    matchedSkills: [
-      { name: "PyTorch", confidence: 78 },
-      { name: "Research", confidence: 85 },
-    ],
-    gapSkills: ["Distributed systems"],
-    whyHighlights: [
-      "Research publications match (+22)",
-      "PyTorch expertise (+18)",
-      "Mission-aligned (AI safety)",
-    ],
-    breakdown: [
-      { label: "Research background", value: 22, positive: true },
-      { label: "PyTorch", value: 18, positive: true },
-      { label: "Unicorn tier", value: 10, positive: true },
-      { label: "SF onsite preference", value: -5, positive: false },
-      { label: "Distributed systems gap", value: -8, positive: false },
-    ],
-  },
-  {
-    id: "3",
-    score: 76,
-    recommendation: "APPLY" as const,
-    company: { name: "Databricks", tier: "Unicorn" },
-    role: "Senior Data Engineer",
-    location: "Remote (EU)",
-    remote: true,
-    visaSponsorship: true,
-    matchedSkills: [
-      { name: "Python", confidence: 92 },
-      { name: "Spark", confidence: 65 },
-    ],
-    gapSkills: ["Scala", "Delta Lake"],
-    whyHighlights: [
-      "Python expertise (+20)",
-      "Data engineering focus matches (+15)",
-    ],
-    breakdown: [
-      { label: "Python expertise", value: 20, positive: true },
-      { label: "Data engineering", value: 15, positive: true },
-      { label: "Remote EU", value: 8, positive: true },
-      { label: "Missing Scala", value: -10, positive: false },
-      { label: "Missing Delta Lake", value: -7, positive: false },
-    ],
-  },
-  {
-    id: "4",
-    score: 68,
-    recommendation: "CONSIDER" as const,
-    company: { name: "Google", tier: "Big Tech" },
-    role: "ML Engineer",
-    location: "Mountain View, CA",
-    visaSponsorship: true,
-    matchedSkills: [
-      { name: "TensorFlow", confidence: 60 },
-      { name: "Python", confidence: 92 },
-    ],
-    gapSkills: ["JAX", "TPU optimization"],
-    whyHighlights: [
-      "Python expertise (+20)",
-      "Big Tech career value (+15)",
-    ],
-    breakdown: [
-      { label: "Python expertise", value: 20, positive: true },
-      { label: "Big Tech career value", value: 15, positive: true },
-      { label: "TensorFlow", value: 12, positive: true },
-      { label: "Missing JAX", value: -10, positive: false },
-      { label: "Missing TPU opt", value: -8, positive: false },
-      { label: "Competition", value: -5, positive: false },
-    ],
-  },
-];
-
 export default function InboxPage() {
-  const [filter, setFilter] = useState<FilterRec>("ALL");
-  const [search, setSearch] = useState("");
+  const [jobs, setJobs] = useState<Opportunity[]>([]);
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [lowFitExpanded, setLowFitExpanded] = useState(false);
 
-  const filtered = MOCK_OPPORTUNITIES.filter((o) => {
-    if (filter !== "ALL" && o.recommendation !== filter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return o.company.name.toLowerCase().includes(q) || o.role.toLowerCase().includes(q);
-    }
-    return true;
+  const [scanJob, setScanJob] = useState<ScanJob>({
+    job_id: "",
+    status: "idle",
+    phase: "starting",
+    progress: 0,
+    logs: [],
   });
 
-  const counts = {
-    ALL:     MOCK_OPPORTUNITIES.length,
-    APPLY:   MOCK_OPPORTUNITIES.filter((o) => o.recommendation === "APPLY").length,
-    CONSIDER:MOCK_OPPORTUNITIES.filter((o) => o.recommendation === "CONSIDER").length,
-    SKIP:    MOCK_OPPORTUNITIES.filter((o) => o.recommendation === "SKIP").length,
+  const [prefs, setPrefs] = useState<{
+    work_arrangements?: string[];
+    preferred_country_codes?: string[];
+    requires_sponsorship?: boolean;
+    salary?: { min?: number; max?: number };
+    salary_min?: number;
+    salary_max?: number;
+  } | null>(null);
+
+  // Load jobs + prefs on mount
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [jobsRes, prefsRes] = await Promise.all([
+        apiFetch<{ total: number; jobs: Opportunity[] }>("/api/jobs/?recommendation=ALL&limit=500"),
+        apiFetch<any>("/api/preferences").catch(() => null),
+      ]);
+      setJobs(jobsRes.jobs);
+      setPrefs(prefsRes);
+      // Auto-select first job
+      if (jobsRes.jobs.length > 0 && !selectedUrl) {
+        setSelectedUrl(jobsRes.jobs[0].url);
+      }
+    } catch {
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedUrl]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Scan handler
+  const handleScan = async () => {
+    setScanJob((prev) => ({ ...prev, status: "running", phase: "starting", progress: 0, logs: [] }));
+    try {
+      const { job_id } = await apiFetch<{ job_id: string }>("/api/jobs/scan?hours=99999&limit=200", {
+        method: "POST",
+      });
+      setScanJob((prev) => ({ ...prev, job_id }));
+
+      // Poll status
+      const poll = setInterval(async () => {
+        try {
+          const st = await apiFetch<any>(`/api/jobs/scan/${job_id}/status`);
+          
+          // Map backend phase status to frontend phase
+          let phase: any = "starting";
+          if (st.status === "scanning") phase = "fetch";
+          if (st.status === "scoring") phase = "score";
+          if (st.status === "profile") phase = "profile";
+
+          const normalizedLogs = Array.isArray(st.logs) 
+            ? st.logs.map((l: any) => typeof l === "string" ? { timestamp: "", message: l } : l)
+            : [];
+
+          setScanJob({
+            job_id,
+            status: st.status === "completed" ? "done" : st.status === "failed" ? "failed" : "running",
+            phase,
+            progress: st.progress ?? 0,
+            logs: normalizedLogs,
+            result: st.result,
+            error: st.error
+          });
+
+          if (st.status === "completed" || st.status === "failed") {
+            clearInterval(poll);
+            if (st.status === "completed") {
+              // Reload jobs
+              const jobsRes = await apiFetch<{ total: number; jobs: Opportunity[] }>(
+                "/api/jobs/?recommendation=ALL&limit=500"
+              );
+              setJobs(jobsRes.jobs);
+            }
+          }
+        } catch {
+          /* poll continues */
+        }
+      }, 1200);
+    } catch (err) {
+      setScanJob((prev) => ({ ...prev, status: "failed", error: String(err) }));
+    }
   };
+
+  // Auto-advance: after Apply/Shortlist/Skip, move to next unreviewed
+  const handleDecision = async (url: string, status: string) => {
+    try {
+      await apiFetch(`/api/applications/${encodeURIComponent(url)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      // Reload to get updated user_decision
+      await loadData();
+      // Auto-advance: select next unreviewed job
+      const currentIdx = jobs.findIndex((j) => j.url === url);
+      const nextUnreviewed = jobs.slice(currentIdx + 1).find((j) => j.user_decision.status === "unreviewed");
+      if (nextUnreviewed) {
+        setSelectedUrl(nextUnreviewed.url);
+      }
+    } catch {
+      /* silent */
+    }
+  };
+
+  // Group by tier (with robust fallback for legacy rows without decision)
+  const grouped = useMemo(() => {
+    const strong = jobs.filter((j) => {
+      const tier = j.decision?.semantic.tier ?? (j.recommendation === "APPLY" ? "strong" : j.recommendation === "SKIP" ? "low" : "look");
+      return tier === "strong";
+    });
+    const look = jobs.filter((j) => {
+      const tier = j.decision?.semantic.tier ?? (j.recommendation === "APPLY" ? "strong" : j.recommendation === "SKIP" ? "low" : "look");
+      return tier === "look";
+    });
+    const low = jobs.filter((j) => {
+      const tier = j.decision?.semantic.tier ?? (j.recommendation === "APPLY" ? "strong" : j.recommendation === "SKIP" ? "low" : "look");
+      return tier === "low";
+    });
+    return { strong, look, low };
+  }, [jobs]);
+
+  const selected = jobs.find((j) => j.url === selectedUrl) ?? null;
+
+  // Build criteria chips for header
+  const criteriaChips = useMemo(() => {
+    const chips: string[] = [];
+    if (prefs?.work_arrangements?.includes("remote")) chips.push("Remote");
+    if (prefs?.preferred_country_codes?.length) {
+      chips.push(prefs.preferred_country_codes.slice(0, 3).join(", "));
+    }
+    const sMin = prefs?.salary_min ?? prefs?.salary?.min;
+    const sMax = prefs?.salary_max ?? prefs?.salary?.max;
+    if (sMin || sMax) {
+      chips.push(`€${sMin ?? 0}k+`);
+    }
+    if (prefs?.requires_sponsorship === false) chips.push("No visa");
+    return chips;
+  }, [prefs]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const currentIdx = jobs.findIndex((j) => j.url === selectedUrl);
+        const nextIdx = e.key === "ArrowUp" ? currentIdx - 1 : currentIdx + 1;
+        if (nextIdx >= 0 && nextIdx < jobs.length) {
+          setSelectedUrl(jobs[nextIdx].url);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [jobs, selectedUrl]);
 
   return (
     <div className="wide-container px-6 lg:px-8 py-10">
@@ -163,103 +206,156 @@ export default function InboxPage() {
             Opportunities
           </NarrativeText>
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            {counts.ALL} total · {counts.APPLY} ready to apply · Updated 2h ago
+            {jobs.length} scored · {grouped.strong.length} strong · {grouped.look.length} worth a look
           </p>
         </div>
-        <Button variant="primary" size="md">
+        <Button variant="primary" size="md" onClick={handleScan} disabled={scanJob.status === "running"}>
           <Zap className="h-4 w-4" />
           Scan Now
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 flex-wrap">
-        <div
-          className="flex items-center gap-1 p-1 rounded-lg"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          {(["ALL", "APPLY", "CONSIDER", "SKIP"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+      {/* Criteria chips */}
+      {criteriaChips.length > 0 && (
+        <div className="mb-6 flex items-center gap-2 flex-wrap">
+          {criteriaChips.map((chip) => (
+            <span
+              key={chip}
+              className="px-3 py-1 rounded-full border text-xs font-medium"
               style={{
-                background: filter === f ? "rgba(255,177,98,0.15)" : "transparent",
-                color: filter === f ? "var(--accent)" : "var(--text-secondary)",
+                borderColor: "var(--accent)",
+                background: "rgba(255, 177, 98, 0.08)",
+                color: "var(--accent)",
               }}
             >
-              {f} ({counts[f]})
-            </button>
+              {chip}
+            </span>
           ))}
-        </div>
-
-        <div className="flex-1 min-w-[200px] max-w-sm relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
-            strokeWidth={1.75}
+          <Link
+            href="/settings"
+            className="flex items-center gap-1 text-xs font-medium transition-colors"
             style={{ color: "var(--text-muted)" }}
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search company or role..."
-            className="w-full h-9 pl-9 pr-3 rounded-lg text-sm outline-none transition-colors"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              color: "var(--text-primary)",
-            }}
-          />
-        </div>
-
-        <button
-          className="h-9 px-3 rounded-lg text-sm inline-flex items-center gap-2 transition-colors"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            color: "var(--text-secondary)",
-          }}
-        >
-          <SlidersHorizontal className="h-4 w-4" strokeWidth={1.75} />
-          Filters
-        </button>
-      </div>
-
-      {/* Feed */}
-      {filtered.length > 0 ? (
-        <OpportunityFeed>
-          {filtered.map((opp) => (
-            <OpportunityItem
-              key={opp.id}
-              score={opp.score}
-              recommendation={opp.recommendation}
-              company={opp.company}
-              role={opp.role}
-              location={opp.location}
-              remote={opp.remote}
-              visaSponsorship={opp.visaSponsorship}
-              deadline={opp.deadline}
-              matchedSkills={opp.matchedSkills}
-              gapSkills={opp.gapSkills}
-              whyHighlights={opp.whyHighlights}
-              breakdown={opp.breakdown}
-            />
-          ))}
-        </OpportunityFeed>
-      ) : (
-        <div className="surface p-12 text-center">
-          <NarrativeText size="lg" weight="medium" className="mb-2">
-            No opportunities match your filters
-          </NarrativeText>
-          <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-            Try adjusting your filters or scanning for new jobs.
-          </p>
-          <Button variant="outline" onClick={() => { setFilter("ALL"); setSearch(""); }}>
-            Clear filters
-          </Button>
+          >
+            <Settings2 className="h-3 w-3" />
+            Edit
+          </Link>
         </div>
       )}
+
+      {/* Split-panel layout */}
+      {loading ? (
+        <div className="surface p-12 text-center">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Loading opportunities…
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 h-[calc(100vh-280px)]">
+          {/* Left: Scanner (compact list) */}
+          <div className="overflow-y-auto custom-scrollbar pr-4 space-y-6">
+            {grouped.strong.length > 0 && (
+              <div className="space-y-2">
+                <div
+                  className="text-[11px] font-semibold tracking-wider uppercase px-2 mb-2"
+                  style={{ color: "var(--success)", fontFamily: "var(--font-display)" }}
+                >
+                  Strong matches ({grouped.strong.length})
+                </div>
+                <div className="space-y-2">
+                  {grouped.strong.map((opp) => (
+                    <OpportunityCardCompact
+                      key={opp.url}
+                      opp={opp}
+                      selected={selectedUrl === opp.url}
+                      onClick={() => setSelectedUrl(opp.url)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {grouped.look.length > 0 && (
+              <div className="space-y-2">
+                <div
+                  className="text-[11px] font-semibold tracking-wider uppercase px-2 mb-2"
+                  style={{ color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}
+                >
+                  Worth a look ({grouped.look.length})
+                </div>
+                <div className="space-y-2">
+                  {grouped.look.map((opp) => (
+                    <OpportunityCardCompact
+                      key={opp.url}
+                      opp={opp}
+                      selected={selectedUrl === opp.url}
+                      onClick={() => setSelectedUrl(opp.url)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {grouped.low.length > 0 && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => setLowFitExpanded(!lowFitExpanded)}
+                  className="w-full text-left text-[11px] font-semibold tracking-wider uppercase px-2 flex items-center gap-2 transition-colors bg-transparent border-0 cursor-pointer mb-2"
+                  style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)" }}
+                >
+                  Low fit ({grouped.low.length})
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${lowFitExpanded ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {lowFitExpanded && (
+                  <div className="space-y-2">
+                    {grouped.low.map((opp) => (
+                      <OpportunityCardCompact
+                        key={opp.url}
+                        opp={opp}
+                        selected={selectedUrl === opp.url}
+                        onClick={() => setSelectedUrl(opp.url)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right: Reader (detail panel) */}
+          <div
+            className="rounded-xl border overflow-hidden"
+            style={{
+              background: "var(--surface)",
+              borderColor: "var(--border)",
+              maxHeight: "calc(100vh - 280px)",
+            }}
+          >
+            {selected ? (
+              <OpportunityDetailPanel
+                opp={selected}
+                onApply={() => handleDecision(selected.url, "applied")}
+                onShortlist={() => handleDecision(selected.url, "to_apply")}
+                onSkip={() => handleDecision(selected.url, "skipped")}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full p-12">
+                <NarrativeText size="lg" weight="medium" className="text-center" style={{ color: "var(--text-muted)" }}>
+                  Select an opportunity to see details
+                </NarrativeText>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Scan overlay */}
+      <ScanOverlay
+        job={scanJob}
+        onDismiss={() => setScanJob((prev) => ({ ...prev, status: "idle" }))}
+        onRetry={handleScan}
+      />
     </div>
   );
 }

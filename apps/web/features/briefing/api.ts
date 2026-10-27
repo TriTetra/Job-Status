@@ -1,11 +1,21 @@
 import type { BriefingResult } from "./types";
-import { MOCK_BRIEFING } from "./mock";
+import { auth } from "@clerk/nextjs/server";
+import { getBriefingData } from "@/lib/db/dashboard";
 
 /**
- * Fetches today's briefing. Backed by mock data for now —
- * swap the body for a real API call once the backend endpoint exists,
- * the BriefingResult shape is what the route already renders against.
+ * Fetches today's briefing from Postgres (server-side, direct DB).
+ * - No signed-in user  -> quiet empty state
+ * - DB error           -> propagates to briefing/error.tsx (retry UI)
  */
 export async function getBriefing(): Promise<BriefingResult> {
-  return MOCK_BRIEFING;
+  const { userId } = await auth();
+
+  if (!userId) {
+    return {
+      status: "empty",
+      data: { watching: ["Sign in to see your personalized briefing."] },
+    };
+  }
+
+  return getBriefingData(userId);
 }

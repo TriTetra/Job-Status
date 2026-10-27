@@ -6,6 +6,7 @@ import { Movement } from "./movement";
 import type { Opportunity } from "@/features/briefing/types";
 
 export function BriefingOpportunities({ opportunities }: { opportunities: Opportunity[] }) {
+  if (opportunities.length === 0) return null;
   return (
     <Movement delay={160}>
       <SectionLabel>Today&apos;s Opportunities</SectionLabel>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { EvidenceBlock } from "@/components/patterns/evidence-block";
 import { ProgressBlock } from "@/components/patterns/progress-block";
 import { SectionLabel } from "@/components/shared/narrative-section";
@@ -12,6 +13,7 @@ interface BriefingEvidenceProgressProps {
 }
 
 export function BriefingEvidenceProgress({ evidence, progress }: BriefingEvidenceProgressProps) {
+  const router = useRouter();
   return (
     <Movement delay={240}>
       <div className="grid grid-cols-1 md:grid-cols-2">
@@ -33,7 +35,7 @@ export function BriefingEvidenceProgress({ evidence, progress }: BriefingEvidenc
               attribution={progress.attribution}
               promise={progress.promise}
               ctaLabel={progress.ctaLabel}
-              ctaOnClick={() => console.log(`[Progress] ${progress.ctaLabel}`)}
+              ctaOnClick={() => progress.ctaHref && router.push(progress.ctaHref)}
             />
           </div>
         </div>

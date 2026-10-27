@@ -7,6 +7,8 @@ export interface TextSegment {
 
 export interface BriefingGreeting {
   name: string;
+  greeting: string;
+  subtitle?: string;
 }
 
 /** One sentence in the Brief section, built from emphasized segments */
@@ -70,6 +72,13 @@ export interface BriefingData {
 
 export interface BriefingEmptyData {
   watching: string[];
+  stats?: {
+    skills_count?: number;
+    projects_count?: number;
+    achievements_count?: number;
+    companies_count?: number;
+  };
+  greeting?: string;
 }
 
 /** Discriminated union so the page can render the ready or empty narrative cleanly */

@@ -1,4 +1,4 @@
-﻿"""CLI for Market Intelligence."""
+"""CLI for Market Intelligence."""
 
 import sys
 from datetime import datetime
@@ -29,12 +29,16 @@ app = typer.Typer(help="Market Intelligence commands")
 def scan_hn(
     year: int = typer.Option(None),
     month: int = typer.Option(None),
+    no_llm: bool = typer.Option(False, "--no-llm", help="Regex-only mode, skip LLM layer"),
+    llm_budget: int = typer.Option(4, "--llm-budget", help="Max LLM batch calls per run"),
 ):
-    """Scan HN Who is Hiring thread."""
+    """Scan HN Who is Hiring thread (hybrid: regex + registry + optional LLM)."""
     now = datetime.utcnow()
     year = year or now.year
     month = month or now.month
-    count = HNSignalExtractor().extract_monthly_signals(year, month)
+    count = HNSignalExtractor().extract_monthly_signals(
+        year, month, use_llm=not no_llm, llm_budget=llm_budget
+    )
     typer.echo(f"Created {count} signals from HN {year}-{month:02d}")
 
 

@@ -5,13 +5,46 @@ from typing import Dict, List
 
 
 _SKILL_KEYWORDS = [
+    # ── Engineering / Backend ─────────────────────────────────────────────
     "Python", "JavaScript", "TypeScript", "Go", "Rust", "Java", "C++", "C#",
-    "React", "Vue", "Angular", "Node.js", "Django", "FastAPI", "Flask",
-    "AWS", "GCP", "Azure", "Docker", "Kubernetes", "Terraform",
+    "Ruby", "PHP", "Swift", "Kotlin", "Scala", "Elixir", "Haskell",
+    "Django", "FastAPI", "Flask", "Rails", "Spring", "Laravel", "Express",
+    "GraphQL", "gRPC", "REST", "WebSockets",
+    # ── Frontend ─────────────────────────────────────────────────────────
+    "React", "Vue", "Angular", "Next.js", "Svelte", "Nuxt", "Remix",
+    "Tailwind", "CSS", "HTML", "WebAssembly",
+    # ── Mobile ───────────────────────────────────────────────────────────
+    "React Native", "Flutter", "SwiftUI", "Jetpack Compose", "iOS", "Android",
+    # ── Cloud / DevOps ────────────────────────────────────────────────────
+    "AWS", "GCP", "Azure", "Docker", "Kubernetes", "Terraform", "Pulumi",
+    "CI/CD", "GitHub Actions", "Jenkins", "Ansible", "Helm",
+    # ── Data / ML ─────────────────────────────────────────────────────────
     "PostgreSQL", "MySQL", "MongoDB", "Redis", "Kafka", "Elasticsearch",
+    "Spark", "Databricks", "dbt", "Airflow", "Snowflake", "BigQuery",
     "PyTorch", "TensorFlow", "scikit-learn", "LLM", "RAG", "MLOps",
     "Machine Learning", "Deep Learning", "Computer Vision", "NLP",
-    "GraphQL", "gRPC", "Spark", "Scala", "Databricks",
+    "Hugging Face", "LangChain", "OpenAI", "Embeddings", "Vector DB",
+    # ── Security ──────────────────────────────────────────────────────────
+    "Penetration Testing", "SIEM", "SOC", "Zero Trust", "OAuth", "SAML",
+    # ── Design / Creative ─────────────────────────────────────────────────
+    "Figma", "Sketch", "Adobe CC", "Photoshop", "Illustrator", "After Effects",
+    "Blender", "Unity", "Unreal Engine", "Design Systems", "Prototyping",
+    "UX Research", "Wireframing", "Motion Design",
+    # ── Marketing / Growth ────────────────────────────────────────────────
+    "SEO", "SEM", "Google Analytics", "Growth Hacking", "Content Marketing",
+    "Copywriting", "HubSpot", "Salesforce", "A/B Testing", "CRM",
+    "Email Marketing", "Paid Ads", "Meta Ads", "Performance Marketing",
+    # ── Medical / Science ─────────────────────────────────────────────────
+    "Clinical Trials", "Patient Care", "ICU", "Oncology", "Radiology",
+    "PCR", "CRISPR", "Genomics", "Bioinformatics", "Flow Cytometry",
+    "GMP", "FDA Compliance", "Pharmacovigilance",
+    # ── Legal / Finance / Ops ─────────────────────────────────────────────
+    "Compliance", "Contract Law", "IP Law", "GAAP", "IFRS", "Auditing",
+    "Six Sigma", "Lean", "Supply Chain", "Procurement", "FP&A",
+    "Venture Capital", "Private Equity", "Financial Modeling",
+    # ── Education / Research ──────────────────────────────────────────────
+    "Curriculum Design", "LMS", "Pedagogy", "Grant Writing", "Peer Review",
+    "Instructional Design", "E-learning",
 ]
 
 _REMOTE_RE = re.compile(r'\b(remote|anywhere|work from home|wfh)\b', re.IGNORECASE)

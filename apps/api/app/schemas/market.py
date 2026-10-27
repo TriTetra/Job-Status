@@ -16,6 +16,7 @@ class MarketSignalResponse(BaseModel):
     companies_affected: List[str] = []
     skills_affected: List[str] = []
     summary: Optional[str] = None
+    url: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -1,8 +1,16 @@
-﻿"""Extract MarketSignal rows from HN 'Who is hiring?' threads."""
+"""Extract MarketSignal rows from HN 'Who is hiring?' threads.
 
+Hybrid skill detection:
+  Layer 1 — seed keywords + market_skills registry (fast, free)
+  Layer 2 — LLM for comments the regex couldn't read (capped budget)
+  Learning — LLM-discovered skills are promoted into market_skills,
+             so the next scan recognizes them without another LLM call.
+"""
+
+import re as _re
 from collections import Counter
 from datetime import datetime
-from typing import Optional
+from typing import List
 
 from core.db.connection import db
 from core.db.repositories import MarketSignalRepository
@@ -16,7 +24,14 @@ class HNSignalExtractor:
         self.client = HackerNewsClient()
         self.parser = WhoIsHiringParser()
 
-    def extract_monthly_signals(self, year: int, month: int) -> int:
+    def extract_monthly_signals(
+        self,
+        year: int,
+        month: int,
+        use_llm: bool = True,
+        llm_budget: int = 4,   # max LLM batch calls per run (~$0.02)
+        batch_size: int = 8,   # comments per LLM call
+    ) -> int:
         thread = self.client.find_who_is_hiring_thread(year, month)
         if not thread:
             print(f"  No thread found for {year}-{month:02d}")
@@ -34,23 +49,85 @@ class HNSignalExtractor:
         if not comments:
             return 0
 
-        # Parse all job postings
-        parsed = []
+        # ── Layer 1: regex fast path ──────────────────────────────────────
+        parsed: List[dict] = []
+        regex_skills: List[str] = []
+        weak_comments: List[str] = []   # comment texts that yielded no skills
+
         for c in comments:
             try:
                 job = self.parser.parse_comment(c)
-                if job and job.get("company"):
-                    parsed.append(job)
             except Exception:
-                continue
+                job = {}
 
+            if job and job.get("company"):
+                parsed.append(job)
+                skills = job.get("skills", [])
+                regex_skills.extend(skills)
+                if not skills:
+                    # company found but no skills → candidate for LLM
+                    weak_comments.append(c.get("text") or "")
+            else:
+                # no company → LLM might still recover it
+                weak_comments.append(c.get("text") or "")
+
+        print(f"  Layer-1: {len(parsed)} postings parsed, {len(weak_comments)} weak")
+
+        # ── Layer 2: LLM on capped sample of weak comments ───────────────
+        llm_skills: List[str] = []
+        llm_count = 0
+
+        if use_llm and weak_comments:
+            try:
+                from .llm_extractor import extract_batch
+            except ImportError:
+                use_llm = False
+
+        if use_llm and weak_comments:
+            # Strip HTML, filter very short texts, cap to budget
+            clean = [_re.sub(r"<[^>]+>", " ", t) for t in weak_comments]
+            clean = [t.strip() for t in clean if len(t.strip()) > 60]
+            clean = clean[: llm_budget * batch_size]
+
+            for i in range(0, len(clean), batch_size):
+                batch = clean[i : i + batch_size]
+                try:
+                    jobs = extract_batch(batch)
+                except Exception as e:
+                    print(f"  [llm] batch {i // batch_size + 1} failed: {e}")
+                    continue
+
+                llm_count += len(jobs)
+                for j in jobs:
+                    if not j.company:
+                        continue
+                    parsed.append(
+                        {
+                            "company": j.company,
+                            "role": j.role,
+                            "remote": j.remote,
+                            "sponsors_visa": j.sponsors_visa,
+                            "skills": j.skills,
+                            "url": None,
+                            "description": "",
+                        }
+                    )
+                    llm_skills.extend(j.skills)
+
+            print(f"  Layer-2: LLM recovered {llm_count} postings")
+
+        # ── Learning: promote into registry, get canonical names ──────────
+        from plugins.market_signals.skill_registry import record_mentions
+
+        with db.session_scope() as session:
+            canon_regex = record_mentions(session, regex_skills, source="seed_match")
+            canon_llm = record_mentions(session, llm_skills, source="llm_discovered")
+            session.commit()
+
+        # ── Aggregate ─────────────────────────────────────────────────────
         companies = [j["company"] for j in parsed]
-        skills: list = []
-        for j in parsed:
-            skills.extend(j.get("skills", []))
-
         company_counts = Counter(companies)
-        skill_counts = Counter(skills)
+        skill_counts = Counter(canon_regex + canon_llm)
         remote_count = sum(1 for j in parsed if j.get("remote"))
 
         signals_created = 0
@@ -72,14 +149,14 @@ class HNSignalExtractor:
             )
             signals_created += 1
 
-            # 2. Top 20 skill demand signals
+            # 2. Top 20 skill demand (canonical + learned names)
             for skill, count in skill_counts.most_common(20):
                 repo.add_signal(
                     signal_type="skill_demand",
                     source="hackernews",
                     title=f"{skill}: {count} mentions in {thread_title}",
                     occurred_at=thread_date,
-                    source_id=f"hn_skill_{thread_id}_{skill.lower().replace(' ', '_')}",
+                    source_id=f"hn_skill_{thread_id}_{skill.lower().replace(' ', '_')[:40]}",
                     impact="high" if count > 50 else "medium",
                     skills_affected=[skill],
                     magnitude=float(count),

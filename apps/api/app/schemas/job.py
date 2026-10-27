@@ -17,6 +17,7 @@ class JobWithScore(BaseModel):
     skill_gaps: List[str] = []
     explanation: Dict[str, Any] = {}
     scanned_at: Optional[str] = None
+    user_decision: Dict[str, Any] = {"status": "unreviewed", "decided_at": None}
 
     class Config:
         from_attributes = True

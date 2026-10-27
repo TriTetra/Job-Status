@@ -8,6 +8,7 @@ import { NAV_GROUPS, type NavItem } from "@/lib/nav-items";
 import { useUIStore } from "@/lib/store";
 import { AplioLogo } from "@/components/shared/aplio-logo";
 import { PanelLeftClose, PanelLeft } from "lucide-react";
+import { useBadgeCounts } from "@/lib/hooks/use-badge-counts";
 
 function NavItemRow({
   item,
@@ -89,6 +90,27 @@ export function Sidebar() {
   const displayName = user?.firstName ?? user?.username ?? "You";
   const displayRole = user?.unsafeMetadata?.role as string | undefined;
   const initials = (user?.firstName?.[0] ?? user?.username?.[0] ?? "A").toUpperCase();
+  const badgeCounts = useBadgeCounts();
+
+  /** Inject real badge counts into the static nav definition. */
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.map((item): NavItem => {
+      if (item.href === "/inbox") {
+        return {
+          ...item,
+          badge: badgeCounts.opportunities !== null ? badgeCounts.opportunities : undefined,
+        };
+      }
+      if (item.href === "/applications") {
+        return {
+          ...item,
+          badge: badgeCounts.applications !== null ? badgeCounts.applications : undefined,
+        };
+      }
+      return item;
+    }),
+  }));
 
   return (
     <aside
@@ -136,7 +158,7 @@ export function Sidebar() {
             <PanelLeft className="h-[18px] w-[18px]" strokeWidth={1.75} />
           </button>
         )}
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.title}>
             {!sidebarCollapsed && (
               <div

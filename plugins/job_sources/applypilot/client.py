@@ -1,4 +1,4 @@
-﻿"""
+"""
 ApplyPilot SQLite client.
 
 ApplyPilotClient  — low-level DB I/O only, no business logic.
@@ -41,15 +41,20 @@ class ApplyPilotClient:
         conn.row_factory = sqlite3.Row
         try:
             if hours_old > 0:
+                from datetime import datetime, timedelta, timezone
+                cutoff = (
+                    datetime.now(timezone.utc) - timedelta(hours=hours_old)
+                ).isoformat()
                 query = """
                     SELECT *
                     FROM jobs
                     WHERE fit_score >= ?
-                      AND discovered_at >= datetime('now', ? || ' hours')
+                      AND discovered_at >= ?
                     ORDER BY fit_score DESC, discovered_at DESC
                 """
-                params: list = [min_score, -hours_old]
+                params: list = [min_score, cutoff]
             else:
+                # hours_old=0 → all time, no time filter
                 query = """
                     SELECT * FROM jobs
                     WHERE fit_score >= ?

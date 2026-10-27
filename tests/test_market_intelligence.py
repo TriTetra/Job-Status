@@ -1,4 +1,4 @@
-﻿"""Test Market Intelligence — 6 tests. Makes real API calls."""
+"""Test Market Intelligence — 6 tests. Makes real API calls."""
 
 import sys
 from datetime import datetime
@@ -137,7 +137,7 @@ def test_market_summary():
     total = sum(s["signal_counts"].values())
     print(f"  Total signals (60d): {total}")
     print(f"  Top skills: {[x['skill'] for x in s['top_skills'][:5]]}")
-    print(f"  Top companies: {[x['company'] for x in s['top_companies'][:5]]}")
+    print(f"  Top companies: {[x['name'] for x in s['top_companies'][:5]]}")
     assert total > 0, "Expected some signals after HN extraction"
     print("  PASS")
 

@@ -31,13 +31,13 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "TODAY",
     items: [
-      { label: "Briefing", href: "/briefing", icon: Sparkles, badge: "4" },
+      { label: "Briefing", href: "/briefing", icon: Sparkles },
     ],
   },
   {
     title: "DISCOVER",
     items: [
-      { label: "Opportunities", href: "/inbox", icon: Compass, badge: 17 },
+      { label: "Opportunities", href: "/inbox", icon: Compass },
       { label: "Companies", href: "/companies", icon: Building2 },
       { label: "Market", href: "/market", icon: TrendingUp },
     ],
@@ -53,7 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "MANAGE",
     items: [
-      { label: "Applications", href: "/applications", icon: ClipboardList, badge: 3 },
+      { label: "Applications", href: "/applications", icon: ClipboardList },
       { label: "Analytics", href: "/analytics", icon: BarChart3 },
       { label: "Timeline", href: "/timeline", icon: Clock, comingSoon: true },
     ],

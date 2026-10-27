@@ -10,16 +10,23 @@ const emphasisColor: Record<NonNullable<BriefLine["segments"][number]["emphasis"
 
 interface BriefingGreetingProps {
   name: string;
+  greeting?: string;
+  subtitle?: string;
   brief: BriefLine[];
 }
 
-export function BriefingGreeting({ name, brief }: BriefingGreetingProps) {
+export function BriefingGreeting({ name, greeting, subtitle, brief }: BriefingGreetingProps) {
   return (
     <FadeInSection delay={0}>
       <div className="max-w-[640px]">
         <NarrativeText as="h1" size="3xl" weight="semibold" className="mb-8">
-          Good evening, {name}.
+          {greeting ?? "Good evening"}, {name}.
         </NarrativeText>
+        {subtitle && (
+          <NarrativeText size="lg" style={{ color: "var(--text-secondary)" }} className="mb-4">
+            {subtitle}
+          </NarrativeText>
+        )}
         <div className="space-y-[var(--rhythm-thought)]">
           {brief.map((line, i) => (
             <NarrativeText

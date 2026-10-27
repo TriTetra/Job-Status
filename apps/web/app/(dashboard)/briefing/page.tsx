@@ -11,15 +11,19 @@ export default async function BriefingPage() {
   const [result, clerkUser] = await Promise.all([getBriefing(), currentUser()]);
 
   if (result.status === "empty") {
-    return <BriefingEmpty watching={result.data.watching} />;
+    return <BriefingEmpty watching={result.data.watching} stats={result.data.stats} greeting={result.data.greeting} />;
   }
 
-  const { brief, focus, opportunities, evidence, progress, closing } = result.data;
-  const name = clerkUser?.firstName ?? clerkUser?.username ?? "there";
+  const { greeting, brief, focus, opportunities, evidence, progress, closing } = result.data;
 
   return (
     <div className="max-w-[1000px] mx-auto px-6 lg:px-8 py-14">
-      <BriefingGreeting name={name} brief={brief} />
+      <BriefingGreeting
+        name={greeting.name}
+        greeting={greeting.greeting}
+        subtitle={greeting.subtitle}
+        brief={brief}
+      />
       <BriefingFocus items={focus} />
       <BriefingOpportunities opportunities={opportunities} />
       <BriefingEvidenceProgress evidence={evidence} progress={progress} />

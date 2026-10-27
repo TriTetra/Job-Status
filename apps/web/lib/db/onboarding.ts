@@ -1,6 +1,4 @@
-import postgres from "postgres";
-
-const sql = postgres(process.env.DATABASE_URL!);
+import { sql } from "./client";
 
 export const STATE_TO_URL: Record<string, string> = {
   NOT_STARTED: "/onboarding?step=IDENTITY",

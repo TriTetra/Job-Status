@@ -95,42 +95,39 @@ class MarketSignalRepository(BaseRepository[MarketSignal]):
         recent_cutoff = now - timedelta(days=days)
         previous_cutoff = now - timedelta(days=days * 2)
 
-        recent_count = self.session.execute(
-            sa.select(func.count())
-            .select_from(self.model)
-            .where(
-                sa.and_(
-                    self.model.skills_affected.contains([skill_name]),
-                    self.model.signal_type == "skill_demand",
-                    self.model.occurred_at >= recent_cutoff,
+        def _sum_magnitude(cutoff_start, cutoff_end=None):
+            stmt = (
+                sa.select(func.coalesce(func.sum(self.model.magnitude), 0))
+                .select_from(self.model)
+                .where(
+                    sa.and_(
+                        self.model.skills_affected.contains([skill_name]),
+                        self.model.signal_type == "skill_demand",
+                        self.model.occurred_at >= cutoff_start,
+                        *([self.model.occurred_at < cutoff_end] if cutoff_end else []),
+                    )
                 )
             )
-        ).scalar() or 0
+            return float(self.session.execute(stmt).scalar() or 0)
 
-        previous_count = self.session.execute(
-            sa.select(func.count())
-            .select_from(self.model)
-            .where(
-                sa.and_(
-                    self.model.skills_affected.contains([skill_name]),
-                    self.model.signal_type == "skill_demand",
-                    self.model.occurred_at >= previous_cutoff,
-                    self.model.occurred_at < recent_cutoff,
-                )
-            )
-        ).scalar() or 0
+        recent_count = _sum_magnitude(recent_cutoff)
+        previous_count = _sum_magnitude(previous_cutoff, recent_cutoff)
 
         if previous_count > 0:
             change_pct = ((recent_count - previous_count) / previous_count) * 100
+            direction = "up" if change_pct > 5 else ("down" if change_pct < -5 else "stable")
+        elif recent_count > 0:
+            # Geçmiş dönem yok — yeni görüldü, % gösterme
+            change_pct = 0.0
+            direction = "stable"
         else:
-            change_pct = 100.0 if recent_count > 0 else 0.0
-
-        direction = "up" if change_pct > 5 else ("down" if change_pct < -5 else "stable")
+            change_pct = 0.0
+            direction = "stable"
 
         return {
             "skill": skill_name,
-            "current_count": recent_count,
-            "previous_count": previous_count,
+            "current_count": int(recent_count),
+            "previous_count": int(previous_count),
             "change_percent": round(change_pct, 1),
             "direction": direction,
         }
@@ -177,6 +174,6 @@ class MarketSignalRepository(BaseRepository[MarketSignal]):
         return {
             "period_days": days,
             "signal_counts": type_counts,
-            "top_companies": [{"company": r.company, "count": r.cnt} for r in company_mentions],
+            "top_companies": [{"name": r.company, "count": r.cnt} for r in company_mentions],
             "top_skills": [{"skill": r.skill, "count": r.cnt} for r in skill_mentions],
         }

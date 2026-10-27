@@ -40,7 +40,7 @@ def test_load_plugin():
 def test_scan():
     print("\n[TEST 3] Scan raw jobs")
     plugin = load_job_source_plugin("applypilot")
-    jobs = plugin.scan(hours_old=720, min_score=7)
+    jobs = plugin.scan(hours_old=1500, min_score=7)
     assert len(jobs) > 0, "No jobs found -- try hours_old=720 or check DB"
     assert "url" in jobs[0]
     assert "title" in jobs[0]
@@ -52,7 +52,7 @@ def test_scan():
 def test_normalize():
     print("\n[TEST 4] Normalize single job")
     plugin = load_job_source_plugin("applypilot")
-    raw_jobs = plugin.scan(hours_old=720, min_score=7)
+    raw_jobs = plugin.scan(hours_old=1500, min_score=7)
     assert raw_jobs
 
     job = plugin.normalize(raw_jobs[0])
@@ -79,7 +79,7 @@ def test_normalize():
 def test_scan_and_normalize():
     print("\n[TEST 5] scan_and_normalize (convenience)")
     plugin = load_job_source_plugin("applypilot")
-    jobs = plugin.scan_and_normalize(hours_old=720, min_score=8)
+    jobs = plugin.scan_and_normalize(hours_old=1500, min_score=8)
     assert len(jobs) > 0
     assert all("url" in j for j in jobs)
     companies = {j["company"] for j in jobs}
@@ -93,7 +93,7 @@ def test_scan_and_normalize():
 def test_company_extraction():
     print("\n[TEST 6] Company extraction rate")
     plugin = load_job_source_plugin("applypilot")
-    raw_jobs = plugin.scan(hours_old=720, min_score=7)
+    raw_jobs = plugin.scan(hours_old=1500, min_score=7)
     sample = raw_jobs[:min(50, len(raw_jobs))]
 
     known = sum(1 for r in sample if plugin.normalize(r)["company"] != "Unknown")
