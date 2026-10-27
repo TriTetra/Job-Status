@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 5b — Thin Routers (evidence, oauth, market, goals, roles) | All API routers now HTTP-only (enforced by an architecture test); role context unified; GitHub OAuth in a service (no leaked GitHub errors, WEB_APP_URL setting); market refresh on JobStore (atomic single-flight); token cipher moved to shared | ✅ Tamam | 2026-10-28 |
 | Refactor Step 5 — Thin Routers (onboarding, jobs) | onboarding router 726 → 115 lines, jobs 390 → 102; logic in services/onboarding and job_intelligence (opportunities, scan); one shared/background JobStore replaces 2 ad-hoc job dicts; upload size checked before write | ✅ Tamam | 2026-10-28 |
 | Refactor Step 4 — Unified Evidence | One evidence store (`evidence_items`) and one module (`services/evidence/`); GitHub analysis 3 → 1 (with tests/docs/releases signals), resume parsing 2 → 1; vendored hiring-agent + PyGithub enricher + legacy evidence code removed; resume generator reads evidence_items (fixes cross-user cache leak) | ✅ Tamam | 2026-10-28 |
 | Refactor Step 3 — shared/ Infrastructure | New `shared/` package: one settings object, one LLM client (retries, JSON parsing), one logging setup; 4 OpenRouter clients → 1, 4 .env loaders → 1, library prints → logging, architecture guard tests | ✅ Tamam | 2026-10-28 |
@@ -85,6 +86,50 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 5b] — 2026-10-28 — Thin Routers: evidence, oauth, market (+ goals, roles) ✅
+
+### Router boyutları (satır)
+| Router | Önce | Sonra |
+|---|---|---|
+| evidence | 337 | 75 |
+| oauth | 286 | 60 |
+| market | 119 | 73 |
+| roles | 149 | 71 |
+| goals | 77 | 32 |
+
+Every router is now HTTP-only — **enforced**: `test_routers_do_not_query_the_database_directly` fails on any `session.query/execute`, raw SQL or `select(` in `apps/api/app/routers/`.
+
+### Yapılan
+
+**Role context, once** — `services/identity_service/application/current_role.py`: `infer_category()` (custom-role title keywords) + `get_current_role()` → `CurrentRole(title, category, is_custom, suggested_source_ids)`. Previously duplicated across the evidence and goals routers, and `goals.py` imported a private function from `evidence.py`.
+
+**Evidence** — `services/evidence/sources.py` (`CATEGORY_SOURCES`, `suggested_source_ids`, pure `present_sources`, `list_sources`), `services/evidence/items.py` (`group_for_review`, `list_for_review`, `delete_item`, `count_for_user`), `aggregation.ranked_user_skills`, `portfolio.portfolio_status` / `disconnect_portfolio`.
+
+**Goals** — `services/onboarding/goals_catalog.py` (pure `visible_goals` + `goal_catalog`).
+
+**Roles** — `services/identity_service/application/roles.py`: `list_roles`, `search_roles` (LIKE prefilter + pure `relevance()` with named weights, ranking unchanged), `list_categories`, `get_role`.
+
+**GitHub OAuth** — `services/identity_service/application/github_account.py`: `OAuthStates` (single-use, 10-min TTL, thread-safe, expired states pruned), `authorize_url`, `complete_authorization`, `account_status`, `disconnect`, `sync_evidence`; `GitHubAccountError(message, status_code)`.
+- Security: failed token exchange no longer echoes GitHub's response body / `token_data` to the browser (logged server-side; client gets a generic 502).
+- Redirect after connect uses the new `WEB_APP_URL` setting (default `http://localhost:3000`) instead of a hardcoded URL.
+- Removed dead `RepoAnalysis` schema and `GITHUB_REPOS_URL`.
+
+**Token encryption** — `apps/api/app/core/auth/token_encryption.py` → `shared/crypto.py` (`TokenCipher`, lazy `get_token_cipher()`): services can use it without importing from the API package, and importing no longer requires the key.
+
+**Market refresh** — `services/market_intelligence/refresh.py` on `JobStore`; `JobStore.create_unless_active()` makes "one refresh at a time" atomic (the previous check-then-create could start two crawls under concurrent requests). Status logs use the shared format (`timestamp` instead of `ts`; the web never polled this endpoint).
+
+### Testler
+- `tests/unit/test_connections.py` (24): category inference, source suggestion/presentation, goal visibility, review grouping, OAuth state single-use/expiry, authorize URL, callback (forged state → 400; exchange failure → 502 without leaking GitHub's body; success → token stored encrypted and decryptable), single-flight job creation, market refresh continues when one source fails, role relevance ranking.
+- Architecture rule 7 (routers HTTP-only).
+- `pytest`: 305 passed, 3 xfailed · `ruff`: temiz · route inventory + auth sweep unchanged
+
+### Dikkat
+- Status code change: GitHub token-exchange / user-fetch failures now return **502** (was 500) with a generic message.
+- `WEB_APP_URL` must be set when the web app is not on `http://localhost:3000`.
+- Not exercised live: GitHub connect/sync, portfolio, market refresh against real services.
 
 ---
 

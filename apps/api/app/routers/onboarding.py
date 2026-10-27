@@ -3,8 +3,8 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from core.db.models.evidence_item import EvidenceItem
 from core.db.repositories.user_repo import UserRepository
+from services.evidence.items import count_for_user
 from services.onboarding import onboarding_jobs, profile
 from services.onboarding.career_graph import run_graph_building
 from services.onboarding.resume_upload import MAX_PDF_BYTES, UploadRejected, run_extraction, store_resume_pdf
@@ -95,7 +95,7 @@ def build_career_graph(
     """Build Career Graph from extracted evidence items."""
     if not UserRepository(session).get_by_clerk_id(user_id):
         raise HTTPException(status_code=404, detail="User not found")
-    if not session.query(EvidenceItem).filter(EvidenceItem.user_id == user_id).count():
+    if not count_for_user(session, user_id):
         raise HTTPException(status_code=400, detail="No evidence items found. Upload resume first.")
 
     job = onboarding_jobs.create(user_id, label="career_graph")

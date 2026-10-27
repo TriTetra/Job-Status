@@ -82,6 +82,23 @@ class JobStore:
             raise JobForbidden(job_id)
         return job
 
+    def create_unless_active(self, owner_id: str, label: str) -> tuple[BackgroundJob, bool]:
+        """(job, created) — the pending/running job with this label if any (any owner), else a new one.
+
+        Atomic, for work that must never run twice at once (e.g. a global crawl).
+        """
+        with self._lock:
+            active = next(
+                (j for j in self._jobs.values() if j.label == label and j.status not in ("completed", "failed")),
+                None,
+            )
+            if active:
+                return active, False
+            self._prune()
+            job = BackgroundJob(owner_id, label)
+            self._jobs[job.job_id] = job
+            return job, True
+
     def __len__(self) -> int:
         return len(self._jobs)
 

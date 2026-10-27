@@ -6,6 +6,7 @@
   4. Nothing manipulates sys.path — the repo is an installed package.
   5. core.domain stays pure: it never imports the DB layer.
   6. evidence_items is the only evidence store: nothing uses the legacy `evidence` model.
+  7. Routers are HTTP only: no queries or raw SQL — they call services/repositories.
 """
 
 import ast
@@ -91,3 +92,11 @@ def test_legacy_evidence_model_is_not_used():
         if not v.startswith("core/db/models/")
     ]
     assert not found, "read/write evidence_items via services.evidence:\n" + "\n".join(found)
+
+
+def test_routers_do_not_query_the_database_directly():
+    found = _violations(
+        ["apps/api/app/routers"],
+        r"session\.(query|execute)\(|sa\.text\(|from sqlalchemy import .*\btext\b|\bselect\(",
+    )
+    assert not found, "move the query into a service or repository:\n" + "\n".join(found)

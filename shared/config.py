@@ -87,6 +87,9 @@ class Settings:
     token_encryption_key: Optional[str]
     e2e_auth_bypass: bool
 
+    # Web app (redirect target after OAuth)
+    web_app_url: str
+
     # Logging
     log_level: str
 
@@ -114,6 +117,7 @@ def get_settings() -> Settings:
         clerk_webhook_secret=os.getenv("CLERK_WEBHOOK_SECRET") or None,
         token_encryption_key=os.getenv("TOKEN_ENCRYPTION_KEY") or None,
         e2e_auth_bypass=os.getenv("CAREEROS_E2E_AUTH_BYPASS") == "1",
+        web_app_url=os.getenv("WEB_APP_URL", "http://localhost:3000").rstrip("/"),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
     )
 

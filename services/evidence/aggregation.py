@@ -98,3 +98,8 @@ def aggregate_user_skills(user_id: str, session: Session) -> List[Dict[str, Any]
     
     logger.info(f"Aggregated {len(aggregated_skills)} skills from {len(skill_evidence)} evidence items")
     return aggregated_skills
+
+
+def ranked_user_skills(user_id: str, session: Session) -> List[Dict[str, Any]]:
+    """aggregate_user_skills, most confident first."""
+    return sorted(aggregate_user_skills(user_id, session), key=lambda s: s["aggregated_confidence"], reverse=True)

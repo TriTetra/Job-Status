@@ -225,3 +225,33 @@ def sync_portfolio_evidence(user_id: str, url: str, session: Session, crawler: O
         "technologies_found": len(result.get("technologies", [])),
         "evidence_created": created,
     }
+
+
+def _portfolio_account(session: Session, user_id: str) -> Optional[ConnectedAccount]:
+    return session.query(ConnectedAccount).filter(
+        ConnectedAccount.user_id == user_id,
+        ConnectedAccount.provider == "portfolio",
+    ).first()
+
+
+def portfolio_status(session: Session, user_id: str) -> dict:
+    account = _portfolio_account(session, user_id)
+    if not account:
+        return {"connected": False}
+    return {
+        "connected": True,
+        "url": account.provider_username,
+        "last_synced_at": account.last_synced_at.isoformat() if account.last_synced_at else None,
+    }
+
+
+def disconnect_portfolio(session: Session, user_id: str) -> None:
+    """Forget the portfolio URL and remove all portfolio evidence."""
+    account = _portfolio_account(session, user_id)
+    if account:
+        session.delete(account)
+    session.query(EvidenceItem).filter(
+        EvidenceItem.user_id == user_id,
+        EvidenceItem.source == "portfolio",
+    ).delete()
+    session.commit()
