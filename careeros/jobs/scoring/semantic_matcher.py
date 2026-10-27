@@ -1,11 +1,13 @@
 ﻿"""
 Semantic job matching with multi-aspect scoring.
+
+Optional: needs `pip install -r requirements-semantic.txt` (sentence-transformers,
+scikit-learn — ~2 GB with torch). The default scan path (semantic=False) never loads it,
+so the heavy imports happen only when a SemanticMatcher is created.
 """
 
 import logging
 from typing import List
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
 from careeros.identity.domain.profile import UserProfile
 from careeros.jobs.domain.job import Job
@@ -38,6 +40,8 @@ class SemanticMatcher:
                 - 'all-MiniLM-L6-v2': Faster, smaller (80MB)
         """
         logger.info("Loading embedding model %s", model_name)
+        from sentence_transformers import SentenceTransformer  # optional dependency, see module docstring
+
         self.encoder = SentenceTransformer(model_name)
         self.skill_graph = SkillGraph()
         logger.info("Semantic matcher ready")
@@ -223,6 +227,8 @@ class SemanticMatcher:
         job_embedding = self.encoder.encode([job.description])
 
         # Cosine similarity
+        from sklearn.metrics.pairwise import cosine_similarity
+
         similarity = cosine_similarity(exp_embedding, job_embedding)[0][0]
 
         # Clip negative values

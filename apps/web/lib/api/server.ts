@@ -1,28 +1,24 @@
 /**
- * Server-side client for the FastAPI backend (Server Components, route handlers).
+ * Server-side client for the FastAPI backend (Server Components).
  *
- * Authenticates with the signed-in user's Clerk session token. Responses are
- * per-user, so they are never cached (`fetch` is uncached by default in Next 16;
- * `no-store` makes that explicit).
+ * Calls the API directly on the internal network (API_URL) and forwards the
+ * signed-in user's session cookie. Responses are per-user, so never cached.
  */
 
 import "server-only";
 
-import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 
-import { parseResponse } from "./shared";
+import { parseResponse, withCsrf } from "./shared";
 
 export { ApiError } from "./shared";
 
-// Server-to-server calls may use an internal URL (e.g. inside Docker); fall back to the public one.
-const SERVER_API_BASE = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const SERVER_API_BASE = process.env.API_URL ?? "http://localhost:8000";
 
 export async function serverApiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const { getToken } = await auth();
-  const token = await getToken();
-
-  const headers = new Headers(init?.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const headers = withCsrf(new Headers(init?.headers), init?.method);
+  const cookieHeader = (await cookies()).toString();
+  if (cookieHeader) headers.set("Cookie", cookieHeader);
 
   const res = await fetch(`${SERVER_API_BASE}${path}`, { cache: "no-store", ...init, headers });
   return parseResponse<T>(path, res);

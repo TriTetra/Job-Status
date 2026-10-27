@@ -1,11 +1,37 @@
 "use client";
 
-import { Search, Bell, Command } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
+import { Search, Bell, Command, LogOut } from "lucide-react";
+import { signOut, useMe } from "@/features/auth/use-me";
 import { useUIStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
 import { NAV_GROUPS } from "@/lib/nav-items";
 import { useEffect } from "react";
+
+/** Initials + sign out (replaces the hosted account widget). */
+function AccountButton() {
+  const me = useMe();
+  const initial = (me?.first_name?.[0] ?? me?.email?.[0] ?? "·").toUpperCase();
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold"
+        style={{ background: "var(--surface)", color: "var(--text-secondary)" }}
+        title={me?.email}
+      >
+        {initial}
+      </span>
+      <button
+        onClick={() => void signOut()}
+        className="h-8 w-8 rounded-md flex items-center justify-center transition-colors"
+        style={{ color: "var(--text-muted)" }}
+        aria-label="Sign out"
+        title="Sign out"
+      >
+        <LogOut className="h-[16px] w-[16px]" strokeWidth={1.75} />
+      </button>
+    </div>
+  );
+}
 
 function Breadcrumb() {
   const pathname = usePathname();
@@ -111,13 +137,7 @@ export function Topbar() {
             />
           </button>
 
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "h-8 w-8",
-              },
-            }}
-          />
+          <AccountButton />
         </div>
       </div>
     </header>

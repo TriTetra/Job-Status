@@ -39,7 +39,7 @@ def build_profile_from_evidence(user_id: str) -> Optional[UserProfile]:
     """UserProfile for a web user from users + evidence_items (+ sponsorship preference)."""
     with db.session_scope() as s:
         row = s.execute(
-            sa.text("SELECT profile_data, years_in_role, email FROM users WHERE clerk_id = :u"), {"u": user_id}
+            sa.text("SELECT profile_data, years_in_role, email FROM users WHERE id = :u"), {"u": user_id}
         ).fetchone()
         if not row:
             return None

@@ -242,7 +242,7 @@ def main():
                     '{resume_path}',
                     '"personal/mock_e2e_resume.pdf"'
                 )
-                WHERE clerk_id = :uid
+                WHERE id = :uid
             """), {"uid": USER_ID})
         
         # Retry
@@ -354,7 +354,7 @@ def main():
     print("CLEANUP (optional - keep data)")
     print("=" * 60)
     print(f"  Test user '{USER_ID}' remains in DB.")
-    print(f"  If needed, manually clean: DELETE FROM users WHERE clerk_id = '{USER_ID}'")
+    print(f"  If needed, manually clean: DELETE FROM users WHERE id = '{USER_ID}'")
     
     # ─── Final ─────────────────────────────────────────────
     print("\n" + "=" * 60)

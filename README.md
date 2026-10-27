@@ -108,6 +108,7 @@ cp config.yaml.example config.yaml
 
 # 4. Seed reference data (countries, visas, salaries, skills, roles, goals, evidence sources)
 career-os seed
+career-os user add you@example.com   # your login; set SESSION_COOKIE_SECURE=false for http://localhost
 
 # 5. Run
 career-os status                                       # CLI
@@ -117,7 +118,7 @@ pytest                                                 # offline tests; -m integ
 ```
 
 > Your API key belongs in `.env`, never in `config.yaml`. Both files are gitignored.
-> Every setting is listed in `.env.example`; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full workflow.
+> Every setting is listed in `.env.example`; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full workflow and the Coolify deploy.
 
 ---
 

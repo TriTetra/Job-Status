@@ -31,7 +31,8 @@ def test_settings_defaults(monkeypatch, fresh_settings):
     for var in ("DB_POOL_SIZE", "DEFAULT_MODEL", "LLM_BASE_URL", "LOG_LEVEL", "CAREEROS_E2E_AUTH_BYPASS"):
         monkeypatch.delenv(var, raising=False)
     s = get_settings()
-    assert s.db_pool_size == 10
+    assert s.db_pool_size == 5
+    assert s.db_connect_timeout == 5
     assert s.llm_model == "openai/gpt-4o-mini"
     assert s.llm_base_url == "https://openrouter.ai/api/v1"
     assert s.log_level == "INFO"
@@ -54,10 +55,8 @@ def test_settings_read_env(monkeypatch, fresh_settings):
 
 def test_empty_secrets_are_none(monkeypatch, fresh_settings):
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
-    monkeypatch.setenv("CLERK_WEBHOOK_SECRET", "")
     s = get_settings()
     assert s.openrouter_api_key is None
-    assert s.clerk_webhook_secret is None
 
 
 def test_settings_are_immutable(fresh_settings):

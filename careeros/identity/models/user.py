@@ -1,8 +1,8 @@
-"""User ORM model — one row per Clerk identity."""
+"""User ORM model — one row per account."""
 
 from typing import Optional
 
-from sqlalchemy import String, ForeignKey, Float, Uuid
+from sqlalchemy import Boolean, String, ForeignKey, Float, Uuid, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,11 +14,14 @@ from careeros.db.base import Base, TimestampMixin
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
-    clerk_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    # Stable string id ("user_…"). Rows created under Clerk keep their old ids.
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
     first_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     last_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    # Deactivated users cannot sign in; their data is kept
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=true())
     onboarding_state: Mapped[str] = mapped_column(
         String(32),
         nullable=False,

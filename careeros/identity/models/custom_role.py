@@ -16,7 +16,7 @@ class CustomRole(Base):
     __tablename__ = "custom_roles"
 
     id: Mapped[str] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), ForeignKey("users.clerk_id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(128), ForeignKey("users.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(150), nullable=False)
     mapped_role_id: Mapped[Optional[str]] = mapped_column(Uuid, ForeignKey("roles.id"), nullable=True)
     mapping_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { API_BASE } from "@/lib/api/client";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { onboardingApi } from "@/features/onboarding/api";
 import {
@@ -37,7 +38,6 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [crawling, setCrawling] = useState(false);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   const fetchSources = useCallback(() => {
     onboardingApi.getEvidenceSources()
@@ -55,7 +55,7 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
 
   const handleConnect = (s: Source) => {
     if (s.connect_kind === "oauth" && s.oauth_provider) {
-      window.location.assign(`${apiBase}/api/oauth/${s.oauth_provider}/authorize`);
+      window.location.assign(`${API_BASE}/api/oauth/${s.oauth_provider}/authorize`);
     } else if (s.connect_kind === "url") {
       setPortfolioOpen(true);
     }

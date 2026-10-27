@@ -54,6 +54,8 @@ class DatabaseConnection:
             pool_pre_ping=True,
             pool_recycle=3600,
             echo=settings.db_echo,
+            # Fail fast when the DB is unreachable instead of hanging the request
+            connect_args={"connect_timeout": settings.db_connect_timeout},
         )
 
         self._session_factory = sessionmaker(

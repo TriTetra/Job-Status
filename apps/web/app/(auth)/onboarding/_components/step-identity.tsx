@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, useCallback, useMemo } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useMe } from "@/features/auth/use-me";
 import { onboardingApi, COUNTRIES, rolesApi, SENIORITY, type SeniorityId } from "@/features/onboarding";
 import { ROLES } from "@/features/onboarding/data/roles";
 import { NarrativeText } from "@/components/shared/narrative-text";
@@ -33,7 +33,7 @@ function suggestCareerLevel(years: number): { level: SeniorityId; confidence: "l
 }
 
 export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
-  const { user } = useUser();
+  const me = useMe();
 
   const [firstName, setFirstName] = useState(initialData?.first_name || "");
   const [lastName, setLastName] = useState(initialData?.last_name || "");
@@ -82,12 +82,12 @@ export function StepIdentity({ initialData, onComplete }: StepIdentityProps) {
     }));
   }, []);
 
-  // Prefill empty name fields from Clerk once the user has loaded
+  // Prefill empty name fields from the account once it has loaded
   const [prefilled, setPrefilled] = useState(false);
-  if (user && !prefilled) {
+  if (me && !prefilled) {
     setPrefilled(true);
-    if (!firstName) setFirstName(user.firstName || "");
-    if (!lastName) setLastName(user.lastName || "");
+    if (!firstName) setFirstName(me.first_name || "");
+    if (!lastName) setLastName(me.last_name || "");
   }
 
 

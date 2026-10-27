@@ -24,7 +24,7 @@ def aggregate_user_skills(user_id: str, session: Session) -> List[Dict[str, Any]
     across sources, and returns aggregated skill list.
     
     Args:
-        user_id: Clerk user ID
+        user_id: account id
         session: Database session
         
     Returns:

@@ -15,7 +15,7 @@ for uid, label in tests:
     user = session.execute(text(
         "SELECT current_role_id, current_custom_role_id, years_in_role, "
         "career_level, career_level_origin, onboarding_state "
-        "FROM users WHERE clerk_id = :uid"
+        "FROM users WHERE id = :uid"
     ), {"uid": uid}).mappings().fetchone()
 
     if not user:

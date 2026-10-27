@@ -53,7 +53,7 @@ class CurrentRole:
 def get_current_role(session: Session, user_id: str) -> Optional[CurrentRole]:
     """The user's current canonical or custom role, or None if not set."""
     row = session.execute(
-        sa.text("SELECT current_role_id, current_custom_role_id FROM users WHERE clerk_id = :uid"),
+        sa.text("SELECT current_role_id, current_custom_role_id FROM users WHERE id = :uid"),
         {"uid": user_id},
     ).fetchone()
     if not row:

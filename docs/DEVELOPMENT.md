@@ -6,10 +6,11 @@
 python -m venv venv && venv/Scripts/activate        # Windows; source venv/bin/activate elsewhere
 pip install -r requirements-dev.txt
 pip install -e .                                     # careeros + apps importable from anywhere
-cp .env.example .env                                 # fill in DATABASE_URL, OPENROUTER_API_KEY, Clerk, GitHub
+cp .env.example .env                                 # fill in DATABASE_URL, OPENROUTER_API_KEY, GitHub
 alembic -c careeros/db/alembic.ini upgrade head
 career-os seed                                       # reference data from infra/seeds/v1
-cd apps/web && npm install                           # web app (uses apps/web/.env.local for Clerk keys)
+career-os user add you@example.com                   # your login (prompts for a password)
+cd apps/web && npm install                           # web app
 ```
 
 Re-run `pip install -e .` whenever a new top-level package is added.
@@ -35,15 +36,40 @@ Notable ones:
 |---|---|
 | `DATABASE_URL` | PostgreSQL (`postgresql+psycopg://…`) |
 | `OPENROUTER_API_KEY`, `DEFAULT_MODEL`, `LLM_BASE_URL` | LLM client |
-| `CLERK_JWKS_URL`, `CLERK_WEBHOOK_SECRET` | auth; the webhook answers 503 without the secret |
+| `SESSION_COOKIE_SECURE` | `true` (default) in production; `false` for http://localhost |
+| `DB_CONNECT_TIMEOUT`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW` | fail fast on an unreachable DB; pool 5 + 5 |
 | `TOKEN_ENCRYPTION_KEY` | Fernet key for stored OAuth tokens |
 | `GITHUB_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | GitHub OAuth |
 | `WEB_APP_URL` | where OAuth sends the browser back (default http://localhost:3000) |
 | `LOG_LEVEL` | default `INFO` |
 | `CAREEROS_E2E_AUTH_BYPASS` | `1` only for local e2e scripts — never deployed |
 
-Web (`apps/web/.env.local`): Clerk publishable/secret keys, `NEXT_PUBLIC_API_URL`, and
-optionally `API_URL` for server-to-server calls.
+Web: only `API_URL` (default http://localhost:8000). It is read at build time for the
+`/api/*` rewrite, so the browser always calls the same origin. No auth keys, no DB access.
+
+## Accounts
+
+```bash
+career-os user add friend@example.com --first-name Ada   # prompts for a password (≥ 12 chars)
+career-os user passwd friend@example.com                 # reset; signs them out everywhere
+career-os user list | disable | enable | signout
+```
+
+Users created under Clerk keep their rows and data — give each one a password with
+`career-os user passwd <email>`.
+
+## Deploy (Coolify)
+
+1. New resource → **Docker Compose** → this repo, compose file `docker-compose.prod.yml`.
+2. Environment: `POSTGRES_PASSWORD`, `TOKEN_ENCRYPTION_KEY`, `WEB_APP_URL`
+   (`https://your-domain`), and optionally `OPENROUTER_API_KEY`, `GITHUB_*`
+   (`GITHUB_REDIRECT_URI=https://your-domain/api/oauth/github/callback`).
+3. Give the domain to the **web** service only (port 3000). `api` and `db` stay internal.
+4. Deploy. The API container runs `alembic upgrade head` on every start.
+5. Once, in the api container's terminal: `career-os seed && career-os user add you@example.com`.
+
+Moving an existing database in: `pg_dump --no-owner` from the old one, `psql` into the
+`db` service, then redeploy (migrations bring it to head).
 
 ## Tests and checks
 

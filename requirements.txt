@@ -1,47 +1,34 @@
-# ============================================================
-# apps/api — FastAPI gateway (Phase 4A)
-# ============================================================
+# Runtime dependencies of the API, CLI and workers (the Docker image installs exactly this).
+# Dev tools: requirements-dev.txt · optional semantic matching: requirements-semantic.txt
+
+# ── API ─────────────────────────────────────────────────────────────────────
 fastapi>=0.111
 uvicorn[standard]>=0.29
-PyMuPDF==1.24.10
 pydantic>=2.7
-python-multipart>=0.0.9
+python-multipart>=0.0.9          # CV upload (multipart/form-data)
 
-# ============================================================
-# apps/cli — Unified Typer CLI (Phase 4D)
-# ============================================================
-typer[all]>=0.12         # bundles rich
+# ── CLI ─────────────────────────────────────────────────────────────────────
+typer[all]>=0.12                 # bundles rich
 
-# ============================================================
-# packages/db — PostgreSQL + migrations
-# ============================================================
+# ── Database ────────────────────────────────────────────────────────────────
 sqlalchemy>=2.0
 psycopg[binary]>=3.1
 alembic>=1.13
 
-# ============================================================
-# packages/intelligence — semantic scoring
-# ============================================================
-sentence-transformers>=2.2
-scikit-learn>=1.3
+# ── Auth / security ─────────────────────────────────────────────────────────
+argon2-cffi>=23.1                # password hashing (careeros/identity/auth)
+cryptography>=42                 # OAuth tokens encrypted at rest (careeros/shared/crypto.py)
+
+# ── Scoring / knowledge ─────────────────────────────────────────────────────
 numpy>=1.24
-networkx>=3.0
+networkx>=3.0                    # skill graph
 
-# ============================================================
-# plugins/ — job sources, enrichment, market signals
-# ============================================================
-applypilot>=0.3.0        # job source plugin (dynamic load)
-feedparser>=6.0          # plugins/market_signals/techcrunch/
-requests>=2.31           # plugins/market_signals/hackernews/, llm_client
+# ── Sources & parsing ───────────────────────────────────────────────────────
+requests>=2.31                   # GitHub, OpenRouter, HN
+feedparser>=6.0                  # TechCrunch RSS
+beautifulsoup4>=4.12             # portfolio crawler
+PyMuPDF==1.24.10                 # CV PDF text
 
-# ============================================================
-# prompts/ + services — templating, config, env
-# ============================================================
+# ── Templates / config ──────────────────────────────────────────────────────
 jinja2>=3.1
 pyyaml>=6.0
-python-dotenv>=1.0
-
-# ============================================================
-# tests/
-# ============================================================
-pytest>=7.0

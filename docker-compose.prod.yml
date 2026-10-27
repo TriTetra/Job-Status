@@ -1,0 +1,65 @@
+# Production stack for Coolify ("Docker Compose" build pack → compose file: /docker-compose.prod.yml).
+#
+#   web  — the only public service; give it your domain in Coolify. Serves the app
+#          and forwards /api/* to the API over the internal network.
+#   api  — FastAPI + migrations on start. Not exposed.
+#   db   — PostgreSQL 16 with a persistent volume. Not exposed.
+#
+# Set the variables marked "required" in Coolify → Environment Variables.
+# First deploy, then in the api container terminal:  career-os seed && career-os user add you@example.com
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: career_os
+      POSTGRES_USER: career_os
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U career_os -d career_os"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://career_os:${POSTGRES_PASSWORD}@db:5432/career_os
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?required}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-openai/gpt-4o-mini}
+      WEB_APP_URL: ${WEB_APP_URL:?required}            # e.g. https://career.example.com
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}    # ${WEB_APP_URL}/api/oauth/github/callback
+      SESSION_COOKIE_SECURE: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - uploads:/app/personal                          # uploaded CVs
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        API_URL: http://api:8000
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:8000
+    expose:
+      - "3000"
+
+volumes:
+  pgdata:
+  uploads:

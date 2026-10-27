@@ -15,6 +15,7 @@ ROOT = Path(__file__).parents[2]
 
 EXPECTED_PATHS = {
     "/", "/health",
+    "/api/auth/login", "/api/auth/logout", "/api/auth/me",
     "/api/applications/", "/api/applications/summary", "/api/applications/{url}",
     "/api/companies/", "/api/companies/hiring", "/api/companies/track",
     "/api/companies/{name}", "/api/companies/{name}/memory",
@@ -38,7 +39,6 @@ EXPECTED_PATHS = {
     "/api/resume/generate",
     "/api/roles", "/api/roles/categories", "/api/roles/search", "/api/roles/{slug}",
     "/api/settings/", "/api/settings/weights",
-    "/api/webhooks/clerk",
 }
 
 

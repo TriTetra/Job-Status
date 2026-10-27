@@ -1,18 +1,19 @@
-"""FastAPI dependencies — DB session and user identity."""
+"""FastAPI dependencies — DB session and the signed-in user."""
 
 import logging
 from typing import Generator, Optional
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
+from sqlalchemy.orm import Session
 
 from careeros.db.connection import db
+from careeros.identity.auth.sessions import COOKIE_NAME, resolve_session
 from careeros.shared.config import get_settings
-from .core.auth.clerk_auth import ClerkAuthenticator
 
 logger = logging.getLogger(__name__)
 
 # Opt-in only (local e2e scripts): CAREEROS_E2E_AUTH_BYPASS=1 lets
-# `X-User-Id: user_e2e_*` act as a user without a Clerk token.
+# `X-User-Id: user_e2e_*` act as a user without a session.
 # Must never be set in a deployed environment.
 E2E_USER_PREFIX = "user_e2e_"
 
@@ -22,36 +23,17 @@ def get_db_session() -> Generator:
         yield session
 
 
-def _verify(token: str, source: str) -> str:
-    try:
-        return ClerkAuthenticator.verify_token(token)
-    except Exception as e:
-        logger.info("Rejected %s token: %s", source, e)
-        raise HTTPException(status_code=401, detail="Invalid authentication token")
-
-
 def get_user_id(
     request: Request,
     x_user_id: Optional[str] = Header(default=None),
+    session: Session = Depends(get_db_session),
 ) -> str:
-    """Resolve the Clerk user id for this request, or raise 401.
+    """The signed-in user's id from the session cookie, or 401. There is no anonymous fallback."""
+    user_id = resolve_session(session, request.cookies.get(COOKIE_NAME))
+    if user_id:
+        return user_id
 
-    Order: Bearer token → Clerk `__session` cookie → opt-in e2e header.
-    There is no anonymous fallback.
-    """
-    auth = request.headers.get("Authorization")
-    if auth and auth.startswith("Bearer "):
-        return _verify(auth[7:], "bearer")
-
-    session_token = request.cookies.get("__session")
-    if session_token:
-        return _verify(session_token, "cookie")
-
-    if (
-        x_user_id
-        and x_user_id.startswith(E2E_USER_PREFIX)
-        and get_settings().e2e_auth_bypass
-    ):
+    if x_user_id and x_user_id.startswith(E2E_USER_PREFIX) and get_settings().e2e_auth_bypass:
         return x_user_id
 
     raise HTTPException(status_code=401, detail="Authentication required")

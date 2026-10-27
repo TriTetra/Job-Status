@@ -1,7 +1,7 @@
-"""Authentication guards — no database or Clerk network calls.
+"""Authentication + CSRF guards on the real app — no database or network.
 
-The DB session dependency is overridden with a stub, so any request that gets
-past auth would fail loudly instead of touching a real database.
+The DB session dependency yields a session that explodes on any use, so a
+request that gets past auth fails loudly instead of touching a database.
 """
 
 import re
@@ -11,23 +11,31 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
+from apps.api.app import dependencies
 from apps.api.app.dependencies import get_db_session, get_user_id
+from careeros.identity.auth.sessions import COOKIE_NAME
 from careeros.shared.config import get_settings
 
 E2E_BYPASS_ENV = "CAREEROS_E2E_AUTH_BYPASS"
+CSRF = {"X-CareerOS-CSRF": "1"}
 
-# Deliberately unauthenticated (see apps/api/app/main.py)
+# Deliberately reachable without a session (see apps/api/app/main.py)
 PUBLIC_ROUTES = {
     ("GET", "/"),
     ("GET", "/health"),
-    ("POST", "/api/webhooks/clerk"),             # Svix signature instead
-    ("GET", "/api/oauth/github/callback"),       # single-use OAuth state instead
+    ("POST", "/api/auth/login"),           # how you get a session
+    ("POST", "/api/auth/logout"),          # harmless without one
+    ("GET", "/api/oauth/github/callback"),  # single-use OAuth state instead
 }
+
+
+class ExplodingSession:
+    def __getattr__(self, name):
+        raise AssertionError(f"request reached the database (session.{name}) without authentication")
 
 
 @pytest.fixture(autouse=True)
 def _fresh_settings():
-    """Settings are cached per process; tests below change env vars."""
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -37,11 +45,10 @@ def _fresh_settings():
 def app():
     from apps.api.app.main import app as fastapi_app
 
-    def _no_db():
-        raise AssertionError("request reached the database without authentication")
-        yield  # pragma: no cover
+    def _exploding_db():
+        yield ExplodingSession()
 
-    fastapi_app.dependency_overrides[get_db_session] = _no_db
+    fastapi_app.dependency_overrides[get_db_session] = _exploding_db
     yield fastapi_app
     fastapi_app.dependency_overrides.pop(get_db_session, None)
 
@@ -49,20 +56,6 @@ def app():
 @pytest.fixture(scope="module")
 def client(app):
     return TestClient(app, raise_server_exceptions=False)
-
-
-def _protected_routes(app):
-    for path, ops in app.openapi()["paths"].items():
-        for method in ops:
-            if (method.upper(), path) not in PUBLIC_ROUTES:
-                yield method.upper(), path
-
-
-def _request(headers=None, cookies=None):
-    raw = [(k.lower().encode(), v.encode()) for k, v in (headers or {}).items()]
-    if cookies:
-        raw.append((b"cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()).encode()))
-    return Request({"type": "http", "method": "GET", "path": "/", "headers": raw})
 
 
 @pytest.fixture
@@ -85,101 +78,139 @@ def sandboxed(monkeypatch):
     monkeypatch.setattr(BackgroundTasks, "add_task", lambda self, *a, **k: None)
 
 
+def _routes(app):
+    for path, ops in app.openapi()["paths"].items():
+        for method in ops:
+            yield method.upper(), path
+
+
 # ── route level ───────────────────────────────────────────────────────────
 
-def test_every_non_public_route_rejects_anonymous_requests(app, client, sandboxed):
+def test_every_non_public_route_rejects_requests_without_a_session(app, client, sandboxed):
     leaks = []
-    for method, path in _protected_routes(app):
+    for method, path in _routes(app):
+        if (method, path) in PUBLIC_ROUTES:
+            continue
         url = re.sub(r"\{[^}]+\}", "x", path)
         try:
-            status = client.request(method, url).status_code
+            status = client.request(method, url, headers=CSRF).status_code
         except Exception as e:  # handler ran past auth and blew up on the sandbox
             status = f"{type(e).__name__}: {e}"
         if status != 401:
             leaks.append(f"{method} {path} -> {status}")
-    assert not leaks, "routes reachable without auth:\n" + "\n".join(leaks)
+    assert not leaks, "routes reachable without a session:\n" + "\n".join(leaks)
+
+
+def test_unsafe_methods_need_the_csrf_header(app, client):
+    missing = []
+    for method, path in _routes(app):
+        if method in ("GET", "HEAD", "OPTIONS"):
+            continue
+        status = client.request(method, re.sub(r"\{[^}]+\}", "x", path)).status_code
+        if status != 403:
+            missing.append(f"{method} {path} -> {status}")
+    assert not missing, "state-changing routes accepted without CSRF header:\n" + "\n".join(missing)
+
+
+def test_no_cors_is_granted(client):
+    resp = client.options(
+        "/api/jobs/",
+        headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
+    )
+    assert "access-control-allow-origin" not in {k.lower() for k in resp.headers}
 
 
 def test_public_routes_still_public(client):
     assert client.get("/health").status_code == 200
 
 
+# ── login / logout ────────────────────────────────────────────────────────
+
 @pytest.fixture
-def webhook_client(app, client):
-    """The webhook resolves a DB session before verifying; give it an inert one."""
-    def _inert_session():
-        yield None
+def login_env(monkeypatch):
+    from types import SimpleNamespace
 
-    previous = app.dependency_overrides[get_db_session]
-    app.dependency_overrides[get_db_session] = _inert_session
-    yield client
-    app.dependency_overrides[get_db_session] = previous
+    from apps.api.app.routers import auth as auth_router
+    from careeros.identity.auth.throttle import LoginThrottle
+
+    users = {("me@example.com", "correct horse battery"): SimpleNamespace(id="user_1")}
+    monkeypatch.setattr(auth_router.accounts, "authenticate",
+                        lambda s, email, pw: users.get((email.lower(), pw)))
+    monkeypatch.setattr(auth_router.sessions, "create_session", lambda s, uid, ua, ip: f"token-for-{uid}")
+    monkeypatch.setattr(auth_router.sessions, "purge_expired", lambda s: 0)
+    monkeypatch.setattr(auth_router.sessions, "revoke_session", lambda s, tok: None)
+    monkeypatch.setattr(auth_router, "login_throttle", LoginThrottle(per_email=3, per_ip=10))
 
 
-def test_webhook_rejected_when_secret_missing(webhook_client, monkeypatch):
-    monkeypatch.delenv("CLERK_WEBHOOK_SECRET", raising=False)
-    assert webhook_client.post("/api/webhooks/clerk", content=b"{}").status_code == 503
+def test_login_sets_a_hardened_session_cookie(client, login_env):
+    resp = client.post("/api/auth/login", json={"email": "me@example.com", "password": "correct horse battery"},
+                       headers=CSRF)
+    assert resp.status_code == 204
+    cookie = resp.headers["set-cookie"].lower()
+    assert cookie.startswith(f"{COOKIE_NAME}=token-for-user_1")
+    assert "httponly" in cookie and "samesite=lax" in cookie and "secure" in cookie and "path=/" in cookie
 
 
-def test_webhook_rejects_bad_signature(webhook_client, monkeypatch):
-    monkeypatch.setenv("CLERK_WEBHOOK_SECRET", "whsec_dGVzdHNlY3JldA==")
-    resp = webhook_client.post(
-        "/api/webhooks/clerk",
-        content=b"{}",
-        headers={"svix-id": "msg_1", "svix-timestamp": "0", "svix-signature": "v1,bogus"},
-    )
-    assert resp.status_code == 401
+def test_wrong_password_is_401_and_repeated_failures_are_throttled(client, login_env):
+    body = {"email": "me@example.com", "password": "nope"}
+    assert [client.post("/api/auth/login", json=body, headers=CSRF).status_code for _ in range(3)] == [401] * 3
+    blocked = client.post("/api/auth/login", json=body, headers=CSRF)
+    assert blocked.status_code == 429 and int(blocked.headers["retry-after"]) > 0
+    # even the right password waits out the lock
+    ok_body = {"email": "me@example.com", "password": "correct horse battery"}
+    assert client.post("/api/auth/login", json=ok_body, headers=CSRF).status_code == 429
+
+
+def test_login_without_csrf_header_is_refused(client, login_env):
+    resp = client.post("/api/auth/login", json={"email": "me@example.com", "password": "correct horse battery"})
+    assert resp.status_code == 403
+
+
+def test_logout_clears_the_cookie(client, login_env):
+    resp = client.post("/api/auth/logout", headers=CSRF, cookies={COOKIE_NAME: "whatever"})
+    assert resp.status_code == 204
+    assert f'{COOKIE_NAME}=""' in resp.headers["set-cookie"] or "max-age=0" in resp.headers["set-cookie"].lower()
 
 
 # ── get_user_id ───────────────────────────────────────────────────────────
 
-def test_anonymous_request_is_rejected():
-    with pytest.raises(HTTPException) as exc:
-        get_user_id(_request(), x_user_id=None)
-    assert exc.value.status_code == 401
+def _request(cookies=None):
+    raw = []
+    if cookies:
+        raw.append((b"cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()).encode()))
+    return Request({"type": "http", "method": "GET", "path": "/", "headers": raw})
 
 
-def test_forged_user_id_header_is_rejected():
-    with pytest.raises(HTTPException) as exc:
-        get_user_id(_request(), x_user_id="user_someone_else")
-    assert exc.value.status_code == 401
+def test_valid_session_cookie_resolves_user(monkeypatch):
+    monkeypatch.setattr(dependencies, "resolve_session", lambda s, tok: "user_1" if tok == "good" else None)
+    assert get_user_id(_request({COOKIE_NAME: "good"}), x_user_id=None, session=object()) == "user_1"
 
 
-def test_e2e_header_rejected_without_opt_in(monkeypatch):
+def test_invalid_or_missing_session_is_rejected(monkeypatch):
+    monkeypatch.setattr(dependencies, "resolve_session", lambda s, tok: None)
+    for req in (_request(), _request({COOKIE_NAME: "forged"})):
+        with pytest.raises(HTTPException) as exc:
+            get_user_id(req, x_user_id=None, session=object())
+        assert exc.value.status_code == 401
+
+
+def test_forged_user_id_header_is_rejected(monkeypatch):
+    monkeypatch.setattr(dependencies, "resolve_session", lambda s, tok: None)
+    with pytest.raises(HTTPException):
+        get_user_id(_request(), x_user_id="user_someone_else", session=object())
+
+
+def test_e2e_header_only_with_opt_in(monkeypatch):
+    monkeypatch.setattr(dependencies, "resolve_session", lambda s, tok: None)
     monkeypatch.delenv(E2E_BYPASS_ENV, raising=False)
-    with pytest.raises(HTTPException) as exc:
-        get_user_id(_request(), x_user_id="user_e2e_attacker")
-    assert exc.value.status_code == 401
-
-
-def test_e2e_header_accepted_with_opt_in(monkeypatch):
+    with pytest.raises(HTTPException):
+        get_user_id(_request(), x_user_id="user_e2e_abc", session=object())
+    get_settings.cache_clear()
     monkeypatch.setenv(E2E_BYPASS_ENV, "1")
-    assert get_user_id(_request(), x_user_id="user_e2e_abc") == "user_e2e_abc"
+    assert get_user_id(_request(), x_user_id="user_e2e_abc", session=object()) == "user_e2e_abc"
 
 
-def test_invalid_bearer_token_is_rejected(monkeypatch):
-    from apps.api.app.core.auth.clerk_auth import ClerkAuthenticator
-
-    def _boom(token):
-        raise ValueError("bad token")
-
-    monkeypatch.setattr(ClerkAuthenticator, "verify_token", staticmethod(_boom))
-    with pytest.raises(HTTPException) as exc:
-        get_user_id(_request({"Authorization": "Bearer nope"}), x_user_id=None)
-    assert exc.value.status_code == 401
-
-
-def test_valid_cookie_resolves_user(monkeypatch):
-    from apps.api.app.core.auth.clerk_auth import ClerkAuthenticator
-
-    monkeypatch.setattr(ClerkAuthenticator, "verify_token", staticmethod(lambda t: "user_123"))
-    assert get_user_id(_request(cookies={"__session": "tok"}), x_user_id=None) == "user_123"
-
-
-def test_bearer_takes_precedence_over_e2e_header(monkeypatch):
-    from apps.api.app.core.auth.clerk_auth import ClerkAuthenticator
-
+def test_session_beats_e2e_header(monkeypatch):
+    monkeypatch.setattr(dependencies, "resolve_session", lambda s, tok: "user_real")
     monkeypatch.setenv(E2E_BYPASS_ENV, "1")
-    monkeypatch.setattr(ClerkAuthenticator, "verify_token", staticmethod(lambda t: "user_real"))
-    req = _request({"Authorization": "Bearer tok"})
-    assert get_user_id(req, x_user_id="user_e2e_abc") == "user_real"
+    assert get_user_id(_request({COOKIE_NAME: "good"}), x_user_id="user_e2e_abc", session=object()) == "user_real"

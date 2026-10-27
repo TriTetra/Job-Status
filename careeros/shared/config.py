@@ -69,6 +69,7 @@ class Settings:
     db_max_overflow: int
     db_pool_timeout: int
     db_echo: bool
+    db_connect_timeout: int
 
     # LLM (OpenRouter-compatible chat completions API)
     openrouter_api_key: Optional[str]
@@ -82,8 +83,7 @@ class Settings:
     github_redirect_uri: Optional[str]
 
     # Auth
-    clerk_jwks_url: str
-    clerk_webhook_secret: Optional[str]
+    session_cookie_secure: bool
     token_encryption_key: Optional[str]
     e2e_auth_bypass: bool
 
@@ -100,10 +100,12 @@ def get_settings() -> Settings:
     load_env()
     return Settings(
         database_url=os.getenv("DATABASE_URL"),
-        db_pool_size=_int("DB_POOL_SIZE", 10),
-        db_max_overflow=_int("DB_MAX_OVERFLOW", 20),
+        # A handful of users and one API worker: small pool by default
+        db_pool_size=_int("DB_POOL_SIZE", 5),
+        db_max_overflow=_int("DB_MAX_OVERFLOW", 5),
         db_pool_timeout=_int("DB_POOL_TIMEOUT", 30),
         db_echo=_bool("DB_ECHO"),
+        db_connect_timeout=_int("DB_CONNECT_TIMEOUT", 5),
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY") or None,
         llm_model=os.getenv("DEFAULT_MODEL", "openai/gpt-4o-mini"),
         llm_base_url=os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/"),
@@ -111,10 +113,8 @@ def get_settings() -> Settings:
         github_client_id=os.getenv("GITHUB_CLIENT_ID") or None,
         github_client_secret=os.getenv("GITHUB_CLIENT_SECRET") or None,
         github_redirect_uri=os.getenv("GITHUB_REDIRECT_URI") or None,
-        clerk_jwks_url=os.getenv(
-            "CLERK_JWKS_URL", "https://fond-grizzly-40.clerk.accounts.dev/.well-known/jwks.json"
-        ),
-        clerk_webhook_secret=os.getenv("CLERK_WEBHOOK_SECRET") or None,
+        # Secure cookies also work on http://localhost in current browsers; set false only for odd dev setups
+        session_cookie_secure=_bool("SESSION_COOKIE_SECURE", True),
         token_encryption_key=os.getenv("TOKEN_ENCRYPTION_KEY") or None,
         e2e_auth_bypass=os.getenv("CAREEROS_E2E_AUTH_BYPASS") == "1",
         web_app_url=os.getenv("WEB_APP_URL", "http://localhost:3000").rstrip("/"),

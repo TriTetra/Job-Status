@@ -2,7 +2,7 @@
 Jinja2 template loader — singleton pattern.
 
 Usage:
-    from core.prompts import template_loader
+    from careeros.resume.prompts import template_loader
 
     output = template_loader.render(
         "resume/tailor_for_target.jinja",

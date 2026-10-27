@@ -3,9 +3,23 @@
  * The FastAPI backend is the only data source for the web app.
  */
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+/**
+ * The browser calls the API on its own origin: next.config.ts rewrites /api/*
+ * to the backend, so the session cookie is first-party and there is no CORS.
+ */
+export const API_BASE = "";
 
-/** Non-2xx response from the API. `status` lets callers branch (404 → empty state, 401 → sign in …). */
+/** Required by the API on every state-changing request (see apps/api/app/main.py). */
+export const CSRF_HEADER = "X-CareerOS-CSRF";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+export function withCsrf(headers: Headers, method: string | undefined): Headers {
+  if (!SAFE_METHODS.has((method ?? "GET").toUpperCase())) headers.set(CSRF_HEADER, "1");
+  return headers;
+}
+
+/** Non-2xx response from the API. `status` lets callers branch (401 → sign in, 404 → empty state …). */
 export class ApiError extends Error {
   constructor(
     readonly path: string,

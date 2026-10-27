@@ -5,6 +5,7 @@ Models live in their feature package; import them from there in code.
 
 from careeros.db.base import Base, TimestampMixin
 from careeros.identity.models.user import User
+from careeros.identity.models.auth import AuthCredential, AuthSession
 from careeros.identity.models.role import Role
 from careeros.identity.models.custom_role import CustomRole
 from careeros.identity.models.user_role import UserRole
@@ -37,6 +38,8 @@ __all__ = [
     "Base",
     "TimestampMixin",
     "User",
+    "AuthCredential",
+    "AuthSession",
     "Role",
     "CustomRole",
     "UserRole",

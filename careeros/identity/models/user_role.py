@@ -18,7 +18,7 @@ class UserRole(Base):
     __tablename__ = "user_roles"
 
     id: Mapped[str] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), ForeignKey("users.clerk_id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(128), ForeignKey("users.id"), nullable=False)
     role_id: Mapped[Optional[str]] = mapped_column(Uuid, ForeignKey("roles.id"), nullable=True)
     custom_role_id: Mapped[Optional[str]] = mapped_column(Uuid, ForeignKey("custom_roles.id"), nullable=True)
     started_at: Mapped[date] = mapped_column(Date, nullable=False)

@@ -62,7 +62,7 @@ def _evidence_counts(session: Session, user_id: str) -> dict:
 def get_briefing_facts(session: Session, user_id: str) -> dict:
     since = func.now() - timedelta(hours=24)  # DB clock, same as the timestamps it compares
 
-    user = session.query(User).filter(User.clerk_id == user_id).first()
+    user = session.query(User).filter(User.id == user_id).first()
     profile = (user.profile_data if user else None) or {}
 
     companies = (

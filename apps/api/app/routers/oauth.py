@@ -11,7 +11,7 @@ from careeros.shared.config import get_settings
 from ..dependencies import get_db_session, get_user_id
 
 # Per-endpoint auth: /github/callback is a browser redirect from GitHub,
-# authenticated by its single-use state token instead of a Clerk session.
+# authenticated by its single-use state token instead of a session cookie.
 router = APIRouter(prefix="/api/oauth", tags=["oauth"])
 
 

@@ -39,6 +39,7 @@ app = typer.Typer(
 
 _SUB_CLIS = [
     # (module, Typer attribute, command name, help)
+    ("careeros.identity.cli", "app", "user", "Manage who can sign in"),
     ("careeros.applications.cli", "app", "track", "Application tracking pipeline"),
     ("careeros.resume.cli", "app", "resume", "Target-aware resume generation"),
     ("careeros.companies.cli", "app", "company", "Company intelligence and memory"),

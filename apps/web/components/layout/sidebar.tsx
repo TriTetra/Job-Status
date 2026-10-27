@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useMe } from "@/features/auth/use-me";
 import { cn } from "@/lib/utils";
 import { NAV_GROUPS, type NavItem } from "@/lib/nav-items";
 import { useUIStore } from "@/lib/store";
@@ -86,10 +86,9 @@ function NavItemRow({
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const { user } = useUser();
-  const displayName = user?.firstName ?? user?.username ?? "You";
-  const displayRole = user?.unsafeMetadata?.role as string | undefined;
-  const initials = (user?.firstName?.[0] ?? user?.username?.[0] ?? "A").toUpperCase();
+  const me = useMe();
+  const displayName = me?.first_name ?? me?.email?.split("@")[0] ?? "You";
+  const initials = (me?.first_name?.[0] ?? me?.email?.[0] ?? "A").toUpperCase();
   const badgeCounts = useBadgeCounts();
 
   /** Inject real badge counts into the static nav definition. */
@@ -208,11 +207,6 @@ export function Sidebar() {
               <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
                 {displayName}
               </div>
-              {displayRole && (
-                <div className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
-                  {displayRole}
-                </div>
-              )}
             </div>
           )}
         </div>

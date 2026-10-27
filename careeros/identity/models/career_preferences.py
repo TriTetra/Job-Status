@@ -11,7 +11,7 @@ class CareerPreferences(Base):
     __tablename__ = 'career_preferences'
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default='gen_random_uuid()')
-    user_id = Column(String(128), ForeignKey('users.clerk_id'), nullable=False, unique=True)
+    user_id = Column(String(128), ForeignKey('users.id'), nullable=False, unique=True)
 
     goal_ids = Column(JSONB, server_default='[]')
     preferred_role_ids = Column(JSONB, server_default='[]')

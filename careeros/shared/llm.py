@@ -1,6 +1,6 @@
 """The one LLM client (OpenRouter-compatible chat completions).
 
-    from shared.llm import get_llm_client
+    from careeros.shared.llm import get_llm_client
     llm = get_llm_client()                        # raises LLMNotConfiguredError without a key
     text = llm.complete("…", system="…", max_tokens=200)
     data = llm.complete_json("…", max_tokens=2000)   # parsed JSON, ``` fences tolerated

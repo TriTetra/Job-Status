@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Phase 1 — Own Auth + Coolify Deploy | Clerk removed: invite-only accounts (`career-os user`), argon2id passwords, hashed server-side sessions in an httpOnly cookie, login throttling, CSRF header, no CORS; users.clerk_id → users.id (data kept); Coolify compose stack (db + internal api + public web, /api proxied); DB connect timeout; torch made optional | ✅ Tamam | 2026-10-28 |
 | Refactor Step 8 — Seeds, Scripts, Docs | All seed data in infra/seeds/v1/*.yaml (roles, skills, goals, evidence sources) + one idempotent `career-os seed`; no more killing DB connections; role metadata merge; scripts/ = 3 ops scripts; new docs/ARCHITECTURE.md + DEVELOPMENT.md, stale docs archived | ✅ Tamam | 2026-10-28 |
 | Refactor Step 7 — Web: One Data Path | Web reads only through FastAPI (lib/db + postgres removed; new /api/briefing, GET /api/onboarding/identity); one apiFetch (client + server-only); 4 dashboard pages → server page + client view with loading/error; ESLint 78 → 0; badge/notes/reasoning bugs fixed | ✅ Tamam | 2026-10-28 |
 | Refactor Step 6 — Feature Packages | core/ services/ plugins/ shared/ → one package `careeros/` with one folder per feature (identity, onboarding, evidence, jobs, applications, companies, market, resume, knowledge) + shared + db; 152 files moved with history, 411 imports rewritten by AST; 2 new architecture rules | ✅ Tamam | 2026-10-28 |
@@ -89,6 +90,49 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Phase 1] — 2026-10-28 — Own auth + Coolify deploy ✅
+
+**Neden:** Site özel — sadece sahibi ve birkaç arkadaş. Clerk dış bağımlılık, kayıt
+sayfası ve webhook senkronu getiriyordu; Coolify'da tek domain ile güvenli kurulum
+gerekiyordu.
+
+### Auth (`careeros/identity/auth/`)
+- `passwords.py`: argon2id, en az 12 karakter, bilinmeyen e-postada dummy hash (timing oracle yok), otomatik rehash.
+- `sessions.py`: 256-bit rastgele token httpOnly + `SameSite=Lax` + `Secure` cookie'de; DB'de sadece sha256 (`auth_sessions`); 30 gün kayan süre (12 saatte bir yenilenir); pasif kullanıcı anında düşer.
+- `throttle.py`: 15 dk'da e-posta başına 5, IP başına 20 hatalı giriş → 429 + `Retry-After`.
+- `accounts.py` + `cli.py`: `career-os user add / passwd / list / disable / enable / signout`. Kayıt sayfası yok (davetli).
+- API: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`. `get_user_id` artık cookie'yi çözer.
+- CSRF middleware: GET/HEAD/OPTIONS dışındaki her istek `X-CareerOS-CSRF: 1` ister; CORS tamamen kaldırıldı (tarayıcı sadece web'le konuşur).
+- Silindi: `apps/api/app/core/` (Clerk JWT), `routers/webhooks.py`, `tests/integration/test_clerk_auth.py`, `@clerk/nextjs`.
+
+### Veritabanı
+- Migration `own_auth_001`: `users.clerk_id` → `users.id` (mevcut id'ler ve veriler korunur), `users.is_active`, yeni `auth_credentials` ve `auth_sessions` tabloları.
+- Clerk'ten kalan kullanıcılar: `career-os user passwd <email>` ile şifre alır.
+- `ensure_user` (sessiz placeholder kullanıcı) → `require_user` (yoksa hata).
+- `DB_CONNECT_TIMEOUT` (5 sn): erişilemeyen DB artık sonsuza kadar asılı kalmıyor; pool 5 + 5.
+
+### Web
+- Yeni `/sign-in` formu (open-redirect korumalı `next`), `features/auth` (`useMe`, `signOut`), topbar hesap butonu.
+- `proxy.ts` cookie yoksa `/sign-in`'e yönlendirir; dashboard layout 401'de yönlendirir.
+- `next.config.ts`: `output: "standalone"`, `/api/*` → `API_URL` rewrite (aynı origin, first-party cookie).
+- Server fetch'leri cookie'yi API'ye iletir; client fetch `credentials: same-origin` + CSRF header.
+
+### Deploy (Coolify)
+- `docker-compose.prod.yml`: `db` (Postgres 16, volume), `api` (iç ağ, başlangıçta `alembic upgrade head`, tek worker, `--proxy-headers`), `web` (tek public servis).
+- `infra/docker/api.Dockerfile`, `web.Dockerfile` (non-root, healthcheck), `api-entrypoint.sh`, `.dockerignore`, `.gitattributes` (LF).
+- `requirements.txt` sadeleşti: applypilot, pytest, dotenv, torch/sentence-transformers çıktı; argon2-cffi, cryptography, beautifulsoup4 eklendi. Semantik eşleştirme opsiyonel: `requirements-semantic.txt` (import'lar lazy).
+
+### Testler
+- `tests/smoke/test_auth.py` yeniden yazıldı: oturumsuz her route 401, CSRF'siz her yazma isteği 403, CORS yok, cookie bayrakları, throttle, logout.
+- Yeni `tests/unit/test_auth_core.py`: şifre, throttle, session (hash saklama, süre, kayma, pasif kullanıcı), hesaplar (Clerk kullanıcısı göçü dahil).
+- Sonuç: 357 passed, ruff temiz, alembic head `own_auth_001`, web tsc + eslint + `npm run build` temiz.
+
+### Bilinen açıklar
+- Throttle, background job ve OAuth state bellekte → tek API worker.
+- Canlı Coolify kurulumu henüz denenmedi; migration canlı DB'ye uygulanmadı.
 
 ---
 

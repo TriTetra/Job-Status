@@ -23,18 +23,14 @@ class OnboardingInputError(ValueError):
 
 # ── user record ───────────────────────────────────────────────────────────
 
-def ensure_user(session: Session, clerk_id: str) -> User:
-    """The user's row, created with placeholders if the Clerk webhook has not run yet."""
-    repo = UserRepository(session)
-    user = repo.get_by_clerk_id(clerk_id)
-    if not user:
-        user = repo.upsert_from_clerk(
-            clerk_id=clerk_id,
-            email=f"{clerk_id}@placeholder-applypilot.com",
-            first_name="New",
-            last_name="User",
-        )
-        session.commit()
+class UserNotFound(LookupError):
+    """The signed-in id has no users row (should not happen: sessions require a user)."""
+
+
+def require_user(session: Session, user_id: str) -> User:
+    user = UserRepository(session).get_by_id(user_id)
+    if user is None:
+        raise UserNotFound(user_id)
     return user
 
 
@@ -61,9 +57,9 @@ def _preferences_view(prefs) -> Optional[dict]:
     }
 
 
-def get_state(session: Session, clerk_id: str) -> dict:
-    user = ensure_user(session, clerk_id)
-    prefs = CareerPreferencesRepository(session).get_by_user_id(clerk_id)
+def get_state(session: Session, user_id: str) -> dict:
+    user = require_user(session, user_id)
+    prefs = CareerPreferencesRepository(session).get_by_user_id(user_id)
     return {
         "state": user.onboarding_state,
         "profile_data": user.profile_data or {},
@@ -83,7 +79,7 @@ def classify_role_id(role_id: str) -> str:
     return "slug"
 
 
-def _resolve_role(session: Session, clerk_id: str, role_id: str, role_title: str) -> tuple[Optional[str], Optional[str]]:
+def _resolve_role(session: Session, user_id: str, role_id: str, role_title: str) -> tuple[Optional[str], Optional[str]]:
     """(canonical role id, custom role id) — exactly one is set."""
     kind = classify_role_id(role_id)
     if kind == "uuid":
@@ -97,19 +93,19 @@ def _resolve_role(session: Session, clerk_id: str, role_id: str, role_title: str
     # Custom role: idempotent per (user, title)
     existing = session.execute(
         sa.text("SELECT id FROM custom_roles WHERE user_id = :uid AND title = :title LIMIT 1"),
-        {"uid": clerk_id, "title": role_title},
+        {"uid": user_id, "title": role_title},
     ).fetchone()
     if existing:
         return None, str(existing[0])
-    custom = CustomRole(id=uuid.uuid4(), user_id=clerk_id, title=role_title)
+    custom = CustomRole(id=uuid.uuid4(), user_id=user_id, title=role_title)
     session.add(custom)
     session.flush()
     return None, str(custom.id)
 
 
-def get_identity(session: Session, clerk_id: str) -> dict:
+def get_identity(session: Session, user_id: str) -> dict:
     """What the identity step saved — read back by the settings profile tab."""
-    user = ensure_user(session, clerk_id)
+    user = require_user(session, user_id)
     return {
         "profile_data": user.profile_data or {},
         "years_in_role": user.years_in_role,
@@ -120,11 +116,11 @@ def get_identity(session: Session, clerk_id: str) -> dict:
     }
 
 
-def save_identity(session: Session, clerk_id: str, identity: dict[str, Any]) -> str:
+def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> str:
     """Persist the identity step, record the role in history, advance the state. Returns new state."""
-    user = ensure_user(session, clerk_id)
+    user = require_user(session, user_id)
     role_id, custom_role_id = _resolve_role(
-        session, clerk_id, identity["current_role_id"], identity["current_role_title"]
+        session, user_id, identity["current_role_id"], identity["current_role_title"]
     )
 
     user.current_role_id = role_id
@@ -147,14 +143,14 @@ def save_identity(session: Session, clerk_id: str, identity: dict[str, Any]) -> 
     session.execute(
         sa.text("UPDATE user_roles SET is_current = false, ended_at = :today "
                 "WHERE user_id = :user_id AND is_current = true"),
-        {"user_id": clerk_id, "today": today},
+        {"user_id": user_id, "today": today},
     )
     session.execute(
         sa.text("INSERT INTO user_roles (id, user_id, role_id, custom_role_id, started_at, is_current, source) "
                 "VALUES (:id, :user_id, :role_id, :custom_role_id, :started_at, true, :source)"),
         {
             "id": str(uuid.uuid4()),
-            "user_id": clerk_id,
+            "user_id": user_id,
             "role_id": role_id,
             "custom_role_id": custom_role_id,
             "started_at": today,
@@ -176,12 +172,12 @@ def validate_goals(goals: dict[str, Any]) -> None:
         raise OnboardingInputError("salary_min cannot be greater than salary_max")
 
 
-def save_goals(session: Session, clerk_id: str, goals: dict[str, Any]) -> str:
+def save_goals(session: Session, user_id: str, goals: dict[str, Any]) -> str:
     """Persist career preferences and advance GOALS → EVIDENCE. Returns new state."""
     validate_goals(goals)
-    CareerPreferencesRepository(session).upsert(user_id=clerk_id, **goals)
+    CareerPreferencesRepository(session).upsert(user_id=user_id, **goals)
 
-    user = ensure_user(session, clerk_id)
+    user = require_user(session, user_id)
     if user.onboarding_state == OnboardingState.GOALS.value:
         user.onboarding_state = OnboardingState.EVIDENCE.value
     session.commit()
@@ -190,20 +186,20 @@ def save_goals(session: Session, clerk_id: str, goals: dict[str, Any]) -> str:
 
 # ── state machine ─────────────────────────────────────────────────────────
 
-def advance(session: Session, clerk_id: str) -> str:
-    user = ensure_user(session, clerk_id)
+def advance(session: Session, user_id: str) -> str:
+    user = require_user(session, user_id)
     nxt = OnboardingState.next_state(user.onboarding_state)
     if nxt:
         user.onboarding_state = nxt
     return user.onboarding_state
 
 
-def complete(session: Session, clerk_id: str) -> str:
-    user = ensure_user(session, clerk_id)
+def complete(session: Session, user_id: str) -> str:
+    user = require_user(session, user_id)
     user.onboarding_state = OnboardingState.READY.value
     return user.onboarding_state
 
 
-def get_career_graph(session: Session, clerk_id: str) -> dict:
-    user = ensure_user(session, clerk_id)
+def get_career_graph(session: Session, user_id: str) -> dict:
+    user = require_user(session, user_id)
     return (user.profile_data or {}).get("career_graph") or {"nodes": [], "edges": [], "stats": {}}

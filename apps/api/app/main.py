@@ -1,42 +1,55 @@
-"""CareerOS FastAPI Gateway."""
+"""CareerOS FastAPI Gateway.
 
-from fastapi import Depends, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+Deployed behind the web app on a single domain: the browser only ever talks to
+the Next.js origin, which forwards /api/* to this service on the internal
+network. There is no CORS — cross-origin browser requests are simply refused.
+"""
+
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from careeros.shared.logging import configure_logging
 
 from .dependencies import get_user_id
-from .routers import applications, briefing, companies, evidence, goals, jobs, market, onboarding, resume, settings, webhooks, roles, preferences, oauth
+from .routers import (
+    applications, auth, briefing, companies, evidence, goals, jobs, market, oauth,
+    onboarding, preferences, resume, roles, settings,
+)
 
 configure_logging()
 
 app = FastAPI(
     title="CareerOS API",
-    description="AI-native career operating system API",
+    description="Private career intelligence API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ── CSRF ──────────────────────────────────────────────────────────────────
+# Every state-changing request must carry this header. A cross-site form or
+# image cannot set custom headers, and a cross-site fetch() that tries needs a
+# CORS preflight this API never grants — so only our own pages can write.
+CSRF_HEADER = "x-careeros-csrf"
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
+
+@app.middleware("http")
+async def require_csrf_header(request: Request, call_next):
+    if request.method not in SAFE_METHODS and request.headers.get(CSRF_HEADER) != "1":
+        return JSONResponse({"detail": "Missing CSRF header"}, status_code=403)
+    return await call_next(request)
+
+
+# ── routers ───────────────────────────────────────────────────────────────
 # Secure by default: every router requires a signed-in user.
 # Exceptions are deliberate and few:
-#   webhooks — authenticated by Svix signature
-#   oauth    — per-endpoint auth; /github/callback is a GitHub redirect
-#              authenticated by its single-use state token
+#   auth  — /login must work signed-out; /me checks the session itself
+#   oauth — per-endpoint auth; /github/callback is a GitHub redirect
+#           authenticated by its single-use state token
 authenticated = [Depends(get_user_id)]
 
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(briefing.router, prefix="/api/briefing", tags=["briefing"], dependencies=authenticated)
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"], dependencies=authenticated)
 app.include_router(companies.router, prefix="/api/companies", tags=["companies"], dependencies=authenticated)
@@ -49,7 +62,6 @@ app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboardin
 app.include_router(roles.router, dependencies=authenticated)
 app.include_router(preferences.router, dependencies=authenticated)
 app.include_router(goals.router, dependencies=authenticated)
-app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 app.include_router(oauth.router)
 
 
@@ -60,4 +72,5 @@ def root():
 
 @app.get("/health")
 def health():
+    """Liveness for the container healthcheck (does not touch the DB)."""
     return {"status": "ok"}

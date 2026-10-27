@@ -70,14 +70,33 @@ feature's service or model, never its internals.
 
 ## Request lifecycle (API)
 
-1. `apps/api/app/main.py` mounts every router with `Depends(get_user_id)` — secure by
-   default. Exceptions: the Clerk webhook (Svix signature) and the GitHub OAuth callback
+1. The browser only talks to the web app; Next rewrites `/api/*` to the internal API, so
+   cookies are first-party and there is no CORS.
+2. CSRF middleware: every non-GET/HEAD/OPTIONS request needs `X-CareerOS-CSRF: 1`
+   (a cross-site form cannot set it), else 403.
+3. `apps/api/app/main.py` mounts every router with `Depends(get_user_id)` — secure by
+   default. Exceptions: `/api/auth/login|logout` and the GitHub OAuth callback
    (single-use state token).
-2. `get_user_id` accepts a Clerk bearer token or `__session` cookie; no anonymous
-   fallback. `CAREEROS_E2E_AUTH_BYPASS=1` enables the `X-User-Id: user_e2e_*` header for
+4. `get_user_id` resolves the `careeros_session` cookie (`careeros/identity/auth/`); no
+   anonymous fallback. `CAREEROS_E2E_AUTH_BYPASS=1` enables the `X-User-Id: user_e2e_*` header for
    local e2e scripts only.
-3. The router validates input (Pydantic schema), calls a service, maps service errors to
+5. The router validates input (Pydantic schema), calls a service, maps service errors to
    HTTP status codes and serializes the result.
+
+## Authentication
+
+Private, invite-only — there is no sign-up page. `careeros/identity/auth/`:
+
+| Module | Does |
+|---|---|
+| `passwords.py` | argon2id hashes, ≥ 12 characters; unknown emails still pay one hash (no timing oracle) |
+| `sessions.py` | random 256-bit token in an httpOnly `SameSite=Lax` cookie; the DB keeps only its sha256 (`auth_sessions`); 30-day sliding expiry |
+| `throttle.py` | 5 failed logins per email / 20 per IP per 15 min → 429 (in memory, one worker) |
+| `accounts.py` | create, set password (signs out everywhere), enable/disable, authenticate |
+| `cli.py` | `career-os user add / passwd / list / disable / enable / signout` |
+
+`apps/web/proxy.ts` only checks that the cookie exists (fast redirect to `/sign-in`); the
+API is the authority on every request.
 
 ## Background work
 
@@ -96,7 +115,6 @@ FastAPI background tasks tracked by `careeros/shared/background.py`:
 |---|---|---|
 | OpenRouter (LLM) | `careeros/shared/llm.py` | retries 429/5xx/timeouts; `LLMNotConfiguredError` lets callers fall back (reasoning → template) |
 | GitHub | `careeros/evidence/github.py`, `careeros/identity/github_account.py` | user's OAuth token, encrypted at rest (`careeros/shared/crypto.py`) |
-| Clerk | `apps/api/app/core/auth/clerk_auth.py`, `apps/web/proxy.ts` | JWT via JWKS; webhook fails closed without `CLERK_WEBHOOK_SECRET` |
 | ApplyPilot | `careeros/jobs/sources/applypilot/` | local SQLite job source, column mapping in `infra/config/plugins.yaml` |
 
 ## Web app

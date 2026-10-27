@@ -99,7 +99,7 @@ def build_career_graph(
     session: Session = Depends(get_db_session),
 ):
     """Build Career Graph from extracted evidence items."""
-    if not UserRepository(session).get_by_clerk_id(user_id):
+    if not UserRepository(session).get_by_id(user_id):
         raise HTTPException(status_code=404, detail="User not found")
     if not count_for_user(session, user_id):
         raise HTTPException(status_code=400, detail="No evidence items found. Upload resume first.")

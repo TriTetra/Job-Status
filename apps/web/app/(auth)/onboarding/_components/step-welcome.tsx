@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useMe } from "@/features/auth/use-me";
 
 export function StepWelcome() {
   const router = useRouter();
-  const { user } = useUser();
-  const name = user?.firstName ?? "there";
+  const me = useMe();
+  const name = me?.first_name ?? "there";
 
   return (
     <div className="text-center">

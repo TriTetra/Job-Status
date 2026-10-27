@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useMe } from "@/features/auth/use-me";
 import { settingsApi, API_BASE } from "@/features/settings/api";
 import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
 import { Section, Row, UnderlineInput } from "./kit";
 
 export function AccountTab() {
-  const { user } = useUser();
+  const me = useMe();
   const [github, setGithub] = useState<GithubStatus | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioStatus | null>(null);
   const [urlOpen, setUrlOpen] = useState(false);
@@ -51,12 +51,12 @@ export function AccountTab() {
       <Section title="Account">
         <Row label="Name">
           <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-            {user?.fullName ?? "—"}
+            {[me?.first_name, me?.last_name].filter(Boolean).join(" ") || "—"}
           </span>
         </Row>
-        <Row label="Email" hint="Managed by your account provider">
+        <Row label="Email" hint="Change it with: career-os user …">
           <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {user?.primaryEmailAddress?.emailAddress ?? "—"}
+            {me?.email ?? "—"}
           </span>
         </Row>
       </Section>

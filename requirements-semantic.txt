@@ -1,0 +1,5 @@
+# Optional: semantic job matching (careeros/jobs/scoring/semantic_matcher.py).
+# Not used by the default scan (semantic=False) and not in the Docker image — pulls in torch (~2 GB).
+-r requirements.txt
+sentence-transformers>=2.2
+scikit-learn>=1.3
