@@ -19,7 +19,7 @@ PACKAGES = [
     ("apps/api/app", "apps.api.app"),
     ("apps/cli", "apps.cli"),
 ]
-SKIP_PARTS = {"hiring-agent", "migrations", "__pycache__"}
+SKIP_PARTS = {"migrations", "__pycache__"}
 
 
 def _module_names():

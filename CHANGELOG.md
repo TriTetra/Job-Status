@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Refactor Step 4 — Unified Evidence | One evidence store (`evidence_items`) and one module (`services/evidence/`); GitHub analysis 3 → 1 (with tests/docs/releases signals), resume parsing 2 → 1; vendored hiring-agent + PyGithub enricher + legacy evidence code removed; resume generator reads evidence_items (fixes cross-user cache leak) | ✅ Tamam | 2026-10-28 |
 | Refactor Step 3 — shared/ Infrastructure | New `shared/` package: one settings object, one LLM client (retries, JSON parsing), one logging setup; 4 OpenRouter clients → 1, 4 .env loaders → 1, library prints → logging, architecture guard tests | ✅ Tamam | 2026-10-28 |
 | Refactor Step 2 — Single Package & Imports | Repo installable (`pip install -e .`), API imported as `apps.api.app`, `career-os` console script, all sys.path hacks removed, career_os retired into core, core.domain ↔ core.db.models cycle broken | ✅ Tamam | 2026-10-28 |
 | Security Fix — API Auth Hardening + Scan Fix | Router-level auth on all API routers, no anonymous "default" fallback, e2e bypass opt-in only, Clerk webhook fails closed, resume user from token, single in-flight market refresh, scan job_meta kwarg fix, market page sends Clerk token | ✅ Tamam | 2026-10-28 |
@@ -83,6 +84,56 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Refactor Step 4] — 2026-10-28 — Unified Evidence ✅
+
+### Kararlar (kullanıcı onaylı)
+- Tek doğru kaynak: **`evidence_items`**. Eski `evidence` tablosu ve satırları DB'de **dokunulmadan** kalıyor (drop yok); kod artık okumuyor/yazmıyor.
+- Vendor edilmiş **hiring-agent kaldırıldı**; CV parsing tek yol: PDF + LLM.
+- PyGithub zenginleştiricisinin **sinyalleri kanonik GitHub analizine taşındı**, eskisi silindi.
+
+### Yapılan
+
+**`services/evidence/` — tek evidence modülü** (git mv ile, geçmiş korunarak):
+| Yeni | Eski yer(ler) |
+|---|---|
+| `skills.py` | `apps/api/app/evidence/skill_matcher.py` + `core/evidence/github_evidence._find_canonical_skill` (2 ayrı eşleştirici → 1) |
+| `aggregation.py` | `apps/api/app/core/evidence/confidence_aggregator.py` |
+| `github.py` | `core/evidence/github_analyzer.py` + `github_evidence.py` (+ `plugins/enrichment/github` sinyalleri) |
+| `portfolio.py` | `core/evidence/portfolio_crawler.py` + crawl mantığı `routers/evidence.py`'den |
+| `resume.py` | `apps/api/app/evidence/resume_pipeline.py` + `pdf_parser.py` |
+| `resume_llm.py` | `apps/api/app/evidence/resume_extractor.py` |
+
+`apps/api/app/evidence/` ve `apps/api/app/core/evidence/` silindi; çağıranlar (`routers/evidence.py`, `oauth.py`, `onboarding.py`, `jobs.py`, `scripts/backfill_job_metadata.py`) yeni modüle bağlandı.
+
+**GitHub (3 → 1)**: `GitHubAnalyzer` artık repo başına `topics`, `has_tests`, `has_docs`, `has_releases` topluyor (contents + releases REST çağrıları; hata → False). Proje item'ının `evidence_data`'sına `language`, `topics`, `code_bytes` (eskiden yanlışlıkla "LOC" denen byte sayısı), `commits_estimate`, kalite sinyalleri, `last_push` yazılıyor. Güven formülü değişmedi. Silinen: `plugins/enrichment/github/` (PyGithub), `scripts/enrich_github_evidence.py`, `tests/integration/test_github_enrichment.py`; `requirements.txt`'ten PyGithub.
+
+**Resume parsing (2 → 1)**: Silinen: `services/hiring-agent/` (28 tracked dosya, ~5.4k satır), `plugins/resume_parsers/`, `services/resume_intelligence/application/evidence_builder.py`, `hiring_agent_adapter.py`, `ResumeData`/`ResumeParserPlugin` (plugin_interface), `load_parser_plugin`/`list_available_parsers`, `plugins.yaml → resume_parsers`, `tests/manual/test_plugin_refactor.py`. Git-ignored yerel dosyalar (`.env`, `.venv` 149 MB, `cache/`, `resume_evaluations.csv`) **silinmedi**, `_archive/hiring-agent-local/`'a taşındı.
+
+**Resume generator**: `evidence_items`'tan okuyor (`aggregate_user_skills` + proje item'ları). Saf `build_project_list` / `build_skill_evidence` prompt/şablonların beklediği şekli üretiyor. `githubcache_*.json`'dan okuma kalktı → **başka kullanıcının GitHub projelerini CV'ye koyma hatası giderildi**. Gerçek olmayan metrikler (yazar commit sayısı, LOC) artık `None`; prompt ve şablonlar onları koşullu gösteriyor — CV'de tahmini sayı yazılmıyor.
+
+**Router**: Web'in kullanmadığı eski tablo endpoint'leri `GET /api/evidence/`, `/summary`, `/{skill}` (+ şemaları) kaldırıldı. Portfolio crawl endpoint'i 90 satırdan 10 satıra indi (`sync_portfolio_evidence`).
+
+**Hatalar giderildi (yol üstünde)**:
+- Portfolio dedupe çalışmıyordu (autoflush=False iken DB sorgusu aynı istekte eklenenleri görmüyordu) → bellek içi set.
+- GitHub/portfolio skill eşleme her teknoloji için tüm `skills` tablosunu yeniden yüklüyordu (N+1) → istek başına bir kez.
+- CLI `career-os status` "Evidence" sayısı `evidence_items`'tan.
+
+**Diğer**: `core/db/repositories/evidence_repo.py` silindi; `core/db/models/evidence.py` LEGACY olarak işaretlendi. README mimari/katman/tablo bölümleri güncellendi.
+
+### Testler
+- `tests/unit/test_evidence.py` (16): canonical eşleme (exact/alias/fuzzy/none), `detect_tests`/`detect_docs`, `GitHubAnalyzer` (sahte HTTP: sinyaller, fork atlama, 404 → False), `build_project_list`/`build_skill_evidence`, `create_github_evidence` ve `sync_portfolio_evidence` (sahte session: canonical eşleme, dedupe, hata).
+- `test_architecture.py` kural 6: eski `Evidence` modeli hiçbir yerde kullanılmıyor.
+- Route envanteri: 3 eski endpoint bilinçli olarak çıkarıldı.
+- `pytest`: 240 passed, 3 xfailed · `ruff`: temiz
+
+### Dikkat
+- Canlı doğrulama yapılmadı: GitHub sync, portfolio crawl, CV upload ve resume generation gerçek DB/GitHub/LLM ile çalıştırılmadı (Neon'daki gerçek veriyi değiştirirdi).
+- Resume generation artık onboarding'de yüklenen CV + GitHub sync verisine dayanıyor; bu kullanıcı için bunlar yoksa evidence boş gelir.
+- Eski `evidence` tablosunu silmek istersen ayrı bir Alembic migration gerekiyor.
+- `_archive/hiring-agent-local/` silinebilir (içinde eski `.env` var).
 
 ---
 

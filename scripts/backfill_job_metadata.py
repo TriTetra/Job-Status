@@ -14,7 +14,7 @@ from plugins.plugin_loader import load_job_source_plugin
 from core.db.connection import db
 from core.db.models.career_score import CareerScore
 from core.db.models.company import Company
-from apps.api.app.core.evidence.confidence_aggregator import aggregate_user_skills
+from services.evidence.aggregation import aggregate_user_skills
 
 FORCE = "--force" in sys.argv
 

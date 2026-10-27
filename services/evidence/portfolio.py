@@ -1,10 +1,18 @@
-"""Portfolio website crawler for evidence extraction."""
+"""Portfolio website → evidence items (source="portfolio")."""
+
+import logging
+from datetime import datetime
+from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
-from typing import Optional
-import logging
+from sqlalchemy.orm import Session
+
+from core.db.models.connected_account import ConnectedAccount
+from core.db.models.evidence_item import EvidenceItem
+
+from .skills import find_canonical, load_all_skills
 
 logger = logging.getLogger(__name__)
 
@@ -144,3 +152,76 @@ class PortfolioCrawler:
             return text[:500]  # Limit length
         
         return None
+
+
+class PortfolioCrawlError(Exception):
+    """The portfolio URL could not be crawled (bad URL, timeout, HTTP error)."""
+
+
+def sync_portfolio_evidence(user_id: str, url: str, session: Session, crawler: Optional[PortfolioCrawler] = None) -> dict:
+    """Remember the portfolio URL, crawl it and replace the user's portfolio evidence.
+
+    Raises PortfolioCrawlError if the site cannot be crawled.
+    """
+    account = session.query(ConnectedAccount).filter(
+        ConnectedAccount.user_id == user_id,
+        ConnectedAccount.provider == "portfolio",
+    ).first()
+    if account is None:
+        account = ConnectedAccount(user_id=user_id, provider="portfolio")
+        session.add(account)
+    account.provider_username = url
+    account.provider_user_id = url
+    account.last_synced_at = datetime.utcnow()
+    session.commit()
+
+    result = (crawler or PortfolioCrawler()).crawl(url)
+    if "error" in result:
+        raise PortfolioCrawlError(result["error"])
+
+    # Idempotent: a re-crawl replaces previous portfolio evidence
+    session.query(EvidenceItem).filter(
+        EvidenceItem.user_id == user_id,
+        EvidenceItem.source == "portfolio",
+    ).delete()
+
+    created = 0
+    for project in result.get("projects", []):
+        session.add(EvidenceItem(
+            user_id=user_id,
+            source="portfolio",
+            skill_name=project["name"],
+            confidence_score=0.85,
+            evidence_data={
+                "type": "project",
+                "description": project.get("description", ""),
+                "technologies": project.get("technologies", []),
+            },
+        ))
+        created += 1
+
+    canonical_skills = load_all_skills(session)
+    seen: set[str] = set()
+    for tech in result.get("technologies", []):
+        canonical = find_canonical(tech, canonical_skills)
+        name = canonical.name if canonical else tech
+        if name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        session.add(EvidenceItem(
+            user_id=user_id,
+            source="portfolio",
+            skill_id=canonical.id if canonical else None,
+            skill_name=name,
+            confidence_score=0.80,
+            evidence_data={"type": "skill"},
+        ))
+        created += 1
+
+    session.commit()
+    return {
+        "status": "crawled",
+        "projects_found": len(result.get("projects", [])),
+        "technologies_found": len(result.get("technologies", [])),
+        "evidence_created": created,
+    }

@@ -393,7 +393,7 @@ def run_extraction(job_id: str, file_path: str, user_id: str):
     """Background task: real PDF → LLM → evidence items pipeline."""
     from core.db.connection import db as _db
     from core.db.models.resume_document import ResumeDocument
-    from ..evidence.resume_pipeline import process_resume
+    from services.evidence.resume import process_resume
 
     job = extraction_jobs[job_id]
 

@@ -6,13 +6,13 @@ target job, using evidence-backed skills from the Evidence Graph.
 """
 
 import logging
-import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from core.db.connection import db
-from core.db.repositories import EvidenceRepository
+from core.db.models.evidence_item import EvidenceItem
 from core.prompts import template_loader
+from services.evidence.aggregation import aggregate_user_skills
 
 from shared.llm import get_llm_client
 
@@ -22,12 +22,75 @@ _JSON_SYSTEM = "You are a career strategist. Always respond with valid JSON."
 _TEXT_SYSTEM = "You are a career strategist applying the Evidence > Claim principle."
 
 
+def build_project_list(items: List[Any]) -> List[dict]:
+    """Project evidence items → the project dicts the resume prompts expect.
+
+    GitHub projects carry real repo signals; resume/portfolio projects only a
+    description and technologies. Metrics we do not have stay None — the
+    templates skip them rather than show invented numbers.
+    """
+    projects = []
+    for item in items:
+        data = item.evidence_data or {}
+        if data.get("type") != "project":
+            continue
+        code_bytes = data.get("code_bytes")
+        projects.append({
+            "name": item.skill_name,
+            "source": item.source,
+            "technologies": data.get("technologies") or [],
+            "author_commit_count": None,  # not known per author; never estimate on a resume
+            "github_url": item.source_url if item.source == "github" else None,
+            "github_details": {
+                "stars": data.get("stars", 0),
+                "language": data.get("language"),
+                "topics": data.get("topics") or [],
+                "description": data.get("description") or "",
+                "size": f"{code_bytes // 1024:,} KB of code" if code_bytes else None,
+                "has_tests": data.get("has_tests"),
+                "has_docs": data.get("has_docs"),
+                "has_releases": data.get("has_releases"),
+            },
+        })
+    projects.sort(key=lambda p: (p["source"] != "github", -(p["github_details"]["stars"] or 0)))
+    return projects
+
+
+def build_skill_evidence(aggregated: List[dict], projects: List[dict], per_skill: int = 3) -> Dict[str, dict]:
+    """{skill: {"confidence", "evidence_list"}} — each skill linked to projects that used it."""
+    evidence: Dict[str, dict] = {}
+    for agg in aggregated:
+        skill = agg["skill_name"]
+        related = [p for p in projects if skill.lower() in {t.lower() for t in p["technologies"]}]
+        evidence[skill] = {
+            "confidence": agg["aggregated_confidence"],
+            "evidence_list": [
+                {
+                    "project_name": p["name"],
+                    "author_commits": None,
+                    "stars": p["github_details"]["stars"],
+                    "github_url": p["github_url"],
+                    "loc_count": None,
+                    "language": p["github_details"]["language"],
+                    "topics": p["github_details"]["topics"],
+                    "has_tests": p["github_details"]["has_tests"],
+                    "has_docs": p["github_details"]["has_docs"],
+                    "has_releases": p["github_details"]["has_releases"],
+                    "pr_count": None,
+                    "issue_count": None,
+                }
+                for p in related[:per_skill]
+            ],
+        }
+    return evidence
+
+
 class ResumeGenerator:
     """
     Generates target-aware resumes using Evidence Graph + LLM.
 
     Workflow:
-    1. Load user's evidence (DB) + GitHub projects (cache)
+    1. Load the user's evidence_items (skills + projects, all sources)
     2. Extract job priorities (LLM)
     3. Select best evidence (LLM)
     4. Rank projects (LLM)
@@ -38,7 +101,6 @@ class ResumeGenerator:
     def __init__(self, user_id: str = "default"):
         self.user_id = user_id
         self.llm = get_llm_client()
-        self.hiring_agent_dir = Path("services/hiring-agent")
 
     def generate(
         self,
@@ -65,9 +127,8 @@ class ResumeGenerator:
         """
         logger.info("Generating resume: %s @ %s (template=%s)", target_title, target_company, template_name)
 
-        logger.info("[1/5] Loading Evidence Graph + GitHub projects")
-        evidence = self._load_evidence()
-        projects = self._load_github_projects()
+        logger.info("[1/5] Loading evidence (skills + projects)")
+        evidence, projects = self._load_evidence()
         logger.info("  %d skills, %d projects", len(evidence), len(projects))
 
         logger.info("[2/5] Extracting job priorities (LLM)")
@@ -121,49 +182,13 @@ class ResumeGenerator:
     # Data loading
     # ------------------------------------------------------------------
 
-    def _load_evidence(self) -> Dict[str, dict]:
+    def _load_evidence(self) -> tuple[Dict[str, dict], List[dict]]:
+        """This user's evidence from `evidence_items`, shaped for the prompts/templates."""
         with db.session_scope() as session:
-            repo = EvidenceRepository(session)
-            all_evidence = repo.get_all_evidence_for_user(self.user_id)
-
-        grouped = {}
-        for ev in all_evidence:
-            skill = ev.skill_name
-            if skill not in grouped:
-                grouped[skill] = {"confidence": 0.0, "evidence_list": []}
-            grouped[skill]["evidence_list"].append({
-                "project_name": ev.project_name,
-                "author_commits": ev.author_commits,
-                "stars": ev.stars,
-                "github_url": ev.github_url,
-                # Real GitHub metrics from Phase 3B enrichment
-                "loc_count": ev.loc_count,
-                "language": ev.language,
-                "topics": ev.topics or [],
-                "has_tests": ev.has_tests,
-                "has_docs": ev.has_docs,
-                "has_releases": ev.has_releases,
-                "pr_count": ev.pr_count,
-                "issue_count": ev.issue_count,
-            })
-            grouped[skill]["confidence"] = max(grouped[skill]["confidence"], ev.confidence)
-
-        return grouped
-
-    def _load_github_projects(self) -> List[dict]:
-        cache_dir = self.hiring_agent_dir / "cache"
-        if not cache_dir.exists():
-            return []
-
-        cache_files = sorted(
-            cache_dir.glob("githubcache_*.json"),
-            key=lambda p: p.stat().st_mtime,
-        )
-        if not cache_files:
-            return []
-
-        data = json.loads(cache_files[-1].read_text(encoding="utf-8"))
-        return data.get("projects", [])
+            aggregated = aggregate_user_skills(self.user_id, session)
+            items = session.query(EvidenceItem).filter(EvidenceItem.user_id == self.user_id).all()
+            projects = build_project_list(items)
+        return build_skill_evidence(aggregated, projects), projects
 
     def _default_candidate_info(self) -> dict:
         from shared.config import load_config

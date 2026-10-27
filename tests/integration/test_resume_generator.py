@@ -40,8 +40,7 @@ def test_evidence_loading():
     from services.resume_intelligence.application.resume_generator import ResumeGenerator
 
     gen = ResumeGenerator(user_id="default")
-    evidence = gen._load_evidence()
-    projects = gen._load_github_projects()
+    evidence, projects = gen._load_evidence()
 
     print(f"  Skills with evidence: {len(evidence)}")
     print(f"  GitHub projects: {len(projects)}")
@@ -51,7 +50,7 @@ def test_evidence_loading():
         for skill, data in top:
             print(f"  - {skill}: {data['confidence']:.2f} ({len(data['evidence_list'])} projects)")
 
-    assert len(evidence) > 0, "No evidence found — run evidence_builder first"
+    assert len(evidence) > 0, "No evidence found — upload a CV or sync GitHub first"
     print("  PASS")
 
 

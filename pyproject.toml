@@ -50,7 +50,6 @@ line-length = 120
 extend-exclude = [
     "_archive",
     "venv",
-    "services/hiring-agent",  # vendored third-party tool
     "core/db/migrations/versions",
 ]
 

@@ -31,7 +31,6 @@ networkx>=3.0
 # plugins/ — job sources, enrichment, market signals
 # ============================================================
 applypilot>=0.3.0        # job source plugin (dynamic load)
-PyGithub>=2.0            # plugins/enrichment/github/client.py
 feedparser>=6.0          # plugins/market_signals/techcrunch/
 requests>=2.31           # plugins/market_signals/hackernews/, llm_client
 

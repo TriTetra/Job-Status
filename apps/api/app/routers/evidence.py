@@ -1,14 +1,12 @@
-"""Evidence router — skill confidence from GitHub projects."""
+"""Evidence router — evidence items, aggregated skills, portfolio and source registry."""
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
-from core.db.repositories import EvidenceRepository
 
 router = APIRouter()
 
@@ -64,58 +62,6 @@ def _infer_category(title: str | None) -> str | None:
         if any(k in t for k in keywords):
             return category
     return None
-
-
-class EvidenceResponse(BaseModel):
-    skill_name: str
-    project_name: str
-    confidence: float
-    author_commits: int = 0
-    stars: int = 0
-    github_url: str = ""
-    evidence_type: str = ""
-
-    class Config:
-        from_attributes = True
-
-
-class SkillSummary(BaseModel):
-    skill: str
-    evidence_count: int
-    avg_confidence: float
-    total_commits: int
-    total_stars: int
-
-
-@router.get("/", response_model=List[EvidenceResponse])
-def list_evidence(
-    user_id: str = Depends(get_user_id),
-    session: Session = Depends(get_db_session),
-):
-    """All evidence rows for the user."""
-    repo = EvidenceRepository(session)
-    rows = repo.get_all_evidence_for_user(user_id=user_id)
-    return [EvidenceResponse.model_validate(e) for e in rows]
-
-
-@router.get("/summary", response_model=List[SkillSummary])
-def skill_summary(
-    user_id: str = Depends(get_user_id),
-    session: Session = Depends(get_db_session),
-):
-    """Per-skill confidence summary."""
-    repo = EvidenceRepository(session)
-    data: Dict[str, Any] = repo.skill_summary(user_id=user_id)
-    return [
-        SkillSummary(
-            skill=skill,
-            evidence_count=v["evidence_count"],
-            avg_confidence=v["avg_confidence"],
-            total_commits=v["total_commits"],
-            total_stars=v["total_stars"],
-        )
-        for skill, v in data.items()
-    ]
 
 
 @router.get("/items")
@@ -212,7 +158,7 @@ def get_aggregated_skills(
     Aggregates evidence items from resume, GitHub, portfolio into
     unified skill list with weighted confidence scores.
     """
-    from ..core.evidence.confidence_aggregator import aggregate_user_skills
+    from services.evidence.aggregation import aggregate_user_skills
 
     skills = aggregate_user_skills(user_id, session)
 
@@ -233,98 +179,12 @@ def crawl_portfolio(
     session: Session = Depends(get_db_session),
 ):
     """Crawl portfolio website and create evidence items."""
-    from core.db.models.connected_account import ConnectedAccount
-    from core.db.models.evidence_item import EvidenceItem
-    from ..core.evidence.portfolio_crawler import PortfolioCrawler
-    from ..core.evidence.github_evidence import _find_canonical_skill
+    from services.evidence.portfolio import PortfolioCrawlError, sync_portfolio_evidence
 
-    # Save portfolio URL to connected_accounts
-    existing = session.query(ConnectedAccount).filter(
-        ConnectedAccount.user_id == user_id,
-        ConnectedAccount.provider == "portfolio"
-    ).first()
-
-    if existing:
-        existing.provider_username = request.url
-        existing.provider_user_id = request.url
-        existing.last_synced_at = datetime.utcnow()
-    else:
-        new_account = ConnectedAccount(
-            user_id=user_id,
-            provider="portfolio",
-            provider_username=request.url,
-            provider_user_id=request.url,
-            last_synced_at=datetime.utcnow()
-        )
-        session.add(new_account)
-
-    session.commit()
-
-    # Crawl portfolio
-    crawler = PortfolioCrawler()
-    result = crawler.crawl(request.url)
-
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-
-    # Clear existing portfolio evidence for this user to make it idempotent
-    session.query(EvidenceItem).filter(
-        EvidenceItem.user_id == user_id,
-        EvidenceItem.source == "portfolio"
-    ).delete()
-
-    evidence_created = 0
-
-    # Create project evidence
-    for project in result.get("projects", []):
-        evidence_item = EvidenceItem(
-            user_id=user_id,
-            source="portfolio",
-            skill_name=project["name"],
-            confidence_score=0.85,
-            evidence_data={
-                "type": "project",
-                "description": project.get("description", ""),
-                "technologies": project.get("technologies", [])
-            }
-        )
-        session.add(evidence_item)
-        evidence_created += 1
-
-    # Create skill evidence from found technologies
-    for tech in result.get("technologies", []):
-        # Find canonical skill if possible
-        canonical_id, canonical_name = _find_canonical_skill(tech, session)
-
-        # Check if this portfolio skill already exists
-        existing_skill = session.query(EvidenceItem).filter(
-            EvidenceItem.user_id == user_id,
-            EvidenceItem.source == "portfolio",
-            EvidenceItem.skill_name.ilike(canonical_name or tech)
-        ).first()
-
-        if not existing_skill:
-            evidence_item = EvidenceItem(
-                user_id=user_id,
-                source="portfolio",
-                skill_id=int(canonical_id) if canonical_id and str(canonical_id).isdigit() else None,
-                skill_name=canonical_name or tech,
-                confidence_score=0.80,
-                evidence_data={
-                    "type": "skill"
-                }
-            )
-            session.add(evidence_item)
-            evidence_created += 1
-
-    session.commit()
-
-    return {
-        "status": "crawled",
-        "projects_found": len(result.get("projects", [])),
-        "technologies_found": len(result.get("technologies", [])),
-        "evidence_created": evidence_created
-    }
+    try:
+        return sync_portfolio_evidence(user_id, request.url, session)
+    except PortfolioCrawlError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/portfolio/status")
@@ -475,18 +335,3 @@ def get_evidence_sources(
         "connected": {p: True for p in connected_providers},
         "role_title": role_title,
     }
-
-
-@router.get("/{skill}", response_model=List[EvidenceResponse])
-def evidence_for_skill(
-    skill: str,
-    user_id: str = Depends(get_user_id),
-    session: Session = Depends(get_db_session),
-):
-    """Evidence rows for a specific skill."""
-    repo = EvidenceRepository(session)
-    rows = repo.get_for_skill(skill_name=skill, user_id=user_id)
-    return [EvidenceResponse.model_validate(e) for e in rows]
-
-
-

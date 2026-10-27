@@ -4,7 +4,6 @@ from .base import BaseRepository
 from .career_score_repo import CareerScoreRepository
 from .application_repo import ApplicationRepository
 from .scan_history_repo import ScanHistoryRepository
-from .evidence_repo import EvidenceRepository
 from .job_repo import JobRepository
 from .user_settings_repo import UserSettingsRepository
 from .company_repo import CompanyRepository, CompanyMemoryRepository
@@ -21,7 +20,6 @@ __all__ = [
     "CareerScoreRepository",
     "ApplicationRepository",
     "ScanHistoryRepository",
-    "EvidenceRepository",
     "JobRepository",
     "UserSettingsRepository",
     "CompanyRepository",

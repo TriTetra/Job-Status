@@ -78,18 +78,17 @@ $ career-os resume generate --company Anthropic --title "ML Engineer"
 ┌─────────────────────────────────────────────────────────────────────┐
 │  PLUGINS           plugins/                                         │
 │  JobSourcePlugin → applypilot/                                      │
-│  EnrichmentPlugin → github/ (9 metrics: LOC, PRs, has_tests …)     │
 │  MarketPlugin     → hackernews/ · techcrunch/                       │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  SERVICES          services/                                        │
-│  resume_intelligence   → Evidence Graph + 4-call LLM pipeline      │
+│  evidence              → GitHub · CV (PDF+LLM) · portfolio → items  │
+│  resume_intelligence   → evidence_items + 4-call LLM pipeline      │
 │  company_intelligence  → tech stack enrichment + interview memory   │
 │  market_intelligence   → signal extraction + trend queries          │
 │  application_engine    → state machine (to_apply → offer/rejected)  │
-│  hiring-agent          → PDF → GitHub enrichment → LLM scoring      │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -147,10 +146,13 @@ pytest                                                 # offline tests; -m integ
 
 ### Evidence Graph
 
-CareerOS builds a skill × project matrix from your GitHub activity. Every project gets 9 real metrics (LOC, PR count, `has_tests`, `has_docs`, language, topics …) pulled via the GitHub API. Confidence scores are computed from commits, stars, and code quality signals — not hallucinated.
+All proof lives in one table, `evidence_items`, written by three sources in `services/evidence/`:
+your GitHub repos (OAuth — languages, stars, topics, `has_tests` / `has_docs` / `has_releases`),
+your uploaded CV (PDF → LLM extraction of skills, experience, projects, achievements) and your
+portfolio site. `aggregation.py` weighs sources (GitHub > portfolio > CV) into one confidence per skill.
 
 ```python
-# evidence table: skill_name × project × confidence
+# aggregated skill confidence
 Python      | Sentropy-Engine  | 0.91
 PyTorch     | IMMUNO-TCR       | 0.87
 FastAPI     | career-os        | 0.84
@@ -245,9 +247,9 @@ career-os
 | ORM / Migrations | SQLAlchemy 2 + Alembic |
 | LLM | OpenRouter (`openai/gpt-4o-mini` default) |
 | Templates | Jinja2 |
-| GitHub enrichment | PyGithub |
+| GitHub evidence | GitHub REST API (user's OAuth token) |
 | Market signals | Algolia HN API + feedparser |
-| PDF scoring | PyMuPDF → hiring-agent pipeline |
+| CV parsing | PyMuPDF → LLM structured extraction |
 
 ---
 
@@ -259,23 +261,21 @@ applypilot-jobs/
 │   ├── api/              FastAPI app — 24 endpoints across 7 routers
 │   └── cli/              career-os launcher + Typer app
 ├── services/
-│   ├── resume_intelligence/   Evidence Graph → Target-Aware Resume
+│   ├── evidence/              evidence_items: GitHub, CV, portfolio, aggregation
+│   ├── resume_intelligence/   evidence_items → Target-Aware Resume
 │   ├── company_intelligence/  Tech stack enrichment + company memory
 │   ├── market_intelligence/   HN + TechCrunch signal scanning
-│   ├── application_engine/    Application state machine
-│   └── hiring-agent/          PDF → LLM scoring pipeline (~4,300 lines)
+│   └── application_engine/    Application state machine
+├── shared/               config (.env + Settings), LLM client, logging
 ├── core/
 │   ├── db/               Models, repositories, Alembic migrations
-│   ├── timeline/         Snapshot tracking + auto-diff
-│   ├── events/           Thread-safe EventBus (18 event types)
 │   ├── prompts/          Jinja2 template loader
 │   └── knowledge/        Country/visa/salary repositories
 ├── plugins/
 │   ├── job_sources/      ApplyPilot SQLite adapter
-│   ├── enrichment/       GitHub metrics (9 signals per repo)
 │   └── market_signals/   HN + TechCrunch scrapers
 ├── infra/seeds/v1/       14 YAML files → DB seed (countries, visas, salaries)
-├── tests/                14 test files
+├── tests/                unit/ · smoke/ (offline) · integration/ (live) · manual/
 ├── config.yaml.example   Profile template
 └── docker-compose.yml    PostgreSQL 16 + Adminer
 ```

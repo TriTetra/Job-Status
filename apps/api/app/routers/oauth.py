@@ -246,8 +246,7 @@ def github_sync(
     session: Session = Depends(get_db_session),
 ):
     """Sync GitHub repos and extract skill evidence."""
-    from ..core.evidence.github_analyzer import GitHubAnalyzer
-    from ..core.evidence.github_evidence import create_github_evidence
+    from services.evidence.github import GitHubAnalyzer, create_github_evidence
 
     # Get connected account
     account = session.query(ConnectedAccount).filter(
@@ -266,12 +265,7 @@ def github_sync(
     repos = analyzer.get_top_repos(limit=20)
 
     # Create evidence items
-    stats = create_github_evidence(
-        user_id=user_id,
-        repos=repos,
-        source_id=f"github:{account.provider_username}",
-        session=session
-    )
+    stats = create_github_evidence(user_id=user_id, repos=repos, session=session)
 
     # Update last_synced_at
     account.last_synced_at = datetime.utcnow()

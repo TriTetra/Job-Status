@@ -1,4 +1,4 @@
-You are selecting GitHub projects to feature on a resume.
+You are selecting projects to feature on a resume.
 
 ## Target Role
 {{ target_title }} at {{ target_company }}
@@ -6,13 +6,13 @@ You are selecting GitHub projects to feature on a resume.
 ## Candidate's Projects
 {% for project in projects %}
 ### {{ loop.index }}. {{ project.name }}
-- **Commits (author)**: {{ project.author_commit_count }}
-- **Stars**: {{ project.github_details.stars }}
+{% if project.author_commit_count %}- **Commits (author)**: {{ project.author_commit_count }}
+{% endif %}- **Stars**: {{ project.github_details.stars }}
 - **Language**: {{ project.github_details.language }}
 - **Topics**: {{ project.github_details.topics | join(', ') or 'None' }}
 - **Description**: {{ project.github_details.description or 'No description' }}
-- **Size (LOC)**: {{ project.github_details.size }}
-{% endfor %}
+{% if project.github_details.size %}- **Code size**: {{ project.github_details.size }}
+{% endif %}{% endfor %}
 
 ## Selection Criteria
 

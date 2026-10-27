@@ -1,3 +1,3 @@
-from .evidence_builder import EvidenceBuilder, build_evidence_graph
+from .resume_generator import ResumeGenerator, generate_resume
 
-__all__ = ["EvidenceBuilder", "build_evidence_graph"]
+__all__ = ["ResumeGenerator", "generate_resume"]

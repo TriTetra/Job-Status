@@ -1,11 +1,5 @@
-from .hiring_agent_adapter import HiringAgentAdapter, score_resume, build_and_enrich, enrich_career_scores
-from .application.evidence_builder import EvidenceBuilder, build_evidence_graph
+"""Resume intelligence — target-aware resume generation from evidence_items."""
 
-__all__ = [
-    "HiringAgentAdapter",
-    "score_resume",
-    "build_and_enrich",
-    "enrich_career_scores",
-    "EvidenceBuilder",
-    "build_evidence_graph",
-]
+from .application.resume_generator import ResumeGenerator, generate_resume
+
+__all__ = ["ResumeGenerator", "generate_resume"]

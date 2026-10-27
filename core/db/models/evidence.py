@@ -1,4 +1,9 @@
-"""Evidence model — per-skill proof tracking from GitHub + CV evaluation."""
+"""LEGACY `evidence` table — kept only so the table and its rows stay in the DB.
+
+Nothing reads or writes it any more; all evidence lives in `evidence_items`
+(core.db.models.evidence_item, services.evidence). Drop it with a migration
+once the old rows are no longer wanted.
+"""
 
 from datetime import datetime
 from typing import Optional

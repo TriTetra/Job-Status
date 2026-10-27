@@ -83,7 +83,7 @@ def status():
     from core.db.models import Company, MarketSignal
     from core.db.models.career_score import CareerScore
     from core.db.models.application import Application
-    from core.db.models.evidence import Evidence
+    from core.db.models.evidence_item import EvidenceItem
     from sqlalchemy import func, select
 
     with db.session_scope() as session:
@@ -93,7 +93,7 @@ def status():
         rows = {
             "Career Scores":  count(CareerScore),
             "Applications":   count(Application),
-            "Evidence":       count(Evidence),
+            "Evidence":       count(EvidenceItem),
             "Companies":      count(Company),
             "Market Signals": count(MarketSignal),
         }

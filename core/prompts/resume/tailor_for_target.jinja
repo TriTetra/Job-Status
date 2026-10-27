@@ -32,18 +32,18 @@ The user has the following evidence-backed skills (with confidence scores):
 {% for skill, data in evidence.items() | sort(attribute='1.confidence', reverse=true) %}
 ### {{ skill }} (confidence: {{ "%.2f" | format(data.confidence) }})
 {% for ev in data.evidence_list[:3] %}
-- **{{ ev.project_name }}**: {{ ev.author_commits }} commits, {{ ev.stars }} stars{% if ev.loc_count %}, {{ "{:,}".format(ev.loc_count) }} LOC{% endif %}{% if ev.language %}, primary={{ ev.language }}{% endif %}
+- **{{ ev.project_name }}**: {% if ev.author_commits %}{{ ev.author_commits }} commits, {% endif %}{{ ev.stars or 0 }} stars{% if ev.loc_count %}, {{ "{:,}".format(ev.loc_count) }} LOC{% endif %}{% if ev.language %}, primary={{ ev.language }}{% endif %}
   {% if ev.topics %}- Topics: {{ ev.topics | join(', ') }}
   {% endif %}{% if ev.has_tests or ev.has_docs or ev.has_releases %}- Quality: {% if ev.has_tests %}has_tests=true {% endif %}{% if ev.has_docs %}has_docs=true {% endif %}{% if ev.has_releases %}has_releases=true{% endif %}
   {% endif %}{% if ev.pr_count %}- PRs merged: {{ ev.pr_count }}{% endif %}
-  - GitHub: {{ ev.github_url }}
+  {% if ev.github_url %}- GitHub: {{ ev.github_url }}{% endif %}
 {% endfor %}
 {% endfor %}
 
-## User's GitHub Projects (from Hiring-Agent)
+## User's Projects
 {% for project in projects %}
 ### {{ project.name }}
-- Commits: {{ project.author_commit_count }} | Stars: {{ project.github_details.stars }}
+- {% if project.author_commit_count %}Commits: {{ project.author_commit_count }} | {% endif %}Stars: {{ project.github_details.stars or 0 }}
 - Language: {{ project.github_details.language }}
 - Topics: {{ project.github_details.topics | join(', ') }}
 - Description: {{ project.github_details.description }}

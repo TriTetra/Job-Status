@@ -20,7 +20,7 @@
 {% if evidence.get(skill) %}
 ### {{ skill }} — {{ "%.0f" | format(evidence[skill].confidence * 100) }}% confidence
 {% for ev in evidence[skill].evidence_list[:2] %}
-- **{{ ev.project_name }}** — {{ ev.author_commits }} commits, {{ ev.stars }} stars{% if ev.github_url %} ([GitHub]({{ ev.github_url }})){% endif %}
+- **{{ ev.project_name }}** — {% if ev.author_commits %}{{ ev.author_commits }} commits, {% endif %}{{ ev.stars or 0 }} stars{% if ev.github_url %} ([GitHub]({{ ev.github_url }})){% endif %}
 {% endfor %}
 {% endif %}
 {% endfor %}

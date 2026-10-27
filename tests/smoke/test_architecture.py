@@ -5,6 +5,7 @@
   3. Library code logs; it does not print. (CLIs, scripts and `__main__` blocks may print.)
   4. Nothing manipulates sys.path — the repo is an installed package.
   5. core.domain stays pure: it never imports the DB layer.
+  6. evidence_items is the only evidence store: nothing uses the legacy `evidence` model.
 """
 
 import ast
@@ -13,14 +14,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 APP_DIRS = ["apps/api", "apps/cli", "core", "services", "plugins", "scripts"]
-VENDORED = ("services/hiring-agent",)
 
 
 def _py_files(dirs):
     for d in dirs:
         for path in (ROOT / d).rglob("*.py"):
             rel = path.relative_to(ROOT).as_posix()
-            if rel.startswith(VENDORED) or "/migrations/versions/" in rel or "__pycache__" in rel:
+            if "/migrations/versions/" in rel or "__pycache__" in rel:
                 continue
             yield rel, path.read_text(encoding="utf-8-sig")
 
@@ -83,3 +83,11 @@ def test_library_code_logs_instead_of_printing():
 def test_core_domain_does_not_import_db_layer():
     found = _violations(["core/domain"], r"^\s*(from|import)\s+(core\.db|sqlalchemy)")
     assert not found, "core.domain must stay pure:\n" + "\n".join(found)
+
+
+def test_legacy_evidence_model_is_not_used():
+    found = [
+        v for v in _violations(APP_DIRS + ["shared"], r"models\.evidence import|models import .*\bEvidence\b(?!Item)")
+        if not v.startswith("core/db/models/")
+    ]
+    assert not found, "read/write evidence_items via services.evidence:\n" + "\n".join(found)

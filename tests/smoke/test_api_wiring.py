@@ -18,10 +18,10 @@ EXPECTED_PATHS = {
     "/api/applications/", "/api/applications/summary", "/api/applications/{url}",
     "/api/companies/", "/api/companies/hiring", "/api/companies/track",
     "/api/companies/{name}", "/api/companies/{name}/memory",
-    "/api/evidence/", "/api/evidence/items", "/api/evidence/items/{item_id}",
+    # legacy-table endpoints /api/evidence/, /summary, /{skill} removed in Refactor Step 4
+    "/api/evidence/items", "/api/evidence/items/{item_id}",
     "/api/evidence/portfolio", "/api/evidence/portfolio/crawl", "/api/evidence/portfolio/status",
-    "/api/evidence/skills/aggregated", "/api/evidence/sources", "/api/evidence/summary",
-    "/api/evidence/{skill}",
+    "/api/evidence/skills/aggregated", "/api/evidence/sources",
     "/api/goals/catalog",
     "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan",
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",

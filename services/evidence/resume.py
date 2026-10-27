@@ -1,4 +1,4 @@
-"""Resume processing pipeline: PDF → LLM extraction → evidence items."""
+"""Uploaded CV (PDF) → LLM extraction → evidence items (source="resume")."""
 
 import logging
 from typing import Callable
@@ -7,13 +7,24 @@ from sqlalchemy.orm import Session
 
 from core.db.models.evidence_item import EvidenceItem
 from core.db.models.resume_document import ResumeDocument
-from .pdf_parser import PDFParser
-from .resume_extractor import extract_resume
-from .skill_matcher import find_canonical, load_all_skills
+
+from .resume_llm import extract_resume
+from .skills import find_canonical, load_all_skills
 
 logger = logging.getLogger(__name__)
 
 LogFn = Callable[[str], None]
+
+
+def extract_pdf_text(pdf_path: str) -> str:
+    """All text from a PDF, page by page (PyMuPDF)."""
+    import fitz  # PyMuPDF — imported lazily, it is only needed here
+
+    with fitz.open(pdf_path) as doc:
+        text = "\n".join(page.get_text() for page in doc).strip()
+    logger.info("Extracted %d chars from %s", len(text), pdf_path)
+    return text
+
 
 # Externally-validated evidence carries higher confidence than self-reported skills.
 ACHIEVEMENT_CONFIDENCE: dict[str, float] = {
@@ -49,7 +60,7 @@ def process_resume(
 
         log("Parsing PDF structure...")
         file_path = resume_doc.storage_key
-        text = PDFParser.extract_text(file_path)
+        text = extract_pdf_text(file_path)
         resume_doc.parsed_text = text[:50000]  # cap at 50k chars
         log(f"Extracted {len(text):,} characters from {len(text.splitlines())} lines")
 
