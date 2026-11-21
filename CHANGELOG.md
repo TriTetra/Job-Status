@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Deploy — Production Images + Coolify | Multi-stage API image (no pip/setuptools at runtime, auto migrate + seed on start), cached web build, Coolify-generated secrets, memory caps and log rotation; fixed /api trailing-slash redirect that sent browsers to the internal API host; full stack smoke-tested locally | ✅ Tamam | 2026-11-22 |
 | Phase 3 — LLM Brain + Gateway | One gateway for every model call: task routing (fast model for bulk), daily budgets (global, per user, bulk share), concurrency cap, `llm_calls` log, pydantic-validated output; LLM reads each relevant posting once (cached per version) and the deterministic scorer uses those facts; canonical skill names, real skill gaps, fit not diluted by long lists; last known-bug xfails fixed | ✅ Tamam | 2026-10-28 |
 | Phase 2 — Company Career Boards | 74 verified company boards (Greenhouse, Lever, Ashby, Workday) read directly, ~9k relevant postings; incremental sync (new/changed/closed) with per-board run log and advisory lock; scores upserted one per (user, job) and rescored only when posting or profile changes; scheduler in the API; `career-os jobs` CLI; apply links to the company site; visa negation + Go/AI keyword bugs fixed | ✅ Tamam | 2026-10-28 |
 | Phase 1 — Own Auth + Coolify Deploy | Clerk removed: invite-only accounts (`career-os user`), argon2id passwords, hashed server-side sessions in an httpOnly cookie, login throttling, CSRF header, no CORS; users.clerk_id → users.id (data kept); Coolify compose stack (db + internal api + public web, /api proxied); DB connect timeout; torch made optional | ✅ Tamam | 2026-10-28 |
@@ -92,6 +93,32 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Deploy] — 2026-11-22 — Production images + Coolify setup ✅
+
+### İmajlar
+- **API** (`infra/docker/api.Dockerfile`): iki aşamalı — bağımlılıklar ayrı bir venv'de (BuildKit pip cache), runtime'da pip/setuptools/wheel yok, kaynak `/app`'ten çalışır, `career-os` küçük bir wrapper. Non-root (uid 10001), healthcheck.
+- **Başlangıç** (`api-entrypoint.sh`): `alembic upgrade head` → idempotent `career-os seed` (`SEED_ON_START=false` ile kapatılır) → uvicorn (tek worker, proxy headers, 20 sn graceful shutdown, server header yok).
+- **Web** (`infra/docker/web.Dockerfile`): npm ve `.next/cache` build cache'leri, standalone çıktı, non-root, healthcheck.
+
+### Compose (`docker-compose.prod.yml`)
+- Gizli değerler Coolify'da üretilir: `SERVICE_PASSWORD_POSTGRES`, `SERVICE_PASSWORD_64_TOKENKEY` — kimse yazmaz, deploy'lar arası sabit.
+- `TOKEN_ENCRYPTION_KEY` artık Fernet anahtarı veya 32+ karakterlik herhangi bir sır olabilir (SHA-256 ile türetilir); mevcut Fernet anahtarları aynen çalışır.
+- Bellek sınırları: db 512 MB, api 768 MB, web 384 MB (sunucuda 8 başka proje var). Loglar 3 × 10 MB'ta döner.
+- web, api sağlıklı olana kadar bekler.
+
+### Düzeltilen hata
+- Tarayıcıdan `/api/jobs/` → Next 308 `/api/jobs` → FastAPI 307 `http://api:8000/api/jobs/` (iç adres, tarayıcı ulaşamaz). Inbox/applications/companies listelerinin yenilenmesi production'da kırık olurdu. `skipTrailingSlashRedirect` + sondaki eğik çizgiyi koruyan rewrite kuralı.
+
+### Doğrulama (yerel Docker, production compose)
+- Cold build 4 dk; imajlar: api 559 MB, web 294 MB. Üç servis healthy; boşta bellek: web 41 MB, api 82 MB, db 63 MB.
+- Sıfır DB'de 15 migration + seed (180 rol, 87 beceri) otomatik; CLI ile kullanıcı → web proxy üzerinden giriş (204, httpOnly cookie) → web'in çağırdığı tüm GET yolları 200; CSRF'siz POST 403; canlı sync 2 board / 62 iş.
+- 430 test, ruff, tsc, eslint temiz.
+
+### Kalan
+- Push, Coolify'da proje/kaynak oluşturma, `career.abdullokh.xyz` DNS kaydı, env değişkenleri, ilk deploy.
 
 ---
 

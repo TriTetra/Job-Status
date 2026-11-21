@@ -286,3 +286,20 @@ def test_enrich_without_api_key_is_a_no_op(monkeypatch):
     monkeypatch.setattr(llm_extract, "get_llm_client", missing)
     s = llm_extract.enrich_jobs(10)
     assert s.extracted == 0 and "not set" in s.stopped
+
+
+# ── token cipher keys (deploy: Coolify-generated secrets) ─────────────────
+
+def test_cipher_accepts_fernet_keys_and_long_secrets():
+    from cryptography.fernet import Fernet
+
+    from careeros.shared.crypto import TokenCipher, fernet_key
+
+    real = Fernet.generate_key().decode()
+    assert fernet_key(real) == real.encode()  # existing keys keep decrypting old tokens
+    assert TokenCipher(real).decrypt(Fernet(real.encode()).encrypt(b"tok").decode()) == "tok"
+    generated = "aZ3" * 22  # e.g. SERVICE_PASSWORD_64_* from Coolify
+    c = TokenCipher(generated)
+    assert c.decrypt(c.encrypt("gho_secret")) == "gho_secret"
+    with pytest.raises(ValueError):
+        TokenCipher("short")
