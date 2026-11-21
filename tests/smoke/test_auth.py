@@ -25,6 +25,10 @@ PUBLIC_ROUTES = {
     ("GET", "/health"),
     ("POST", "/api/auth/login"),           # how you get a session
     ("POST", "/api/auth/logout"),          # harmless without one
+    ("GET", "/api/auth/setup"),            # does this site still need its first account?
+    ("POST", "/api/auth/setup"),           # the first account; closed once one exists
+    ("POST", "/api/auth/invites/check"),   # invite page; the token is the credential
+    ("POST", "/api/auth/invites/accept"),  # sign-up with a valid invite token
     ("GET", "/api/oauth/github/callback"),  # single-use OAuth state instead
 }
 

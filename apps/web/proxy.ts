@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Must match careeros/identity/auth/sessions.py COOKIE_NAME
 const SESSION_COOKIE = "careeros_session";
-const PUBLIC_PATHS = ["/sign-in"];
+const PUBLIC_PATHS = ["/sign-in", "/invite"];
 
 /**
- * Signed-out visitors only ever see /sign-in. This is a fast first gate — the
+ * Signed-out visitors only ever see /sign-in (and invite links). This is a fast first gate — the
  * API validates the session on every request, so a stale or forged cookie
  * still gets nothing (the dashboard then sends the user back here).
  */

@@ -1,4 +1,4 @@
-"""`career-os user …` — the only way accounts are created (there is no sign-up page)."""
+"""`career-os user …` — account administration on the server (the web has setup + invite links)."""
 
 from typing import Optional
 
@@ -26,12 +26,14 @@ def add(
     email: str = typer.Argument(..., help="Sign-in email"),
     first_name: Optional[str] = typer.Option(None, "--first-name"),
     last_name: Optional[str] = typer.Option(None, "--last-name"),
+    admin: bool = typer.Option(False, "--admin", help="Can create invite links"),
 ):
     """Create an account (asks for the password)."""
     password = _ask_password()
     try:
         with db.session_scope() as s:
             user = accounts.create_account(s, email, password, first_name, last_name)
+            user.is_admin = admin
             user_id = user.id
     except (accounts.AccountError, WeakPassword) as e:
         _fail(str(e))

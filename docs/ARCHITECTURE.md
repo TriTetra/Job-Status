@@ -85,7 +85,10 @@ feature's service or model, never its internals.
 
 ## Authentication
 
-Private, invite-only — there is no sign-up page. `careeros/identity/auth/`:
+Private, invite-only. Accounts are made on the website: the **first** account through
+setup (shown on `/sign-in` while the site has none; it becomes admin, then setup closes),
+every other one through an admin's single-use **invite link** (`/invite/<token>`, 7 days,
+optionally bound to one email). There is no open sign-up. `careeros/identity/auth/`:
 
 | Module | Does |
 |---|---|
@@ -93,7 +96,8 @@ Private, invite-only — there is no sign-up page. `careeros/identity/auth/`:
 | `sessions.py` | random 256-bit token in an httpOnly `SameSite=Lax` cookie; the DB keeps only its sha256 (`auth_sessions`); 30-day sliding expiry |
 | `throttle.py` | 5 failed logins per email / 20 per IP per 15 min → 429 (in memory, one worker) |
 | `accounts.py` | create, set password (signs out everywhere), enable/disable, authenticate |
-| `cli.py` | `career-os user add / passwd / list / disable / enable / signout` |
+| `invites.py` | first-account setup (advisory lock against races), invite create / check / accept (row lock: single use) / revoke, own password change (other sessions signed out) |
+| `cli.py` | server-side administration: `career-os user add [--admin] / passwd / list / disable / enable / signout` |
 
 `apps/web/proxy.ts` only checks that the cookie exists (fast redirect to `/sign-in`); the
 API is the authority on every request.

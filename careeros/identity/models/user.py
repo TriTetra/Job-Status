@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from sqlalchemy import Boolean, String, ForeignKey, Float, Uuid, true
+from sqlalchemy import Boolean, String, ForeignKey, Float, Uuid, false, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,8 @@ class User(Base, TimestampMixin):
     image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     # Deactivated users cannot sign in; their data is kept
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=true())
+    # Admins create invite links; the first account (web setup) is one
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     onboarding_state: Mapped[str] = mapped_column(
         String(32),
         nullable=False,

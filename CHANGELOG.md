@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Web Accounts — Setup + Invite Links | First account created on the site (becomes admin, setup then closes), single-use invite links (7 days, optional email binding, revocable) in Settings, own password change (other devices signed out); verified with 28 end-to-end checks | ✅ Tamam | 2026-11-22 |
 | Deploy — Production Images + Coolify (live) | Multi-stage API image (no pip/setuptools at runtime, auto migrate + seed on start), cached web build, Coolify-generated secrets, memory caps and log rotation; fixed /api trailing-slash redirect that sent browsers to the internal API host; full stack smoke-tested locally | ✅ Tamam | 2026-11-22 |
 | Phase 3 — LLM Brain + Gateway | One gateway for every model call: task routing (fast model for bulk), daily budgets (global, per user, bulk share), concurrency cap, `llm_calls` log, pydantic-validated output; LLM reads each relevant posting once (cached per version) and the deterministic scorer uses those facts; canonical skill names, real skill gaps, fit not diluted by long lists; last known-bug xfails fixed | ✅ Tamam | 2026-10-28 |
 | Phase 2 — Company Career Boards | 74 verified company boards (Greenhouse, Lever, Ashby, Workday) read directly, ~9k relevant postings; incremental sync (new/changed/closed) with per-board run log and advisory lock; scores upserted one per (user, job) and rescored only when posting or profile changes; scheduler in the API; `career-os jobs` CLI; apply links to the company site; visa negation + Go/AI keyword bugs fixed | ✅ Tamam | 2026-10-28 |
@@ -93,6 +94,34 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Web Accounts] — 2026-11-22 — Setup + invite links + password change ✅
+
+**Neden:** Hesap açmak için sunucu terminalinde `career-os user add` gerekiyordu. Artık
+her şey sitede; site yine özel (açık kayıt yok).
+
+### Akış
+- **İlk hesap:** sitede hiç hesap yokken `/sign-in` "Create account" formu gösterir; bu hesap **admin** olur ve kurulum kalıcı olarak kapanır. Aynı anda iki tarayıcı yarışırsa Postgres advisory lock tek birini kabul eder.
+- **Davet linkleri:** Settings → Account → Invites. Tek kullanımlık, 7 gün geçerli, istenirse tek e-postaya bağlı; bekleyenler iptal edilebilir, katılanlar listelenir. Link yalnızca oluşturulurken bir kez gösterilir; DB'de sadece sha256'sı tutulur. Kabul sırasında satır kilidi (FOR UPDATE) aynı linkin iki kez kullanılmasını engeller.
+- **Şifre değiştirme:** Settings → Account; mevcut şifre doğrulanır, bu tarayıcı açık kalır, diğer tüm cihazların oturumu kapanır.
+- `/invite/<token>` sayfası oturumsuz açılır (proxy'de public). Davet bir e-postaya bağlıysa alan kilitli gelir.
+
+### Backend
+- Migration `invites_001`: `users.is_admin`, `auth_invites` (id, token_hash, email, created_by, expires_at, used_at, used_by). Var olan en eski kullanıcı admin yapılır.
+- `careeros/identity/auth/invites.py`; yeni uçlar: `GET/POST /api/auth/setup`, `POST /api/auth/invites/check|accept`, `GET/POST /api/auth/invites`, `DELETE /api/auth/invites/{id}`, `POST /api/auth/password`. `/me` artık `is_admin` döner.
+- Setup, davet kabul/kontrol ve şifre değiştirme giriş throttle'ını kullanır (429).
+- `career-os user add --admin`; CLI artık kurtarma/yönetim için (unutulan şifre: `career-os user passwd`).
+
+### Web
+- `features/auth/account-form.tsx` (ortak form + hata mesajları), sign-in'de setup modu, `app/(auth)/invite/[token]`, Settings'te `PasswordRow` ve `InvitesSection` (yalnız admin).
+- Profil sekmesindeki Clerk'ten kalma "Managed by your account provider" yazısı düzeltildi; uzun davet linki taşmıyor (Copy görünür kalıyor).
+
+### Doğrulama
+- Yerel production stack'te 28/28 uçtan uca kontrol (`tests/manual/account_flows.py`): setup → admin, ikinci setup 409, zayıf şifre 400, e-postaya bağlı davet, sahte token, ikinci kullanım 410, admin olmayan 403, iptal, şifre değişince diğer cihaz 401 / bu cihaz 200, eski şifre 401 / yeni 204, davet sayfası public.
+- Tarayıcıda: setup formu → onboarding ("Welcome, Test."), Settings'te davet oluşturma, arkadaşın davet sayfası (kilitli e-posta). Konsol hatası yok.
+- 431 test, ruff, tsc, eslint temiz.
 
 ---
 

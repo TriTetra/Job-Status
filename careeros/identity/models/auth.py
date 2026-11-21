@@ -1,4 +1,4 @@
-"""Password credentials and server-side sessions (own auth — invite-only)."""
+"""Password credentials, server-side sessions and invite links (own auth — invite-only)."""
 
 from datetime import datetime
 from typing import Optional
@@ -40,3 +40,18 @@ class AuthSession(Base):
         Index("idx_auth_sessions_user", "user_id"),
         Index("idx_auth_sessions_expires", "expires_at"),
     )
+
+
+class AuthInvite(Base):
+    """A single-use sign-up link an admin sends to a friend. Only the token's sha256 is stored."""
+
+    __tablename__ = "auth_invites"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)          # shown to admins, used to revoke
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)  # if set, only this address can use it
+    created_by: Mapped[Optional[str]] = mapped_column(String(128), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_by: Mapped[Optional[str]] = mapped_column(String(128), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

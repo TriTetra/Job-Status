@@ -36,7 +36,7 @@ export function Row({
           </div>
         )}
       </div>
-      <div className="md:pt-0.5">{children}</div>
+      <div className="md:pt-0.5 min-w-0">{children}</div>
     </div>
   );
 }

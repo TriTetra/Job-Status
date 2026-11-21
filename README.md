@@ -111,7 +111,7 @@ cp config.yaml.example config.yaml
 
 # 4. Seed reference data (countries, visas, salaries, skills, roles, goals, evidence sources)
 career-os seed
-career-os user add you@example.com   # your login; set SESSION_COOKIE_SECURE=false for http://localhost
+# then open the web app: the first account you create there is the admin
 career-os jobs sync                  # read 74 company career boards
 
 # 5. Run

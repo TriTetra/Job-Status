@@ -84,7 +84,7 @@ export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
             />
           </div>
         </Row>
-        <Row label="Email" hint="Managed by your account provider">
+        <Row label="Email" hint="Your sign-in address">
           <span className="text-sm" style={{ color: "var(--text-muted)" }}>
             {initial?.email || "—"}
           </span>

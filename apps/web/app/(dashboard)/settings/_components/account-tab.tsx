@@ -5,6 +5,7 @@ import { useMe } from "@/features/auth/use-me";
 import { settingsApi, API_BASE } from "@/features/settings/api";
 import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
 import { Section, Row, UnderlineInput } from "./kit";
+import { InvitesSection, PasswordRow } from "./access-section";
 
 export function AccountTab() {
   const me = useMe();
@@ -54,12 +55,15 @@ export function AccountTab() {
             {[me?.first_name, me?.last_name].filter(Boolean).join(" ") || "—"}
           </span>
         </Row>
-        <Row label="Email" hint="Change it with: career-os user …">
+        <Row label="Email" hint={me?.is_admin ? "Admin — you can invite people" : undefined}>
           <span className="text-sm" style={{ color: "var(--text-muted)" }}>
             {me?.email ?? "—"}
           </span>
         </Row>
+        <PasswordRow />
       </Section>
+
+      {me?.is_admin && <InvitesSection />}
 
       <Section title="Proof sources">
         <Row label="GitHub" hint="Repository analysis raises skill confidence">

@@ -9,7 +9,6 @@ pip install -e .                                     # careeros + apps importabl
 cp .env.example .env                                 # fill in DATABASE_URL, OPENROUTER_API_KEY, GitHub
 alembic -c careeros/db/alembic.ini upgrade head
 career-os seed                                       # reference data from infra/seeds/v1
-career-os user add you@example.com                   # your login (prompts for a password)
 career-os jobs sync                                  # read the company boards (~5 min the first time)
 cd apps/web && npm install                           # web app
 ```
@@ -54,9 +53,19 @@ Web: only `API_URL` (default http://localhost:8000). It is read at build time fo
 
 ## Accounts
 
+On the website:
+
+1. **First account** — open the site; while it has no account, `/sign-in` shows *Create
+   account*. That account is the admin. Setup then closes for good.
+2. **Friends** — Settings → Account → Invites → *Create link* (optionally for one email).
+   The link is shown once, works once and expires in 7 days. Pending links can be revoked.
+3. **Password** — Settings → Account → *Change password* (signs out your other devices).
+
+From the server (api container terminal), for recovery and administration:
+
 ```bash
-career-os user add friend@example.com --first-name Ada   # prompts for a password (≥ 12 chars)
-career-os user passwd friend@example.com                 # reset; signs them out everywhere
+career-os user passwd friend@example.com                 # reset a forgotten password; signs them out everywhere
+career-os user add someone@example.com --admin           # create an account directly (prompts for a password)
 career-os user list | disable | enable | signout
 ```
 
@@ -95,10 +104,9 @@ Live at https://career.abdullokh.xyz (Coolify project **CareerOS**).
    on the first deploy and kept — never change them (the token key decrypts stored OAuth tokens).
 5. Deploy. Every API start runs `alembic upgrade head` and the idempotent `career-os seed`
    (`SEED_ON_START=false` to skip).
-6. Once, in the **api** container terminal:
-   `career-os user add you@example.com` (prompts for the password), then `career-os jobs sync`.
-   After that the API refreshes boards, extracts facts and rescores every
-   `JOB_SYNC_INTERVAL_HOURS` (6).
+6. Open the site and create the first (admin) account; invite friends from Settings.
+   The API reads all company boards 2 minutes after start, then refreshes boards,
+   extracts facts and rescores every `JOB_SYNC_INTERVAL_HOURS` (6).
 
 Images: multi-stage, non-root, healthchecked; API ≈ slim Python + venv, web = Next.js
 standalone. Memory caps 512 MB (db) / 768 MB (api) / 384 MB (web); logs rotate at 3 × 10 MB.

@@ -67,6 +67,14 @@ def revoke_session(session: Session, token: str | None) -> None:
         session.query(AuthSession).filter(AuthSession.token_hash == hash_token(token)).delete()
 
 
+def revoke_others(session: Session, user_id: str, keep_token: str | None) -> int:
+    """Sign a user out of every browser except this one (after a password change)."""
+    q = session.query(AuthSession).filter(AuthSession.user_id == user_id)
+    if keep_token:
+        q = q.filter(AuthSession.token_hash != hash_token(keep_token))
+    return q.delete()
+
+
 def revoke_all(session: Session, user_id: str) -> int:
     """Sign a user out everywhere (password change, deactivation)."""
     return session.query(AuthSession).filter(AuthSession.user_id == user_id).delete()
