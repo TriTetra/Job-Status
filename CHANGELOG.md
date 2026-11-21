@@ -8,7 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
-| Deploy — Production Images + Coolify | Multi-stage API image (no pip/setuptools at runtime, auto migrate + seed on start), cached web build, Coolify-generated secrets, memory caps and log rotation; fixed /api trailing-slash redirect that sent browsers to the internal API host; full stack smoke-tested locally | ✅ Tamam | 2026-11-22 |
+| Deploy — Production Images + Coolify (live) | Multi-stage API image (no pip/setuptools at runtime, auto migrate + seed on start), cached web build, Coolify-generated secrets, memory caps and log rotation; fixed /api trailing-slash redirect that sent browsers to the internal API host; full stack smoke-tested locally | ✅ Tamam | 2026-11-22 |
 | Phase 3 — LLM Brain + Gateway | One gateway for every model call: task routing (fast model for bulk), daily budgets (global, per user, bulk share), concurrency cap, `llm_calls` log, pydantic-validated output; LLM reads each relevant posting once (cached per version) and the deterministic scorer uses those facts; canonical skill names, real skill gaps, fit not diluted by long lists; last known-bug xfails fixed | ✅ Tamam | 2026-10-28 |
 | Phase 2 — Company Career Boards | 74 verified company boards (Greenhouse, Lever, Ashby, Workday) read directly, ~9k relevant postings; incremental sync (new/changed/closed) with per-board run log and advisory lock; scores upserted one per (user, job) and rescored only when posting or profile changes; scheduler in the API; `career-os jobs` CLI; apply links to the company site; visa negation + Go/AI keyword bugs fixed | ✅ Tamam | 2026-10-28 |
 | Phase 1 — Own Auth + Coolify Deploy | Clerk removed: invite-only accounts (`career-os user`), argon2id passwords, hashed server-side sessions in an httpOnly cookie, login throttling, CSRF header, no CORS; users.clerk_id → users.id (data kept); Coolify compose stack (db + internal api + public web, /api proxied); DB connect timeout; torch made optional | ✅ Tamam | 2026-10-28 |
@@ -117,8 +117,19 @@ Sıralama: en yeniden en eskiye.
 - Sıfır DB'de 15 migration + seed (180 rol, 87 beceri) otomatik; CLI ile kullanıcı → web proxy üzerinden giriş (204, httpOnly cookie) → web'in çağırdığı tüm GET yolları 200; CSRF'siz POST 403; canlı sync 2 board / 62 iş.
 - 430 test, ruff, tsc, eslint temiz.
 
+### Canlı (2026-11-22)
+- Coolify: proje **CareerOS** → kaynak **careeros** (public repo `TriTetra/Job-Status`, `main`, Docker Compose, `/docker-compose.prod.yml`).
+- Domain: yalnız **web** servisi → `https://career.abdullokh.xyz` (port 3000, HTTP→HTTPS). Otomatik eklenen `www.` kaydı kaldırıldı.
+- `WEB_APP_URL` ayarlandı; `SERVICE_PASSWORD_POSTGRES` ve `SERVICE_PASSWORD_64_TOKENKEY` Coolify tarafından üretildi.
+- İlk deploy (`bfe8e3c`) sunucuda 2 dk: 30 migration + seed (180 rol, 87 beceri, 21 hedef, 19 kaynak), scheduler açık (6 saat).
+- Scheduler'ın ilk döngüsü: **74 board, 9.119 ilan, 0 hata, ~4 dk**.
+- Sunucu IP'si üzerinden test: `/sign-in` 200, `/api/auth/me` 401 (oturumsuz, doğru), HTTP→HTTPS yönlendirmesi çalışıyor, gerçek istemci IP'si API loglarına ulaşıyor.
+
 ### Kalan
-- Push, Coolify'da proje/kaynak oluşturma, `career.abdullokh.xyz` DNS kaydı, env değişkenleri, ilk deploy.
+- Cloudflare DNS: `career` → A `157.90.232.46` (veya CNAME `coolify.abdullokh.xyz`), proxied.
+- `OPENROUTER_API_KEY` (Coolify env) → redeploy; o zamana kadar ilanlar keyword ile okunur.
+- api terminalinde `career-os user add <email>` (şifreyi kullanıcı girer).
+- İsteğe bağlı: gizli değişkenlerde "Available during build" kapatılabilir (imajlar sunucudan çıkmıyor, risk düşük).
 
 ---
 
