@@ -110,6 +110,14 @@ def _facts(job: Job) -> dict:
     }
 
 
+def _feed_label(job: Job) -> Optional[dict]:
+    if job.source != "feed":
+        return None
+    from careeros.jobs.sources.feeds import LABELS
+
+    return {"name": LABELS.get(job.site or "", job.site or "a job feed"), "url": job.url}
+
+
 def get_posting(session: Session, url: str) -> Optional[dict]:
     job = session.get(Job, url)
     if job is None:
@@ -125,6 +133,8 @@ def get_posting(session: Session, url: str) -> Optional[dict]:
         "posted_at": (job.posted_at or job.discovered_at).isoformat() if (job.posted_at or job.discovered_at) else None,
         "closed": job.closed_at is not None,
         "application_url": job.application_url or job.url,
+        # Found through a job feed: credit it and link back to its page
+        "via": _feed_label(job),
         "facts": _facts(job),
         "blocks": posting_blocks(job.full_description or job.description or ""),
     }

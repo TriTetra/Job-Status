@@ -1,7 +1,7 @@
 """Companies as the job boards see them: open roles, hiring pace, what they ask for.
 
-The list is the boards CareerOS reads (infra/config/companies.yaml), not a hand-kept
-seed: every number comes from the `jobs` table and the board sync log, and the
+The list is the boards CareerOS reads (infra/config/companies.yaml plus the boards
+found through job feeds), not a hand-kept seed: every number comes from the `jobs` table and the board sync log, and the
 user's own view (fitting roles, best score, skills they already show) from their
 scores and evidence. Seed profiles (tier, HQ, interview notes) are added when a
 company has one.
@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from careeros.companies.models.company import Company
 from careeros.evidence.aggregation import aggregate_user_skills
-from careeros.jobs.boards import load_boards
+from careeros.jobs.boards import all_boards
 from careeros.jobs.models.board_run import JobBoardRun
 from careeros.jobs.models.career_score import CareerScore
 from careeros.jobs.models.job import Job
@@ -107,7 +107,7 @@ def _summary(board, jobs: list[Job], all_recent: list[Job], scores: dict[str, Ca
 def company_directory(session: Session, user_id: str, now: Optional[datetime] = None) -> list[dict]:
     """Every board's company, the ones with roles for this user first."""
     now = now or datetime.now(timezone.utc)
-    boards = load_boards().boards
+    boards = all_boards(session)
     recent_or_open = (session.query(Job)
                       .filter(Job.company_key.isnot(None),
                               or_(Job.closed_at.is_(None), Job.closed_at > now - 2 * WEEK,
@@ -145,7 +145,7 @@ def weekly_new(session: Session, company_key: str, now: datetime, weeks: int = W
 def company_detail(session: Session, user_id: str, company_key: str, now: Optional[datetime] = None) -> Optional[dict]:
     """One company: the directory summary plus its open roles, best fit for this user first."""
     now = now or datetime.now(timezone.utc)
-    board = next((b for b in load_boards().boards if b.key == company_key), None)
+    board = next((b for b in all_boards(session) if b.key == company_key), None)
     if board is None:
         return None
     jobs = session.query(Job).filter(Job.company_key == company_key,

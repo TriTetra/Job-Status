@@ -97,6 +97,26 @@ def parse(data: dict) -> BoardConfig:
     )
 
 
+def discovered_boards(session) -> list[Board]:
+    """Active boards found through job feeds (careeros/jobs/feeds.py)."""
+    from careeros.jobs.models.discovered_board import DiscoveredBoard
+
+    rows = session.query(DiscoveredBoard).filter(DiscoveredBoard.active.is_(True)).order_by(DiscoveredBoard.key).all()
+    return [Board(key=d.key, name=d.name, ats=d.ats, board=d.board, host=d.host or "", domain=d.domain or "",
+                  discovered=True) for d in rows if d.ats in FETCHERS]
+
+
+def all_boards(session=None) -> list[Board]:
+    """companies.yaml plus the boards discovered through feeds."""
+    config = list(load_boards().boards)
+    if session is not None:
+        return config + discovered_boards(session)
+    from careeros.db.connection import db
+
+    with db.session_scope() as s:
+        return config + discovered_boards(s)
+
+
 @lru_cache(maxsize=1)
 def load_boards() -> BoardConfig:
     with open(COMPANIES_FILE, encoding="utf-8") as f:

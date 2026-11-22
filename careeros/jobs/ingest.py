@@ -19,7 +19,7 @@ from sqlalchemy import text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from careeros.db.connection import db
-from careeros.jobs.boards import TitleFilter, load_boards
+from careeros.jobs.boards import TitleFilter, all_boards, load_boards
 from careeros.jobs.extraction import TextExtractor
 from careeros.jobs.models.board_run import JobBoardRun
 from careeros.jobs.models.job import Job
@@ -160,10 +160,11 @@ def sync_board(board: Board, titles: TitleFilter, *, dry_run: bool = False,
         seen = {p.url for p in fetched.postings} | fetched.seen_urls
         result.fetched, result.complete = len(seen), fetched.complete
 
-        rows, touched = [], []
+        rows, touched, done = [], [], set()
         for p in fetched.postings:
-            if not (_http(p.url) and p.title and titles.keeps(p.title)):
-                continue
+            if not (_http(p.url) and p.title and titles.keeps(p.title)) or p.url in done:
+                continue  # one row per URL: a board listing a job twice would break the upsert
+            done.add(p.url)
             row = to_row(board, p, extract)
             old = known.get(p.url)
             if old is None:
@@ -213,9 +214,15 @@ def _sync_lock():
 
 def sync_all(keys: Optional[Iterable[str]] = None, *, dry_run: bool = False,
              workers: int = WORKERS) -> SyncSummary:
-    """Sync every configured board (or just `keys`). Raises SyncBusy if a sync is running."""
+    """Sync every board, configured and discovered (or just `keys`). Raises SyncBusy if a sync is running."""
     config = load_boards()
-    boards = config.select(keys)
+    if dry_run:
+        boards = config.select(keys)
+    else:
+        everything = all_boards()
+        boards = everything if not keys else [b for b in everything if b.key in set(keys)]
+        if keys and not boards:
+            boards = config.select(keys)  # raises for unknown keys
     titles = config.titles
     if not dry_run:
         from careeros.jobs.targeting import role_terms
@@ -231,12 +238,44 @@ def sync_all(keys: Optional[Iterable[str]] = None, *, dry_run: bool = False,
         t = summary.totals
         logger.info("Job sync: %d boards, %d kept, %d new, %d updated, %d closed, %d failed",
                     len(boards), t["kept"], t["new"], t["updated"], t["closed"], t["failed"])
+        if not dry_run:
+            _after_sync(boards, summary)
         return summary
 
     if dry_run:
         return _run_all()
     with _sync_lock():
         return _run_all()
+
+
+MAX_DISCOVERED_FAILURES = 3  # a found board that never answers is switched off
+
+
+def _after_sync(boards: list[Board], summary: SyncSummary) -> None:
+    """Discovered boards: count failures in a row, switch off dead ones. Then close feed
+    copies of jobs the company boards now carry."""
+    from careeros.jobs.feeds import close_feed_duplicates
+    from careeros.jobs.models.discovered_board import DiscoveredBoard
+
+    found = {b.key for b in boards if b.discovered}
+    try:
+        with db.session_scope() as s:
+            if found:
+                results = {r.key: r for r in summary.boards if r.key in found}
+                for d in s.query(DiscoveredBoard).filter(DiscoveredBoard.key.in_(found)).all():
+                    r = results.get(d.key)
+                    if r is None:
+                        continue
+                    d.failures = d.failures + 1 if r.error else 0
+                    if d.failures >= MAX_DISCOVERED_FAILURES:
+                        d.active = False
+                        logger.info("Discovered board %s (%s/%s) switched off after %d failures",
+                                    d.key, d.ats, d.board, d.failures)
+            closed = close_feed_duplicates(s)
+            if closed:
+                logger.info("Closed %d feed postings now read from company boards", closed)
+    except Exception:
+        logger.exception("Post-sync bookkeeping failed")
 
 
 def import_rows(normalized: list[dict]) -> int:
@@ -286,7 +325,7 @@ SYNC_LABEL = "job-sync"
 
 
 def board_status(session) -> list[dict]:
-    """Every configured board with its open postings and last sync outcome."""
+    """Every board (configured and discovered) with its open postings and last sync outcome."""
     from sqlalchemy import func
 
     runs = {r.company_key: r for r in session.query(JobBoardRun).all()}
@@ -294,10 +333,10 @@ def board_status(session) -> list[dict]:
         session.query(Job.company_key, func.count()).filter(Job.closed_at.is_(None)).group_by(Job.company_key).all()
     )
     out = []
-    for b in load_boards().boards:
+    for b in all_boards(session):
         r = runs.get(b.key)
         out.append({
-            "key": b.key, "name": b.name, "ats": b.ats,
+            "key": b.key, "name": b.name, "ats": b.ats, "discovered": b.discovered,
             "open_jobs": open_counts.get(b.key, 0),
             "last_run_at": r.last_run_at.isoformat() if r else None,
             "last_success_at": r.last_success_at.isoformat() if r and r.last_success_at else None,
@@ -313,6 +352,13 @@ def run_sync_job(job: BackgroundJob, user_id: str) -> None:
 
     try:
         job.update(status="syncing", progress=10)
+        from careeros.jobs.feeds import MIN_INTERVAL_H, sync_feeds
+        job.log("Reading job feeds (Hacker News, Arbeitnow, Remotive, Himalayas, Jobicy)…")
+        feeds = sync_feeds(min_interval_h=MIN_INTERVAL_H)
+        if feeds.feeds:
+            job.log(f"✓ {sum(f.new for f in feeds.feeds)} new from feeds · {len(feeds.new_boards)} company boards found")
+        else:
+            job.log("Feeds were read recently; skipped")
         job.log("Reading company career boards…")
         totals = sync_all().totals
         job.log(f"✓ {totals['new']} new · {totals['updated']} updated · {totals['closed']} closed"

@@ -37,6 +37,33 @@ def sync(
 
 
 @app.command()
+def feeds(
+    feed: Optional[List[str]] = typer.Option(None, "--feed", "-f", help="Feed key (repeatable); default all"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Fetch and filter only; no database writes"),
+):
+    """Read the job feeds (Hacker News, Arbeitnow, Remotive, Himalayas, Jobicy) and remember the
+    company boards they link to. Remotive allows ~4 requests a day: don't loop this."""
+    from careeros.jobs.feeds import sync_feeds
+    from careeros.jobs.sources.feeds import FEEDS
+
+    unknown = set(feed or []) - set(FEEDS)
+    if unknown:
+        typer.echo(f"✗ Unknown feed(s): {', '.join(sorted(unknown))} (use {', '.join(FEEDS)})", err=True)
+        raise typer.Exit(1)
+    summary = sync_feeds(feed, dry_run=dry_run)
+    typer.echo(f"\n{'feed':<12}{'fetched':>8}{'kept':>6}{'new':>5}{'dup':>5}{'boards':>7}{'closed':>7}  time")
+    for f in summary.feeds:
+        if f.error:
+            typer.echo(f"{f.feed:<12}  ✗ {f.error[:90]}")
+            continue
+        typer.echo(f"{f.feed:<12}{f.fetched:>8}{f.kept:>6}{f.new:>5}{f.duplicates:>5}{f.boards_found:>7}{f.closed:>7}"
+                   f"  {f.duration_ms / 1000:.1f}s")
+    if summary.new_boards:
+        typer.echo(f"\nNew company boards: {', '.join(summary.new_boards)}")
+    typer.echo("  [dry run]" if dry_run else "")
+
+
+@app.command()
 def boards():
     """Configured boards with the outcome of their last sync."""
     from careeros.db.connection import db

@@ -17,6 +17,8 @@ export interface Posting {
   posted_at: string | null;
   closed: boolean;
   application_url: string;
+  /** Found through a job feed: credited, with a link back to the feed's page */
+  via: { name: string; url: string } | null;
   facts: {
     summary: string | null;
     seniority: string | null;

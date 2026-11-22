@@ -227,6 +227,14 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
                 Open posting <ArrowUpRight className="h-4 w-4" strokeWidth={2} />
               </a>
             )}
+            {posting?.via && safeHttpUrl(posting.via.url) && (
+              <p className="text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
+                Found via{" "}
+                <a href={safeHttpUrl(posting.via.url)!} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                  {posting.via.name}
+                </a>
+              </p>
+            )}
             <div className="grid grid-cols-3 gap-2 text-xs">
               {[
                 { label: status === "applied" ? "Applied ✓" : "I applied", on: onApply, off: status === "applied", color: "var(--text-primary)" },

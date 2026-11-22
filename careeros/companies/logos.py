@@ -1,7 +1,7 @@
 """Company logos for the board companies, fetched once and kept in memory.
 
-Only companies in infra/config/companies.yaml (known domains) can be asked for, so
-this is not an open proxy. The image comes from Google's favicon service at
+Only companies whose board CareerOS reads (companies.yaml or discovered through a
+feed, with a known domain) can be asked for, so this is not an open proxy. The image comes from Google's favicon service at
 128 px; anything that isn't a real icon (unknown domain, error) is "no logo" and
 the web shows a monogram instead.
 """
@@ -13,7 +13,7 @@ from typing import Optional
 
 import requests
 
-from careeros.jobs.boards import load_boards
+from careeros.jobs.boards import all_boards
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ _lock = threading.Lock()
 
 
 def domain_for(key: str) -> Optional[str]:
-    board = next((b for b in load_boards().boards if b.key == key), None)
+    board = next((b for b in all_boards() if b.key == key), None)
     return board.domain if board and board.domain else None
 
 

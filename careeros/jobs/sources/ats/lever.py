@@ -5,11 +5,12 @@ https://github.com/lever/postings-api
 
 from careeros.jobs.sources.ats.base import TIMEOUT, Board, FetchResult, Posting, html_to_text, parse_time
 
-API = "https://api.lever.co/v0/postings/{board}?mode=json"
+API = "https://{host}/v0/postings/{board}?mode=json"
 
 
 def fetch(board: Board, http, known_urls: set[str], keep_title=None) -> FetchResult:
-    resp = http.get(API.format(board=board.board), timeout=TIMEOUT)
+    # EU-hosted boards (jobs.eu.lever.co) have their own API host
+    resp = http.get(API.format(host=board.host or "api.lever.co", board=board.board), timeout=TIMEOUT)
     resp.raise_for_status()
     return FetchResult(postings=[_posting(j) for j in resp.json()])
 

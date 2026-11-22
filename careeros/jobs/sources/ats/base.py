@@ -1,4 +1,5 @@
-"""Shared types for company career-board clients (Greenhouse, Lever, Ashby, Workday)."""
+"""Shared types for company career-board clients (Greenhouse, Lever, Ashby, Workday, Personio,
+Recruitee, Workable, SmartRecruiters)."""
 
 import html
 import re
@@ -21,13 +22,14 @@ class Board:
 
     key: str                       # stable id, e.g. "stripe"
     name: str                      # display name, e.g. "Stripe"
-    ats: str                       # greenhouse | lever | ashby | workday
-    board: str = ""                # board token / slug (greenhouse, lever, ashby)
-    host: str = ""                 # workday: nvidia.wd5.myworkdayjobs.com
+    ats: str                       # greenhouse | lever | ashby | workday | personio | recruitee | workable | smartrecruiters
+    board: str = ""                # board token / slug
+    host: str = ""                 # workday: nvidia.wd5.myworkdayjobs.com · lever EU: api.eu.lever.co · personio: x.jobs.personio.com
     tenant: str = ""               # workday: nvidia
     site: str = ""                 # workday: NVIDIAExternalCareerSite
     search: tuple[str, ...] = ()   # workday: server-side search terms (empty = everything)
     domain: str = ""               # company website, e.g. stripe.com (logo)
+    discovered: bool = False       # found through a job feed, not listed in companies.yaml
 
 
 @dataclass

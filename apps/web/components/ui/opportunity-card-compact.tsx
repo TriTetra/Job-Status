@@ -2,6 +2,7 @@
 
 import { cn, formatScore } from "@/lib/utils";
 import { CompanyLogo } from "@/components/shared/company-logo";
+import { feedLabel } from "@/features/opportunities/feeds";
 import { tierOf } from "@/features/opportunities/tier";
 import {
   CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, TIER_COLOR,
@@ -23,6 +24,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
   const facts = [whereOf(opp), salaryOf(opp)].filter(Boolean).join(" · ");
   const status = DECISION_LABEL[opp.user_decision?.status ?? "unreviewed"];
   const age = postedAgo(opp);
+  const via = feedLabel(opp.explanation?.source);
   const key = typeof opp.explanation?.company_key === "string" ? opp.explanation.company_key : null;
 
   return (
@@ -42,6 +44,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
         </p>
         <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>
           {company}{age ? <span style={{ color: "var(--text-muted)" }}> · {age}</span> : null}
+          {via ? <span style={{ color: "var(--text-muted)" }}> · via {via}</span> : null}
         </p>
         {facts && <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{facts}</p>}
       </div>

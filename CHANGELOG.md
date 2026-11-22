@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Job Feeds + Board Discovery | Startups and EU/remote roles: Hacker News Who is hiring, Arbeitnow, Remotive, Himalayas, Jobicy; company boards they link to are found and read from then on; new Personio, Recruitee, Workable, SmartRecruiters and Lever EU readers | ✅ Tamam | 2026-11-23 |
 | Manage: Applications Board + Analytics | Applications is a fixed board with logos, drag and drop, a drawer (stage, notes, history) and stale flags; new Analytics page (funnel, weekly pace, response rate, score vs interviews); Timeline dropped; applications are per user | ✅ Tamam | 2026-11-23 |
 | Settings Dialog + Account Menu | Settings is a dialog over any page (Profile, Preferences, Scoring, Connections, Account); one account menu replaces the sidebar user block and the top-right avatar; profile save no longer wipes briefing state | ✅ Tamam | 2026-11-23 |
 | Companies + Market One-Screen | Companies is a fixed list | company frame with logos, an 8-week hiring chart and open roles by your fit; Market fits one screen: numbers, skills asked, companies adding roles (with logos), news | ✅ Tamam | 2026-11-22 |
@@ -109,6 +110,33 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Job Feeds + Board Discovery] — 2026-11-23 — Beyond the 74 big companies ✅
+
+**Neden:** Kullanıcı: Gelen şirketlerin hepsi büyük; İngiltere / Almanya / İsviçre / İspanya / Avrupa'da, yapay zekâ alanında, remote çalışılabilecek **orta ölçekli, yeni ve startup** şirketlerin ilanları gelmeli. Durum: Aplio yalnızca `companies.yaml`'daki 74 (çoğu büyük, ABD merkezli) şirketin panosunu okuyordu; listede olmayan hiçbir şirket görünmüyordu.
+
+### Yeni kaynaklar (iş akışları)
+- **Hacker News "Who is hiring?"** (Algolia API): her ay yüzlerce startup kendi ilanını veriyor; "Şirket | Rol | Yer | REMOTE | VISA" satırı ayrıştırılıyor, şirketin pano linki tercih ediliyor.
+- **Arbeitnow** (Almanya ağırlıklı, startup ve orta ölçek; son ~900 ilan), **Remotive** (remote; günde en fazla 4 istek, biz 2 yapıyoruz), **Himalayas** (remote; ML / AI / LLM / data / MLOps aramaları, ilan "hangi ülkelerden işe alınır" listesiyle), **Jobicy** (remote; Avrupa, UK, Almanya, İspanya, İsviçre).
+- Hepsi aynı başlık filtresinden geçiyor (companies.yaml + kullanıcıların hedef rolleri). Kaynakların şartları gereği ilan **kendi sayfasına link** veriyor ve **"via Remotive" / "Found via Hacker News"** olarak belirtiliyor (Opportunities kartı ve okuyucu).
+- Akışlar ~12 saatte bir okunuyor; zamanlama veritabanında tutulduğu için yeniden başlatma / deploy fazladan istek atmıyor. 21 gün listelenmeyen akış ilanı kapanıyor.
+
+### Otomatik şirket keşfi
+- Bir akış ilanı şirketin kendi panosuna (Ashby, Greenhouse — EU dahil, Lever — EU dahil, Personio, Recruitee, Workable, SmartRecruiters) link veriyorsa pano **`discovered_boards`** tablosuna ekleniyor (migration `discovered_boards_018`) ve o andan itibaren companies.yaml'daki panolar gibi her senkronda okunuyor: şirketin **diğer** ilanları da geliyor. Çalıştırma başına en fazla 40 yeni pano; 3 kez üst üste okunamayan pano kapatılıyor.
+- Aynı iş hem akışta hem şirket panosunda görünürse akış kopyası kapatılıyor (aynı şirket + başlık): bir iş iki kez gösterilmiyor.
+- Keşfedilen şirketler Companies sayfasında da görünüyor (alan adı bulunduysa logolu).
+
+### Yeni pano okuyucuları
+- **Personio** (XML), **Recruitee**, **Workable** (aynı iş birden çok şehir için listelenince tek ilana birleştiriliyor), **SmartRecruiters** (liste açıklamasız; yalnız yeni ve ilgili başlıklar detaylı okunuyor, pano başına 60 sınır), **Lever EU** (`api.eu.lever.co`). Greenhouse EU panoları normal API'den geliyor.
+- Senkron artık bir panonun aynı URL'yi iki kez listelemesine dayanıklı (önceden tüm pano yazımı hata veriyordu).
+- CLI: `career-os jobs feeds [--feed hackernews] [--dry-run]`.
+
+### Doğrulama
+- Her kaynak ve okuyucu gerçek açık API'lere karşı denendi: HN 214 ilan (137 ilgili, 21 şirket panosu), Arbeitnow 900 (243), Himalayas 198 (193), Jobicy 239 (90); Personio, Recruitee (Tether), Workable (Modash), SmartRecruiters (CERN), Lever EU, Greenhouse EU okundu. Remotive günlük sınırı korumak için kayıtlı örnekle test edildi.
+- Atılabilir Postgres'te uçtan uca: migration 018 → 651 akış ilanı + keşfedilen 21 panodan 500 ilan → yeniden skorlama: 261 eşleşmenin 167'si yeni kaynaklardan; Strong listesinin başında küçük şirketler (ICEYE, YO AI Labs, Xperteez); okuyucuda "Found via Himalayas"; Companies 74 → 95 şirket.
+- 602 test (yeni `test_job_feeds.py`: pano link ayrıştırma, HN satırı, Personio / Recruitee / Workable / SmartRecruiters okuyucuları, akış satırı güvenliği), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

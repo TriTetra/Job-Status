@@ -1,5 +1,6 @@
-"""Periodic refresh: sync every company board, extract facts from new postings (LLM),
-then rescore every active user.
+"""Periodic refresh: read the job feeds (twice a day; they also discover company boards),
+sync every company board, extract facts from new postings (LLM), then rescore every
+active user.
 
 Runs as a daemon thread inside the API process (JOB_SYNC_INTERVAL_HOURS > 0).
 The sync's advisory lock keeps it from overlapping a manual `career-os jobs sync`;
@@ -25,6 +26,7 @@ def run_cycle() -> Optional[dict]:
     from careeros.jobs.llm_extract import enrich_jobs
     from careeros.jobs.scan import run_scan, scan_jobs
 
+    refresh_feeds()
     try:
         summary = sync_all()
     except SyncBusy:
@@ -45,6 +47,16 @@ def run_cycle() -> Optional[dict]:
             logger.info("Rescored %s: %s scored, %s unchanged", user_id, r.get("scored"), r.get("unchanged"))
     refresh_market_news()
     return summary.totals
+
+
+def refresh_feeds() -> None:
+    """Job feeds that are due (each read at most about twice a day, across restarts)."""
+    from careeros.jobs.feeds import MIN_INTERVAL_H, sync_feeds
+
+    try:
+        sync_feeds(min_interval_h=MIN_INTERVAL_H)
+    except Exception:
+        logger.exception("Job feed sync failed")
 
 
 MARKET_NEWS_EVERY = 20 * 3600  # seconds; HN "Who is hiring" + TechCrunch about once a day

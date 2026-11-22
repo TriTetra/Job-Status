@@ -17,6 +17,7 @@ from careeros.jobs.models.scan_history import ScanHistory
 from careeros.db.legacy.evidence import Evidence
 from careeros.jobs.models.job import Job
 from careeros.jobs.models.board_run import JobBoardRun
+from careeros.jobs.models.discovered_board import DiscoveredBoard
 from careeros.shared.llm_usage import LLMCall
 from careeros.identity.models.user_settings import UserSettings
 from careeros.identity.models.user_custom_skills import UserCustomSkill
@@ -54,6 +55,7 @@ __all__ = [
     "Evidence",
     "Job",
     "JobBoardRun",
+    "DiscoveredBoard",
     "LLMCall",
     "UserSettings",
     "UserCustomSkill",
