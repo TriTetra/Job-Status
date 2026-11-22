@@ -1,23 +1,14 @@
-import { unstable_rethrow } from "next/navigation";
-import { getSavedIdentity } from "@/features/onboarding/server";
-import { SettingsShell, type InitialProfile, type ProfileData } from "./_components/settings-shell";
+import { redirect } from "next/navigation";
+import { legacyTab, SETTINGS_PARAM } from "@/features/settings/sections";
 
-export default async function SettingsPage() {
-  let initialProfile: InitialProfile | null = null;
-  try {
-    const id = await getSavedIdentity();
-    initialProfile = {
-      profileData: (id.profile_data ?? {}) as ProfileData,
-      yearsInRole: Number(id.years_in_role ?? 0),
-      careerLevel: id.career_level ?? "mid",
-      currentRoleId: id.current_role_id ?? (id.current_custom_role_id ? `custom_${id.current_custom_role_id}` : ""),
-      email: id.email ?? "",
-    };
-  } catch (err) {
-    unstable_rethrow(err); // Next.js control-flow errors are not ours to swallow
-    // The tabs still load their own data; the profile tab starts blank
-    console.error("[settings] profile load failed:", err);
-  }
+type Params = Record<string, string | string[] | undefined>;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-  return <SettingsShell initialProfile={initialProfile} />;
+/** Settings lives in a dialog over the app; old /settings?tab=… links open it on the Briefing. */
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const sp = await searchParams;
+  const q = new URLSearchParams({ [SETTINGS_PARAM]: legacyTab(one(sp.tab)) });
+  const github = one(sp.github);
+  if (github) q.set("github", github);
+  redirect(`/briefing?${q}`);
 }

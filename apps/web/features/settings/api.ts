@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
+import type { SavedIdentity } from "@/features/onboarding/server";
 export { API_BASE } from "@/lib/api/client";
 /**
  * Settings API client — onboarding ile AYNI tabloları konuşur.
@@ -28,6 +29,8 @@ export interface Preferences {
 
 export const settingsApi = {
   // ── Profile (users tablosu — onboarding ile aynı) ─────────────────────
+  getIdentity: () => apiFetch<SavedIdentity>("/api/onboarding/identity"),
+
   saveIdentity: (data: Record<string, unknown>) =>
     apiFetch<{ state: string; message: string }>("/api/onboarding/identity", {
       method: "POST",

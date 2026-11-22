@@ -5,7 +5,8 @@ import { Command } from "cmdk";
 import { useUIStore } from "@/lib/store";
 import { ALL_NAV_ITEMS } from "@/lib/nav-items";
 import { useRouter } from "next/navigation";
-import { FileText, Plus, Zap } from "lucide-react";
+import { FileText, Plus, Settings, Zap } from "lucide-react";
+import { settingsHref } from "@/features/settings/sections";
 
 const QUICK_ACTIONS = [
   { label: "Generate Resume", icon: FileText, href: "/resume" },
@@ -109,6 +110,19 @@ export function CommandPalette() {
                 )}
               </Command.Item>
             ))}
+            <Command.Item
+              value="Settings"
+              onSelect={() => {
+                setCommandOpen(false);
+                router.push(settingsHref("profile"), { scroll: false });
+              }}
+              className="flex items-center gap-3 h-10 px-3 rounded-lg text-sm cursor-pointer transition-colors"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <Settings className="h-4 w-4" style={{ color: "var(--text-muted)" }} strokeWidth={1.75} />
+              <span className="flex-1">Settings</span>
+              <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>Ctrl ,</span>
+            </Command.Item>
           </Command.List>
 
           <div

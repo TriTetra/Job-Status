@@ -25,7 +25,7 @@ export function Row({
   children: ReactNode;
 }) {
   return (
-    <div className="py-4 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-1.5 md:gap-8 border-b border-[var(--border)] last:border-b-0">
+    <div className="py-4 grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-1.5 lg:gap-8 border-b border-[var(--border)] last:border-b-0">
       <div>
         <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
           {label}
@@ -36,7 +36,7 @@ export function Row({
           </div>
         )}
       </div>
-      <div className="md:pt-0.5 min-w-0">{children}</div>
+      <div className="lg:pt-0.5 min-w-0">{children}</div>
     </div>
   );
 }
@@ -171,7 +171,7 @@ export function UnderlineInput(props: InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
-/** Tek save noktası — NN/g: ayarlar confirm ile uygulanır. */
+/** One save point per section, pinned to the bottom of the dialog while you scroll. */
 export function SaveBar({
   onSave,
   saving,
@@ -184,7 +184,8 @@ export function SaveBar({
   disabled?: boolean;
 }) {
   return (
-    <div className="pt-8 mt-8 border-t border-[var(--border)] flex items-center justify-end gap-4">
+    <div className="sticky bottom-0 z-10 -mx-6 sm:-mx-10 px-6 sm:px-10 py-4 mt-8 border-t border-[var(--border)] flex items-center justify-end gap-4"
+         style={{ background: "var(--background)" }}>
       {saved && (
         <span className="text-xs" style={{ color: "var(--success)" }}>
           Saved

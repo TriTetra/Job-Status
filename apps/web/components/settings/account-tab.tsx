@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useMe } from "@/features/auth/use-me";
+import { signOut, useMe } from "@/features/auth/use-me";
 import { onboardingApi } from "@/features/onboarding/api";
 import { githubNotice, NOTICE_COLOR } from "@/features/onboarding/connect-messages";
 import { connectsByInput, SOURCE_INPUT, useSourceConnect } from "@/features/onboarding/use-source-connect";
@@ -12,8 +12,30 @@ import { InvitesSection, PasswordRow } from "./access-section";
 
 const textBtn = "text-xs underline underline-offset-4 transition-colors cursor-pointer disabled:opacity-40";
 
+/** Sign-in address, password, invites (admins) and sign out. */
 export function AccountTab() {
   const me = useMe();
+  return (
+    <div>
+      <Section title="Sign-in">
+        <Row label="Email" hint={me?.is_admin ? "You're an admin: you can invite people" : "The address you sign in with"}>
+          <span className="text-sm" style={{ color: "var(--text-primary)" }}>{me?.email ?? "—"}</span>
+        </Row>
+        <PasswordRow />
+        <Row label="Sign out" hint="On this browser">
+          <button className={textBtn} style={{ color: "var(--text-secondary)" }} onClick={() => void signOut()}>
+            Sign out
+          </button>
+        </Row>
+      </Section>
+
+      {me?.is_admin && <InvitesSection />}
+    </div>
+  );
+}
+
+/** Proof sources: connect by username or link, or sign in with GitHub. */
+export function ConnectionsTab() {
   const [sources, setSources] = useState<EvidenceSourceRow[] | null>(null);
   const oauthNotice = githubNotice(useSearchParams().get("github"));
 
@@ -30,23 +52,10 @@ export function AccountTab() {
 
   return (
     <div>
-      <Section title="Account">
-        <Row label="Name">
-          <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-            {[me?.first_name, me?.last_name].filter(Boolean).join(" ") || "—"}
-          </span>
-        </Row>
-        <Row label="Email" hint={me?.is_admin ? "Admin — you can invite people" : undefined}>
-          <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {me?.email ?? "—"}
-          </span>
-        </Row>
-        <PasswordRow />
-      </Section>
-
-      {me?.is_admin && <InvitesSection />}
-
       <Section title="Proof sources">
+        <p className="text-xs pb-2" style={{ color: "var(--text-muted)" }}>
+          Every source you add becomes evidence Aplio can point to when it scores a role.
+        </p>
         {oauthNotice && (
           <p className="text-xs py-3" role="status" style={{ color: NOTICE_COLOR[oauthNotice.tone] }}>
             {oauthNotice.text}

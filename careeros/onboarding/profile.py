@@ -123,12 +123,17 @@ def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> s
         session, user_id, identity["current_role_id"], identity["current_role_title"]
     )
 
+    role_changed = (str(user.current_role_id or ""), str(user.current_custom_role_id or "")) != (
+        str(role_id or ""), str(custom_role_id or ""))
     user.current_role_id = role_id
     user.current_custom_role_id = custom_role_id
     user.years_in_role = identity["years_in_role"]
     user.career_level = identity.get("career_level")
     user.career_level_origin = identity.get("career_level_origin", "system")
+    # Merge: profile_data also holds app state (briefing_seen, briefing_dismissed, ...) that a
+    # settings save must not wipe. A new dict so SQLAlchemy sees the JSONB change.
     user.profile_data = {
+        **(user.profile_data or {}),
         "first_name": identity["first_name"],
         "last_name": identity.get("last_name"),
         "country": identity["country"],
@@ -138,8 +143,18 @@ def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> s
         "education_level": identity.get("education_level"),
     }
 
-    # Role history: close the previous current role, open the new one
+    # Role history: close the previous current role, open the new one (only when it changed)
     today = date.today()
+    if role_changed:
+        _record_role(session, user_id, role_id, custom_role_id, today)
+
+    if user.onboarding_state in (OnboardingState.NOT_STARTED.value, OnboardingState.IDENTITY.value):
+        user.onboarding_state = OnboardingState.GOALS.value
+    session.commit()
+    return user.onboarding_state
+
+
+def _record_role(session: Session, user_id: str, role_id, custom_role_id, today: date) -> None:
     session.execute(
         sa.text("UPDATE user_roles SET is_current = false, ended_at = :today "
                 "WHERE user_id = :user_id AND is_current = true"),
@@ -157,11 +172,6 @@ def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> s
             "source": "canonical" if role_id else "custom",
         },
     )
-
-    if user.onboarding_state in (OnboardingState.NOT_STARTED.value, OnboardingState.IDENTITY.value):
-        user.onboarding_state = OnboardingState.GOALS.value
-    session.commit()
-    return user.onboarding_state
 
 
 # ── goals step ────────────────────────────────────────────────────────────

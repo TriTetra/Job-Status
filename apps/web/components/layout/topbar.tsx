@@ -1,37 +1,11 @@
 "use client";
 
-import { Search, Bell, Command, LogOut } from "lucide-react";
-import { signOut, useMe } from "@/features/auth/use-me";
+import { Search, Command } from "lucide-react";
+import { AccountMenu } from "./account-menu";
 import { useUIStore } from "@/lib/store";
 import { usePathname } from "next/navigation";
 import { NAV_GROUPS } from "@/lib/nav-items";
 import { useEffect } from "react";
-
-/** Initials + sign out (replaces the hosted account widget). */
-function AccountButton() {
-  const me = useMe();
-  const initial = (me?.first_name?.[0] ?? me?.email?.[0] ?? "·").toUpperCase();
-  return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold"
-        style={{ background: "var(--surface)", color: "var(--text-secondary)" }}
-        title={me?.email}
-      >
-        {initial}
-      </span>
-      <button
-        onClick={() => void signOut()}
-        className="h-8 w-8 rounded-md flex items-center justify-center transition-colors"
-        style={{ color: "var(--text-muted)" }}
-        aria-label="Sign out"
-        title="Sign out"
-      >
-        <LogOut className="h-[16px] w-[16px]" strokeWidth={1.75} />
-      </button>
-    </div>
-  );
-}
 
 function Breadcrumb() {
   const pathname = usePathname();
@@ -117,27 +91,9 @@ export function Topbar() {
           </kbd>
         </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="relative h-9 w-9 flex items-center justify-center rounded-lg transition-colors"
-            style={{ color: "var(--text-secondary)" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--surface)")
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-            aria-label="Notifications"
-          >
-            <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
-            <span
-              className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full"
-              style={{
-                background: "var(--accent)",
-                outline: "2px solid var(--background)",
-              }}
-            />
-          </button>
-
-          <AccountButton />
+        {/* On desktop "you" lives at the foot of the sidebar; without the sidebar it lives here */}
+        <div className="lg:hidden">
+          <AccountMenu placement="topbar" />
         </div>
       </div>
     </header>

@@ -165,7 +165,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
           {rules && (
             <p className="mt-3 text-[15px] leading-relaxed line-clamp-2" style={{ color: "var(--text-secondary)" }}>
               {rules}{" "}
-              <Link href="/settings?tab=preferences" className="text-sm whitespace-nowrap" style={{ color: "var(--accent)" }}>
+              <Link href="/inbox?settings=preferences" scroll={false} className="text-sm whitespace-nowrap" style={{ color: "var(--accent)" }}>
                 Change
               </Link>
             </p>

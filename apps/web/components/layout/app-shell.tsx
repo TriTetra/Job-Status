@@ -1,7 +1,8 @@
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
-import { type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { SettingsDialogHost } from "@/components/settings/settings-dialog";
 
 /**
  * One viewport: sidebar + (topbar over a scrolling main). Pages that should fit the
@@ -18,6 +19,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
       <CommandPalette />
+      <Suspense fallback={null}>
+        <SettingsDialogHost />
+      </Suspense>
     </div>
   );
 }

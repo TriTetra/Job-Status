@@ -7,7 +7,7 @@ import { ROLES } from "@/features/onboarding/data/roles";
 import { COUNTRIES, SENIORITY, type SeniorityId } from "@/features/onboarding";
 import { settingsApi } from "@/features/settings/api";
 import { Section, Row, UnderlineInput, SaveBar } from "./kit";
-import type { InitialProfile } from "./settings-shell";
+import type { InitialProfile } from "./types";
 
 export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
   const pd = initial?.profileData ?? {};
@@ -17,7 +17,8 @@ export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
   const [country,     setCountry]     = useState<string>(pd.country ?? "");
   const [roleId,      setRoleId]      = useState<string>(initial?.currentRoleId ?? "");
   const [roleTitle,   setRoleTitle]   = useState<string>(pd.current_role_title ?? "");
-  const [yearsInRole, setYearsInRole] = useState<number>(initial?.yearsInRole ?? 0);
+  // Scoring reads total years (profile_data.total_years); years_in_role is only its fallback
+  const [totalYears,  setTotalYears]  = useState<number>(Number(pd.total_years ?? initial?.yearsInRole ?? 0));
   const [level,       setLevel]       = useState<SeniorityId>((initial?.careerLevel as SeniorityId) ?? "mid");
 
   const [saving, setSaving] = useState(false);
@@ -50,11 +51,11 @@ export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
         last_name: lastName || undefined,
         current_role_id: roleId,
         current_role_title: roleTitle,
-        years_in_role: yearsInRole,
+        years_in_role: initial?.yearsInRole ?? 0,
         career_level: level,
         career_level_origin: "user",
         country,
-        total_years: pd.total_years,
+        total_years: totalYears,
         languages: pd.languages ?? [],
         education_level: pd.education_level,
       });
@@ -84,11 +85,6 @@ export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
             />
           </div>
         </Row>
-        <Row label="Email" hint="Your sign-in address">
-          <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {initial?.email || "—"}
-          </span>
-        </Row>
         <Row label="Country of residence">
           <div className="md:max-w-[260px]">
             <SearchableCombobox
@@ -104,7 +100,7 @@ export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
       </Section>
 
       <Section title="Experience">
-        <Row label="Current role" hint="Drives role-aware suggestions">
+        <Row label="Current role" hint="The roles Aplio looks for start here">
           <div className="md:max-w-[320px]">
             <SearchableCombobox
               initialOptions={staticRoles}
@@ -121,13 +117,13 @@ export function ProfileTab({ initial }: { initial: InitialProfile | null }) {
             />
           </div>
         </Row>
-        <Row label="Years in this role">
+        <Row label="Years of experience" hint="In your field, all roles together">
           <UnderlineInput
             type="number"
             min={0}
             max={50}
-            value={yearsInRole}
-            onChange={(e) => setYearsInRole(Number(e.target.value) || 0)}
+            value={totalYears}
+            onChange={(e) => setTotalYears(Number(e.target.value) || 0)}
             className="md:max-w-[80px]"
           />
         </Row>

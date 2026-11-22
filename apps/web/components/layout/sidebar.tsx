@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMe } from "@/features/auth/use-me";
-import { cn, displayName } from "@/lib/utils";
+import { AccountMenu } from "./account-menu";
+import { cn } from "@/lib/utils";
 import { NAV_GROUPS, type NavItem } from "@/lib/nav-items";
 import { useUIStore } from "@/lib/store";
 import { AplioLogo } from "@/components/shared/aplio-logo";
@@ -86,9 +86,6 @@ function NavItemRow({
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const me = useMe();
-  const shownName = displayName(me?.first_name) || me?.email?.split("@")[0] || "You";
-  const initials = (me?.first_name?.[0] ?? me?.email?.[0] ?? "A").toUpperCase();
   const badgeCounts = useBadgeCounts();
 
   /** Inject real badge counts into the static nav definition. */
@@ -188,28 +185,9 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* User */}
+      {/* You: one menu for settings, connections, invites, sign out */}
       <div className="border-t p-3" style={{ borderColor: "var(--border)" }}>
-        <div
-          className={cn(
-            "flex items-center gap-3 h-12 rounded-lg px-3 hover:bg-[var(--surface)] transition-colors cursor-pointer",
-            sidebarCollapsed && "justify-center px-0"
-          )}
-        >
-          <div
-            className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "rgba(255,177,98,0.15)" }}
-          >
-            <span className="text-sm font-semibold" style={{ color: "var(--accent)" }}>{initials}</span>
-          </div>
-          {!sidebarCollapsed && (
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                {shownName}
-              </div>
-            </div>
-          )}
-        </div>
+        <AccountMenu placement={sidebarCollapsed ? "sidebar-collapsed" : "sidebar"} />
       </div>
     </aside>
   );

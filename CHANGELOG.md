@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Settings Dialog + Account Menu | Settings is a dialog over any page (Profile, Preferences, Scoring, Connections, Account); one account menu replaces the sidebar user block and the top-right avatar; profile save no longer wipes briefing state | ✅ Tamam | 2026-11-23 |
 | Companies + Market One-Screen | Companies is a fixed list | company frame with logos, an 8-week hiring chart and open roles by your fit; Market fits one screen: numbers, skills asked, companies adding roles (with logos), news | ✅ Tamam | 2026-11-22 |
 | One-Screen Briefing + Opportunities Reader | Briefing fits one screen (masthead + week, top pick | to do, closing); Opportunities is a fixed frame with company logos and a reader showing the full posting with your skills underlined in the text and your fit in the margin | ✅ Tamam | 2026-11-22 |
 | P3 — Companies + Market from the Boards | Companies list and company pages built from the 74 boards (open roles, hiring pace, your matches, skills asked vs your evidence); Market read from your own matching postings (pace, pay, remote/visa share, skill demand + trend, busiest companies); news refreshed daily | ✅ Tamam | 2026-11-22 |
@@ -107,6 +108,35 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Settings Dialog + Account Menu] — 2026-11-23 — Settings over the page, one place for "you" ✅
+
+**Neden:** Kullanıcı: Ayarlar, Claude / Antigravity'deki gibi açılır pencere olarak güzel görünmeli; gereksiz ayarlar sorgulanmalı; altta ve sağ üstte ayrı ayrı duran profil alanları tek yerde toplanmalı.
+
+### Ayarlar artık bir pencere
+- Hangi sayfadaysan onun üstünde açılıyor (`?settings=<bölüm>`); kapatınca aynı yere dönüyorsun. Sol rayda bölümler + altta sen, sağda serif başlık + bir cümle açıklama, içerik kendi içinde kayıyor, **Save changes** alta yapışık. Esc kapatır, odak pencerede kalır ve açan düğmeye döner; Ctrl/⌘ + , her yerden açar; hafif açılış animasyonu (azaltılmış harekette kapalı). Telefonda tam ekran, bölümler üstte yatay sekme.
+- Bölümler arasında geçişte düzenlemeler kaybolmuyor (hepsi açık kalıyor).
+- Eski `/settings?tab=…` bağlantıları (Briefing yapılacakları, GitHub dönüşü) Briefing'in üstünde doğru bölümü açıyor; Opportunities'teki "Change" pencereyi o sayfada açıyor.
+
+### Ayarlar gözden geçirildi
+- **Profile:** e-posta tekrarı kaldırıldı (Account'ta). "Years in this role" → **Years of experience**: skorlama `total_years`'ı okuyor, eski alan skoru hiç değiştirmiyordu.
+- **Preferences:** aynen (hepsi skorlamada / Briefing'de kullanılıyor: çalışma şekli, ülkeler, vize, maaş, Briefing sesi).
+- **Scoring:** ağırlıklar artık **göreli**: "toplam %100 olmalı" engeli kalktı (skorlayıcı zaten normalize ediyor), paylar her zaman %100 gösteriliyor ve öyle kaydediliyor; **Reset to defaults**.
+- **Connections** (yeni bölüm): kanıt kaynakları Account'tan buraya taşındı.
+- **Account:** e-posta, şifre, davetler (admin), çıkış. İsim tekrarı kaldırıldı.
+- Kullanılmayan `scoring-chart.tsx` silindi.
+
+### Tek hesap menüsü
+- Kenar çubuğunun altındaki kullanıcı alanı artık bir menü: ad + e-posta, **Settings**, **Connections**, (admin) **Invite people**, **Sign out**. Sağ üstteki ayrı avatar + çıkış düğmesi kaldırıldı (kenar çubuğu olmayan dar ekranlarda aynı menü sağ üstte). İşlevi olmayan, hep yanan bildirim zili kaldırıldı. Kenar çubuğundaki "System → Settings" satırı kaldırıldı (menü, Ctrl + , ve komut paletinde).
+
+### Hata düzeltmesi
+- Profil kaydı `profile_data`'yı baştan yazıyordu → Briefing'in "son ziyaret" ve "kapatılan yapılacaklar" durumu silinirdi. Artık birleştiriliyor. Rol değişmediyse rol geçmişine her kayıtta yeni satır eklenmiyor. Yeni `tests/unit/test_identity_save.py`.
+
+### Doğrulama
+- Ayrık önizlemede tarayıcıda: eski bağlantı `/settings?tab=account` → `/briefing?settings=connections`; bölüm geçişi URL'yi güncelliyor; Esc kapatıp `/inbox`'a dönüyor; menüden Settings pencereyi açıyor ve odak pencerede; 1366×768'de pencere 1040×720; 375 px'te tam ekran, yatay taşma yok, sağ üst menü ekrana sığıyor.
+- 557 test, ruff, tsc, eslint, `next build` temiz.
 
 ---
 
