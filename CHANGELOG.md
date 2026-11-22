@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| Deploy — Separate Database + Backups | PostgreSQL moved out of the compose stack into its own Coolify resource (PGVector 17) with daily scheduled backups; app joins its network via DATABASE_URL (postgres:// accepted); build args no longer injected (secrets out of image builds) | ✅ Tamam | 2026-11-22 |
 | Web Accounts — Setup + Invite Links | First account created on the site (becomes admin, setup then closes), single-use invite links (7 days, optional email binding, revocable) in Settings, own password change (other devices signed out); verified with 28 end-to-end checks | ✅ Tamam | 2026-11-22 |
 | Deploy — Production Images + Coolify (live) | Multi-stage API image (no pip/setuptools at runtime, auto migrate + seed on start), cached web build, Coolify-generated secrets, memory caps and log rotation; fixed /api trailing-slash redirect that sent browsers to the internal API host; full stack smoke-tested locally | ✅ Tamam | 2026-11-22 |
 | Phase 3 — LLM Brain + Gateway | One gateway for every model call: task routing (fast model for bulk), daily budgets (global, per user, bulk share), concurrency cap, `llm_calls` log, pydantic-validated output; LLM reads each relevant posting once (cached per version) and the deterministic scorer uses those facts; canonical skill names, real skill gaps, fit not diluted by long lists; last known-bug xfails fixed | ✅ Tamam | 2026-10-28 |
@@ -94,6 +95,27 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Deploy — Database] — 2026-11-22 — Separate PostgreSQL resource + backups ✅
+
+**Neden:** Veritabanı compose yığınının içindeydi: her uygulama deploy'u onu da yeniden
+ele alıyordu ve Coolify'ın zamanlanmış yedekleme/geri yükleme özelliği kullanılamıyordu.
+`web` + `api` birlikte kalıyor (sıkı bağlılar: `/api` rewrite'ı derleme anında API'nin iç
+adresine gömülüyor); sadece veritabanı ayrıldı.
+
+- Coolify: yeni kaynak **careeros-db** — `pgvector/pgvector:pg17` (ileride semantik eşleştirme için pgvector hazır), kullanıcı/DB `career_os`, private (dışarı port yok), Coolify'ın ürettiği şifre.
+- Yedek: her gün 03:30 UTC (`30 3 * * *`), `career_os` veritabanı, sunucuda yerel.
+- `careeros` uygulaması: *Connect to predefined network* (api ↔ careeros-db iç ağ), *Build arguments → Managed manually in Dockerfile* (Coolify artık env değişkenlerini — sırlar dahil — build argümanı olarak enjekte etmiyor).
+- `docker-compose.prod.yml`: `db` servisi ve `pgdata` volume'u kaldırıldı; `api` → `DATABASE_URL` (zorunlu).
+- `DATABASE_URL` artık `postgres://` / `postgresql://` da kabul ediyor (psycopg 3 sürücüsüne çevrilir) → Coolify'ın gösterdiği iç URL olduğu gibi yapıştırılabilir.
+- Test sızıntısı düzeltildi: `test_settings_defaults` geliştiricinin kendi `.env`'ini okuyordu (tek başına çalışınca kırılıyordu).
+
+### Kalan / bilinen
+- Yerel yedek saklama süresi Coolify arayüzünde 0 (sınırsız) kaldı — otomasyon kaydetmedi; elle 14 / 14 / 2 GB girilmeli. DB küçük olduğu için acil değil.
+- Sunucu dışı kopya için S3 depolama eklenmeli (sunucu giderse yerel yedekler de gider).
+- Eski compose `db` konteyneri/volume'u boş; yeni deploy sonrası Coolify'da temizlenebilir.
 
 ---
 

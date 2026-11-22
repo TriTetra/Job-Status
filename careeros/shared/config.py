@@ -61,6 +61,17 @@ def _bool(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes")
 
 
+def _database_url() -> Optional[str]:
+    """DATABASE_URL with the psycopg 3 driver. Coolify (and most hosts) hand out
+    postgres:// or postgresql:// URLs; SQLAlchemy would pick psycopg2 for those."""
+    url = os.getenv("DATABASE_URL") or None
+    if url:
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 def _float(name: str, default: float) -> float:
     return float(os.getenv(name) or default)
 
@@ -120,7 +131,7 @@ def get_settings() -> Settings:
     """Read settings once per process. Tests: get_settings.cache_clear() after changing env."""
     load_env()
     return Settings(
-        database_url=os.getenv("DATABASE_URL"),
+        database_url=_database_url(),
         # A handful of users and one API worker: small pool by default
         db_pool_size=_int("DB_POOL_SIZE", 5),
         db_max_overflow=_int("DB_MAX_OVERFLOW", 5),

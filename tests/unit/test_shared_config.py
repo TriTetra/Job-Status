@@ -28,6 +28,9 @@ def test_load_env_does_not_override_process_env(tmp_path, monkeypatch):
 
 
 def test_settings_defaults(monkeypatch, fresh_settings):
+    from careeros.shared import config
+
+    monkeypatch.setattr(config, "_env_loaded", True)  # the developer's own .env must not leak in
     for var in ("DB_POOL_SIZE", "DEFAULT_MODEL", "LLM_BASE_URL", "LOG_LEVEL", "CAREEROS_E2E_AUTH_BYPASS"):
         monkeypatch.delenv(var, raising=False)
     s = get_settings()
@@ -75,3 +78,13 @@ def test_load_config_substitutes_env(tmp_path, monkeypatch):
 
 def test_plugin_config_loads():
     assert "job_sources" in cfg.load_plugin_config()
+
+
+@pytest.mark.parametrize("given, expected", [
+    ("postgres://u:p@db-abc:5432/postgres", "postgresql+psycopg://u:p@db-abc:5432/postgres"),
+    ("postgresql://u:p@h/db", "postgresql+psycopg://u:p@h/db"),
+    ("postgresql+psycopg://u:p@h/db", "postgresql+psycopg://u:p@h/db"),
+])
+def test_database_url_uses_psycopg3(monkeypatch, fresh_settings, given, expected):
+    monkeypatch.setenv("DATABASE_URL", given)
+    assert get_settings().database_url == expected
