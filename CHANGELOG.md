@@ -125,6 +125,9 @@ Sıralama: en yeniden en eskiye.
 ### Canlıyı etkileyen hata (bulundu ve düzeltildi)
 - `apiFetch` JSON gövdeli isteklerde `Content-Type` göndermiyordu → **Shortlist / Not for me (`/api/jobs/decide`), profil bağlama (GitHub, ORCID…) ve dismiss 422 dönüyordu.** Artık string gövdeli her istek `application/json` (istemci ve sunucu tarafı tek yerde).
 
+### Canlıda
+- 2026-11-22, `775c426` (1 dk 5 sn): site 200, `/api/briefing/dismiss` mevcut (GET → 405), `/api/briefing` oturumsuz 401. Maaşlar bir sonraki 6 saatlik skorlamada (veya "Rescore now") görünür.
+
 ### Doğrulama
 - **Ayrık önizleme ile tarayıcıda denendi** (atılabilir Postgres konteyneri, API 18000, web 13100, oluşturulmuş test hesabı, örnek 14 ilan): Briefing tüm bölümleri; dismiss → yenilemede gizli; Opportunities cümlesi, görünümler, çakışma filtresi (1 gizli), Shortlist 200, Not for me → Skipped ve sıradaki seçili; 375 px'te yatay kaydırma yok. Konteyner ve sunucular kapatıldı.
 - `digest` gerçek Postgres'te: manşet, değişimler, yapılacaklar, hafta, ikinci ziyaret penceresi, dismiss, karar → başvuru.
