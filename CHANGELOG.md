@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| One-Screen Briefing + Opportunities Reader | Briefing fits one screen (masthead + week, top pick | to do, closing); Opportunities is a fixed frame with company logos and a reader showing the full posting with your skills underlined in the text and your fit in the margin | ✅ Tamam | 2026-11-22 |
 | P3 — Companies + Market from the Boards | Companies list and company pages built from the 74 boards (open roles, hiring pace, your matches, skills asked vs your evidence); Market read from your own matching postings (pace, pay, remote/visa share, skill demand + trend, busiest companies); news refreshed daily | ✅ Tamam | 2026-11-22 |
 | Briefing v2 + Opportunities v2 | Briefing answers "what changed since your last visit, what should I do": top APPLY pick with reason/criteria/actions, changes, dismissable to-dos, the week in numbers. Opportunities: the search as one sentence, views (Strong / Worth a look / All / Shortlisted / Skipped), conflict filter, chance per job, decision panel. Fixes JSON requests sent without Content-Type (Shortlist/Skip, profile connect returned 422) | ✅ Tamam | 2026-11-22 |
 | P0 — Broken Discover/Briefing Fixes | Decision panel filled, Apply/Shortlist/Skip create the application, Settings weights and saved work styles actually score, hybrid/on-site no longer penalised by default, chips show real salary, Briefing actions/time zone/links work, Market counts every mention and Refresh waits | ✅ Tamam | 2026-11-22 |
@@ -105,6 +106,32 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [One-Screen Briefing + Opportunities Reader] — 2026-11-22 — No page scroll, logos, the full posting ✅
+
+**Neden:** Kullanıcı: Briefing kaydırılmadan tek ekranda, güzel boşluklarla görünmeli; Opportunities'in ana iskeleti sabit kalmalı, iş ve açıklaması dolu ve yaratıcı biçimde görünmeli, şirket logoları olmalı.
+
+### Uygulama kabuğu
+- `AppShell` artık tek görünüm (`h-dvh`): sayfa değil `main` kayıyor; Briefing ve Opportunities `h-full` ile ekrana tam oturuyor ve kendi sütunlarında kayıyor. Beyaz varsayılan kaydırma çubukları yerine ince koyu çubuk (`.custom-scrollbar`, artık tanımlı; `color-scheme: dark`).
+
+### Logolar
+- `companies.yaml`'daki 74 panoya `domain` eklendi; yeni `GET /api/companies/logo/{key}` logoyu sunucuda bir kez alıp bellekte tutuyor (yalnız bilinen panolar → açık proxy değil), tarayıcı bir hafta önbellekliyor. Logo yoksa monogram. `CompanyLogo` açık zeminli karo (koyu logolar da görünür).
+
+### Opportunities: sabit çerçeve + okuyucu
+- Başlık ve araç çubuğu sabit; liste ve panel ekranın kalanını dolduruyor, sayfa kaymıyor.
+- **Liste satırı:** logo, rol, şirket · yaş, yer · maaş, skor + şans.
+- **Yeni** `GET /api/jobs/posting?url=` (`careeros/jobs/posting.py`): ilanın tamamı temiz metin blokları (başlık / paragraf / madde; HTML hiç enjekte edilmiyor) + Claude'un okuduğu bilgiler (kıdem, yıl, çalışma şekli, vize, maaş, gerekli / tercihli beceriler, özet).
+- **Okuyucu paneli:** masthead (büyük logo, serif başlık, bilgi çipleri) → **ilan bir makale gibi**; metinde sende olan beceriler yeşil, eksikler kırmızı altı çizili. **Kenar notu** (geniş ekranda sağda, dar ekranda üstte şerit): skor halkası, seviye, şans, Open posting / I applied / Shortlist / Not for me, kısa gerekçe (+ "Ask for a deeper read"), sorulan beceriler 5/7 çubuğu, öncelik kontrolleri.
+
+### Briefing: tek ekran
+- Masthead (tarih, selam, tek cümle + "See them", şirket/kapanan değişiklikleri tek satır) | hafta rakamları sağda; altta iki sütun: **Top pick** (logo, skor halkası, gerekçe, kontroller, eylemler) | **To do** (kısa ekranlarda tek satır açıklama, gerekirse kendi içinde kayar); tek satır kapanış. Animasyon (fade) kaldırıldı — arka plandaki sekmelerde içeriği görünmez bırakabiliyordu.
+- İsim profil verisinde yoksa hesap adı kullanılıyor.
+
+### Doğrulama
+- Ayrık önizlemede (atılabilir Postgres, örnek HTML ilan metinleri, 7 pano) tarayıcıda: 1366×768'de Briefing'de sayfa kaymıyor, footer 740 px'te; 1920×1080 ve 1280×720'de de kayma yok (720'de yalnız To do listesi kendi içinde 35 px kayıyor); Opportunities'te logolar 128 px, ilan 13 blok + 6 vurgulu beceri, geniş ekranda kenar notu; 375 px'te yatay taşma yok.
+- 554 test (yeni `test_posting.py`: HTML / kaçışlı HTML / düz metin → bloklar, işaretleme sızmıyor), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

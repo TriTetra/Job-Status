@@ -10,6 +10,7 @@ from careeros.jobs.models.career_score import CareerScore
 from careeros.applications.repositories.application_repo import ApplicationRepository
 from careeros.jobs import opportunities
 from careeros.jobs import ingest
+from careeros.jobs.posting import get_posting
 from careeros.jobs.scan import ALL_TIME_HOURS, run_scan, scan_jobs
 from careeros.shared.background import JobForbidden, JobNotFound
 
@@ -66,6 +67,15 @@ def decide(body: DecisionRequest, user_id: str = Depends(get_user_id), session: 
         return opportunities.record_decision(session, user_id, body.url, body.status)
     except opportunities.UnknownJob:
         raise HTTPException(status_code=404, detail="This job is no longer available.")
+
+
+@router.get("/posting", summary="The full posting as clean text blocks + its facts")
+def job_posting(url: str = Query(..., max_length=2048), user_id: str = Depends(get_user_id),
+                session: Session = Depends(get_db_session)):
+    posting = get_posting(session, url)
+    if posting is None:
+        raise HTTPException(status_code=404, detail="This job is no longer available.")
+    return posting
 
 
 @router.get("/pipeline", summary="Pipeline summary counts")

@@ -157,13 +157,13 @@ export function InboxView({ initial }: { initial: InboxData }) {
   const scanned = lastScan(jobs);
 
   return (
-    <div className="wide-container px-6 lg:px-8 py-10">
+    <div className="lg:h-full flex flex-col w-full max-w-[1680px] mx-auto px-6 lg:px-8 pt-7 pb-5">
       {/* Header: the search as one sentence */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-[760px]">
-          <h1 className="font-serif-display text-4xl" style={{ color: "var(--text-primary)" }}>Opportunities</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4 shrink-0">
+        <div className="max-w-[860px]">
+          <h1 className="font-serif-display text-[34px] leading-none" style={{ color: "var(--text-primary)" }}>Opportunities</h1>
           {rules && (
-            <p className="mt-3 text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            <p className="mt-3 text-[15px] leading-relaxed line-clamp-2" style={{ color: "var(--text-secondary)" }}>
               {rules}{" "}
               <Link href="/settings?tab=preferences" className="text-sm whitespace-nowrap" style={{ color: "var(--accent)" }}>
                 Change
@@ -182,7 +182,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
       </div>
 
       {/* Views + search + conflict filter */}
-      <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+      <div className="mt-5 shrink-0 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
         <nav className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Views">
           {VIEWS.map((v) => {
             const active = v.id === view;
@@ -228,7 +228,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
 
       {/* List + decision panel: each scrolls in its own column */}
       {shown.length === 0 ? (
-        <div className="py-20 text-center max-w-md mx-auto">
+        <div className="flex-1 py-20 text-center max-w-md mx-auto">
           <p className="font-serif-display text-2xl" style={{ color: "var(--text-primary)" }}>
             {jobs.length === 0 ? "No matches yet." : "Nothing in this view."}
           </p>
@@ -241,8 +241,8 @@ export function InboxView({ initial }: { initial: InboxData }) {
           </p>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] gap-8 lg:h-[calc(100vh-300px)]">
-          <div className="max-h-[60vh] lg:max-h-none lg:min-h-0 overflow-y-auto custom-scrollbar -mx-2 px-2 space-y-0.5">
+        <div className="mt-4 lg:flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] gap-6">
+          <div className="max-h-[60vh] lg:max-h-none lg:min-h-0 overflow-y-auto custom-scrollbar -mx-1 px-1 space-y-1 pr-2">
             {shown.map((opp) => (
               <OpportunityCardCompact
                 key={opp.url}
@@ -252,7 +252,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
               />
             ))}
           </div>
-          <div className="rounded-xl border overflow-hidden lg:min-h-0" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="rounded-2xl border overflow-hidden lg:min-h-0 h-[80vh] lg:h-auto" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             {selected && (
               <OpportunityDetailPanel
                 key={selected.url}

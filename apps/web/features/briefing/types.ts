@@ -5,6 +5,7 @@ import type { Chance, CriterionState, TodoFact } from "./facts";
 export interface BriefingHeadline {
   url: string;
   company: string;
+  companyKey: string | null;
   title: string;
   score: number;
   recommendation: "APPLY" | "CONSIDER" | "SKIP";

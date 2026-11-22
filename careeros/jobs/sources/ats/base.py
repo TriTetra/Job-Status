@@ -27,6 +27,7 @@ class Board:
     tenant: str = ""               # workday: nvidia
     site: str = ""                 # workday: NVIDIAExternalCareerSite
     search: tuple[str, ...] = ()   # workday: server-side search terms (empty = everything)
+    domain: str = ""               # company website, e.g. stripe.com (logo)
 
 
 @dataclass

@@ -2,11 +2,12 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.company import CompanyMemoryResponse, CompanyResponse
+from careeros.companies import logos
 from careeros.companies.directory import company_detail, company_directory
 from careeros.companies.repositories.company_repo import CompanyMemoryRepository, CompanyRepository
 
@@ -32,6 +33,16 @@ def companies_hiring_now(
     """Companies actively hiring (hiring_trend = up/spike)."""
     repo = CompanyRepository(session)
     return [CompanyResponse.model_validate(c) for c in repo.get_hiring_now(limit=limit)]
+
+
+@router.get("/logo/{key}", summary="A board company's logo (cached)")
+def company_logo(key: str, user_id: str = Depends(get_user_id)):
+    """The logo image, or 404 (the web then shows a monogram). Browsers keep it for a week."""
+    found = logos.logo(key)
+    if found is None:
+        raise HTTPException(status_code=404, detail="No logo")
+    data, ctype = found
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "private, max-age=604800"})
 
 
 @router.get("/boards", summary="Companies from the job boards, with this user's view")

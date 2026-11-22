@@ -11,6 +11,7 @@
    ============================================ */
 
 :root {
+  color-scheme: dark; /* native scrollbars, form controls */
   --background:        #1B2632;
   --foreground:        #EEE9DF;
 
@@ -158,6 +159,21 @@ body {
     .skeleton-shimmer   { animation: none; background: rgba(238,233,223,0.06); }
     .stagger > *        { animation: none; opacity: 1; }
   }
+
+  /* Thin, quiet scrollbars for the app's own scroll areas */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(238, 233, 223, 0.16) transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(238, 233, 223, 0.14);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: rgba(238, 233, 223, 0.26); }
 
   .font-editorial {
     font-family: var(--font-editorial);

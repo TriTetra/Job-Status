@@ -89,6 +89,7 @@ def parse(data: dict) -> BoardConfig:
             key=key, name=entry["name"], ats=ats, board=entry.get("board", ""),
             host=entry.get("host", ""), tenant=entry.get("tenant", ""), site=entry.get("site", ""),
             search=tuple(entry.get("search") or (search if ats == "workday" else ())),
+            domain=str(entry.get("domain") or ""),
         ))
     return BoardConfig(
         boards=tuple(boards),

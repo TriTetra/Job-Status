@@ -1,6 +1,7 @@
 "use client";
 
 import { cn, formatScore } from "@/lib/utils";
+import { CompanyLogo } from "@/components/shared/company-logo";
 import { tierOf } from "@/features/opportunities/tier";
 import {
   CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, TIER_COLOR,
@@ -14,41 +15,43 @@ interface OpportunityCardCompactProps {
   onClick: () => void;
 }
 
-/**
- * One row of the scanner: company + score, the role, then where / pay / age / chance.
- * Borderless; the selected row gets an accent rule and a surface.
- */
+/** One row of the scanner: logo, role, company, where / pay, then score + chance. */
 export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCardCompactProps) {
   const tier = tierOf(opp);
   const chance = chanceOf(opp);
-  const age = postedAgo(opp);
-  const facts = [whereOf(opp), salaryOf(opp), age].filter(Boolean).join(" · ");
+  const company = companyOf(opp);
+  const facts = [whereOf(opp), salaryOf(opp)].filter(Boolean).join(" · ");
   const status = DECISION_LABEL[opp.user_decision?.status ?? "unreviewed"];
+  const age = postedAgo(opp);
+  const key = typeof opp.explanation?.company_key === "string" ? opp.explanation.company_key : null;
 
   return (
     <button
       onClick={onClick}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "relative w-full text-left px-4 py-3.5 rounded-md transition-colors",
-        selected ? "bg-[var(--surface)]" : "hover:bg-[var(--surface)]/60",
+        "relative w-full text-left grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 px-3 py-3 rounded-lg transition-colors",
+        selected ? "bg-[var(--surface)]" : "hover:bg-[rgba(44,59,77,0.5)]",
       )}
     >
       {selected && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: "var(--accent)" }} />}
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>{companyOf(opp)}</span>
-        <span className="font-mono text-sm font-semibold tabular-nums shrink-0" style={{ color: TIER_COLOR[tier] }}>
+      <CompanyLogo name={company} companyKey={key} size={40} className="mt-0.5" />
+      <div className="min-w-0">
+        <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>
+          {opp.explanation?.title ?? "Open role"}
+        </p>
+        <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>
+          {company}{age ? <span style={{ color: "var(--text-muted)" }}> · {age}</span> : null}
+        </p>
+        {facts && <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{facts}</p>}
+      </div>
+      <div className="text-right">
+        <p className="font-mono text-base font-semibold tabular-nums leading-none" style={{ color: TIER_COLOR[tier] }}>
           {formatScore(opp.career_score)}
-        </span>
-      </div>
-      <div className="text-sm mt-0.5 line-clamp-2" style={{ color: "var(--text-secondary)" }}>
-        {opp.explanation?.title ?? "Open role"}
-      </div>
-      <div className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
-        <span className="truncate" style={{ color: "var(--text-muted)" }}>{facts}</span>
-        <span className="shrink-0" style={{ color: status ? "var(--accent)" : CHANCE_COLOR[chance] }}>
+        </p>
+        <p className="text-[10px] mt-1.5 whitespace-nowrap" style={{ color: status ? "var(--accent)" : CHANCE_COLOR[chance] }}>
           {status ?? CHANCE_LABEL[chance]}
-        </span>
+        </p>
       </div>
     </button>
   );

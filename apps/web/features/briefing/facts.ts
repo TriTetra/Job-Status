@@ -10,6 +10,7 @@ export type CriterionState = "confirmed" | "conflict" | "unknown";
 export interface HeadlineFact {
   url: string;
   company: string;
+  company_key: string | null;
   title: string;
   location: string;
   remote: boolean;

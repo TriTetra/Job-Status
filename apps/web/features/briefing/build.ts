@@ -64,6 +64,7 @@ function headlineView(h: HeadlineFact, now: Date): BriefingHeadline {
   return {
     url: h.url,
     company: h.company,
+    companyKey: h.company_key ?? null,
     title: h.title,
     score: h.score,
     recommendation: h.recommendation,

@@ -146,7 +146,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-5">
+      <nav className="flex-1 overflow-y-auto custom-scrollbar py-5 px-3 space-y-5">
         {sidebarCollapsed && (
           <button
             onClick={toggleSidebar}

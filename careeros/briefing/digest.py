@@ -116,6 +116,7 @@ def _headline(session: Session, user_id: str) -> Optional[dict]:
     return {
         "url": top["url"],
         "company": ex.get("company") or (job.company if job else ""),
+        "company_key": ex.get("company_key") or (job.company_key if job else None),
         "title": ex.get("title") or (job.title if job else "Open role"),
         "location": ex.get("location") or (job.location if job else ""),
         "remote": bool(ex.get("remote")),
@@ -272,7 +273,7 @@ def get_digest(session: Session, user_id: str, now: Optional[datetime] = None) -
 
     return {
         "v": 2,
-        "first_name": profile.get("first_name"),
+        "first_name": profile.get("first_name") or (user.first_name if user else None),
         "tone": tone if tone in TONES else "warm",
         "since": since.isoformat(),
         "hours_since_last_visit": round(hours, 1) if hours is not None else None,
