@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Companies + Market One-Screen | Companies is a fixed list | company frame with logos, an 8-week hiring chart and open roles by your fit; Market fits one screen: numbers, skills asked, companies adding roles (with logos), news | ✅ Tamam | 2026-11-22 |
 | One-Screen Briefing + Opportunities Reader | Briefing fits one screen (masthead + week, top pick | to do, closing); Opportunities is a fixed frame with company logos and a reader showing the full posting with your skills underlined in the text and your fit in the margin | ✅ Tamam | 2026-11-22 |
 | P3 — Companies + Market from the Boards | Companies list and company pages built from the 74 boards (open roles, hiring pace, your matches, skills asked vs your evidence); Market read from your own matching postings (pace, pay, remote/visa share, skill demand + trend, busiest companies); news refreshed daily | ✅ Tamam | 2026-11-22 |
 | Briefing v2 + Opportunities v2 | Briefing answers "what changed since your last visit, what should I do": top APPLY pick with reason/criteria/actions, changes, dismissable to-dos, the week in numbers. Opportunities: the search as one sentence, views (Strong / Worth a look / All / Shortlisted / Skipped), conflict filter, chance per job, decision panel. Fixes JSON requests sent without Content-Type (Shortlist/Skip, profile connect returned 422) | ✅ Tamam | 2026-11-22 |
@@ -106,6 +107,26 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Companies + Market One-Screen] — 2026-11-22 — Fixed frames, logos, weekly hiring ✅
+
+**Neden:** Kullanıcı: Companies ve Market sayfaları da Briefing / Opportunities gibi toparlanmalı.
+
+### Companies: liste | şirket
+- Sayfa sabit çerçeve (`h-full`): başlık cümlesi + görünümler (Fit you / Posted this week / All) + arama sabit; solda logolu şirket listesi (uyum satırı, işe alım eğilimi, açık rol sayısı), sağda seçilen şirket. Liste ve panel kendi içinde kayıyor, sayfa kaymıyor.
+- **Yeni `CompanyPanel`** (hem listede hem `/companies/[name]` sayfasında aynı): büyük logo + serif ad, üç rakam (alanındaki açık rol, sana uyan / güçlü, remote oranı), **son 8 haftanın yeni ilan çubukları** (bu hafta vurgulu) + eğilim; açık roller senin skoruna göre (skorlu olan Opportunities okuyucusunda açılır); "What they ask for" ✓/✗ ile.
+- API: şirket detayına `weekly_new` (haftalık ilk görülen ilan sayıları, eskiden yeniye) eklendi; `careeros/companies/directory.py::weekly_new`.
+- Telefonda panel listenin altında; şirkete dokununca panele kayıyor.
+
+### Market: tek ekran
+- Masthead: başlık + 30/90 gün, tek cümle (eşleşen roller, hız, en çok istenen eksik beceri) ve dört rakam (yeni ilan + değişim, medyan maaş, remote, vize).
+- Altta iki sütun: **What these roles ask for** (✓ sende / • eksik, pay çubuğu, puan değişimi, eşleşmelerinde eksik olduğu sayı; kendi içinde kayar) | **Adding the most roles** (logolu, çubuklu, şirket sayfasına bağlantı) + **In the news** (kendi içinde kayar).
+
+### Doğrulama
+- Ayrık önizlemede (atılabilir Postgres, 7 pano örnek verisi) tarayıcıda: 1366×768 ve 1920×1080'de Companies, şirket sayfası ve Market'te sayfa kaymıyor; logolar yükleniyor (128 px); şirket seçimi paneli değiştiriyor; 375 px'te yatay taşma yok.
+- 555 test (yeni `test_weekly_new_buckets_oldest_first`), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

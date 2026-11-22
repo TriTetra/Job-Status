@@ -127,6 +127,21 @@ def company_directory(session: Session, user_id: str, now: Optional[datetime] = 
     return out
 
 
+WEEKS = 8
+
+
+def weekly_new(session: Session, company_key: str, now: datetime, weeks: int = WEEKS) -> list[int]:
+    """Postings first seen per week, oldest first (the last item is the current week)."""
+    seen = [d for (d,) in session.query(Job.discovered_at).filter(
+        Job.company_key == company_key, Job.discovered_at > now - weeks * WEEK).all() if d]
+    counts = [0] * weeks
+    for d in seen:
+        age = int((now - d) / WEEK)
+        if 0 <= age < weeks:
+            counts[weeks - 1 - age] += 1
+    return counts
+
+
 def company_detail(session: Session, user_id: str, company_key: str, now: Optional[datetime] = None) -> Optional[dict]:
     """One company: the directory summary plus its open roles, best fit for this user first."""
     now = now or datetime.now(timezone.utc)
@@ -158,6 +173,7 @@ def company_detail(session: Session, user_id: str, company_key: str, now: Option
         })
     roles.sort(key=lambda r: (r["score"] is None, -(r["score"] or 0), r["title"]))
     summary["roles"] = roles
+    summary["weekly_new"] = weekly_new(session, company_key, now)
     if seed:
         summary["profile"].update({
             "salary_ranges": seed.salary_ranges, "interview_rounds": seed.interview_rounds,

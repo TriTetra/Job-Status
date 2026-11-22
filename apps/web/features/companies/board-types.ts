@@ -51,4 +51,6 @@ export interface CompanyRole {
 
 export interface BoardCompanyDetail extends BoardCompany {
   roles: CompanyRole[];
+  /** Postings first seen per week, oldest first; the last bar is this week */
+  weekly_new: number[];
 }
