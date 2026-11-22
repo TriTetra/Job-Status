@@ -1,7 +1,12 @@
 "use client";
 
-import type { Opportunity } from "@/features/opportunities/types";
 import { cn, formatScore } from "@/lib/utils";
+import { tierOf } from "@/features/opportunities/tier";
+import {
+  CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, TIER_COLOR,
+  chanceOf, companyOf, postedAgo, salaryOf, whereOf,
+} from "@/features/opportunities/format";
+import type { Opportunity } from "@/features/opportunities/types";
 
 interface OpportunityCardCompactProps {
   opp: Opportunity;
@@ -10,52 +15,41 @@ interface OpportunityCardCompactProps {
 }
 
 /**
- * Sol panel kartı — scanner.
- * Borderless editorial, mono score, sans medium.
+ * One row of the scanner: company + score, the role, then where / pay / age / chance.
+ * Borderless; the selected row gets an accent rule and a surface.
  */
 export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCardCompactProps) {
-  const { decision, career_score } = opp;
-  const tier = decision?.semantic.tier ?? "look";
-  const label = decision?.semantic.label ?? "Worth a look";
-  const company = opp.explanation?.company ?? new URL(opp.url).hostname.replace(/^www\./, "");
-  const title = opp.explanation?.title ?? "Open role";
-
-  const tierColor =
-    tier === "strong" ? "var(--success)" : tier === "low" ? "var(--text-muted)" : "var(--text-secondary)";
+  const tier = tierOf(opp);
+  const chance = chanceOf(opp);
+  const age = postedAgo(opp);
+  const facts = [whereOf(opp), salaryOf(opp), age].filter(Boolean).join(" · ");
+  const status = DECISION_LABEL[opp.user_decision?.status ?? "unreviewed"];
 
   return (
     <button
       onClick={onClick}
+      aria-current={selected ? "true" : undefined}
       className={cn(
-        "w-full text-left p-4 rounded-lg transition-all duration-200 border",
-        selected
-          ? "bg-[var(--surface-elevated)] border-[var(--accent)]"
-          : "bg-transparent border-transparent hover:bg-[var(--surface)] hover:border-[var(--border)]"
+        "relative w-full text-left px-4 py-3.5 rounded-md transition-colors",
+        selected ? "bg-[var(--surface)]" : "hover:bg-[var(--surface)]/60",
       )}
     >
-      {/* Score + Tier */}
-      <div className="flex items-baseline gap-2 mb-1">
-        <span
-          className="font-mono text-sm font-semibold tabular-nums"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {formatScore(career_score)}
-        </span>
-        <span className="text-xs font-medium" style={{ color: tierColor }}>
-          {label}
+      {selected && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: "var(--accent)" }} />}
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>{companyOf(opp)}</span>
+        <span className="font-mono text-sm font-semibold tabular-nums shrink-0" style={{ color: TIER_COLOR[tier] }}>
+          {formatScore(opp.career_score)}
         </span>
       </div>
-
-      {/* Company + Title */}
-      <div className="mb-1">
-        <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-          {company}
-        </div>
-        <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          {title}
-        </div>
+      <div className="text-sm mt-0.5 line-clamp-2" style={{ color: "var(--text-secondary)" }}>
+        {opp.explanation?.title ?? "Open role"}
       </div>
-
+      <div className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
+        <span className="truncate" style={{ color: "var(--text-muted)" }}>{facts}</span>
+        <span className="shrink-0" style={{ color: status ? "var(--accent)" : CHANCE_COLOR[chance] }}>
+          {status ?? CHANCE_LABEL[chance]}
+        </span>
+      </div>
     </button>
   );
 }

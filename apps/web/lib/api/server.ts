@@ -9,14 +9,14 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { parseResponse, withCsrf } from "./shared";
+import { parseResponse, withCsrf, withJsonBody } from "./shared";
 
 export { ApiError } from "./shared";
 
 const SERVER_API_BASE = process.env.API_URL ?? "http://localhost:8000";
 
 export async function serverApiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = withCsrf(new Headers(init?.headers), init?.method);
+  const headers = withJsonBody(withCsrf(new Headers(init?.headers), init?.method), init?.body);
   const cookieHeader = (await cookies()).toString();
   if (cookieHeader) headers.set("Cookie", cookieHeader);
 

@@ -177,7 +177,8 @@ class ScoringService:
 
                     # Root-level fields the UI reads directly
                     for key in ("source", "remote_region", "application_url", "company_key", "posted_at",
-                                "summary", "extracted_by", "preferred_skills"):
+                                "summary", "extracted_by", "preferred_skills",
+                                "salary_min", "salary_max", "salary_currency"):
                         if job_meta_data.get(key) and job_meta_data[key] != "unknown":
                             explanation[key] = job_meta_data[key]
 

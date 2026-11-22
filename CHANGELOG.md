@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Briefing v2 + Opportunities v2 | Briefing answers "what changed since your last visit, what should I do": top APPLY pick with reason/criteria/actions, changes, dismissable to-dos, the week in numbers. Opportunities: the search as one sentence, views (Strong / Worth a look / All / Shortlisted / Skipped), conflict filter, chance per job, decision panel. Fixes JSON requests sent without Content-Type (Shortlist/Skip, profile connect returned 422) | ✅ Tamam | 2026-11-22 |
 | P0 — Broken Discover/Briefing Fixes | Decision panel filled, Apply/Shortlist/Skip create the application, Settings weights and saved work styles actually score, hybrid/on-site no longer penalised by default, chips show real salary, Briefing actions/time zone/links work, Market counts every mention and Refresh waits | ✅ Tamam | 2026-11-22 |
 | Analysis — Briefing + Discover | End-to-end audit of Briefing, Opportunities, Companies, Market; Dribbble/Pinterest references; redesign + P0–P3 roadmap (no code change) | 📝 Analiz | 2026-11-22 |
 | Evidence — Public Profile Sources | GitHub, GitLab, Stack Overflow, ORCID, Medium and Substack connect by username / link from their public APIs and feeds — no OAuth app, no keys; verified live against all six; onboarding and Settings share one connect flow | ✅ Tamam | 2026-11-22 |
@@ -103,6 +104,31 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Briefing v2 + Opportunities v2] — 2026-11-22 — The home page says what changed; the inbox reads like decisions ✅
+
+**Neden:** Canlı ekran görüntüleri: Briefing hâlâ sabit cümlelerdi ("2 projects standing as evidence", "This month"), Opportunities 400 satırlık uzun bir liste. Analizdeki P1 (Briefing v2) ve P2'nin ekran kısmı (Opportunities v2).
+
+### Briefing v2
+- **Yeni arka uç** `careeros/briefing/digest.py` (`GET /api/briefing` artık bunu döndürüyor): son ziyaretten beri ne değişti (2 saatten uzun ara yeni ziyaret sayılıyor; aynı ziyaret içindeki yenilemeler pencereyi sıfırlamıyor), en iyi APPLY ilanı (CONSIDER'dan önce; başvurulan/atlanan hariç), yapılacaklar, hafta rakamları. Sayfa açılışında LLM çağrısı yok; manşet önbellekteki gerekçeyi kullanıyor.
+- **Yapılacaklar (kapatılabilir, 7 gün gizli):** teklif / mülakat; "Spotify'dan 12 gündür cevap yok"; "Old Co'yu 5 gün önce kısa listeye aldın" (kapandıysa söylüyor); "Kafka 6 eşleşmende eksik"; kanıt kaynağı yoksa bağla; hiç skor yoksa ilk tarama. `POST /api/briefing/dismiss`.
+- **Sayfa:** tarih + "N saattir yoktun" satırı, Newsreader serif selamlama, ses ayarına göre tek cümlelik özet (warm / direct / analytical), **Top pick** (şirket, skor, öneri + şans: good chance / fair chance / long shot, yer · maaş · ilan yaşı, gerekçe, öncelik kontrolleri, Open posting / Shortlist / Not for me / Why N?), **Since your last visit**, **To do**, **This week** (büyük rakamlar, geçen haftaya göre fark), kapanış. Eski "Why we recommend this" ve "This month" kaldırıldı; kullanılmayan `components/patterns/*` silindi.
+### Opportunities v2
+- Başlık: aramanın kendisi tek cümle — "Looking for AI Engineer, Backend Engineer or Machine Learning Engineer roles, remote or hybrid, in DE, CH, NL or US — from $85K / yr, with visa sponsorship." (`/api/preferences` artık rol adlarını da döndürüyor) + "N open matches · 3 strong · scored 2 h ago".
+- **Görünümler:** Strong · Worth a look · All · Shortlisted · Skipped (sayılarıyla); arama; **"Hide conflicts with my priorities"** (öncelikle çelişen ilanlar, sayısıyla, varsayılan gizli). Atlananlar artık listede değil.
+- **Satır:** şirket + skor, rol, yer · maaş · ilan yaşı, **şans** (veya Shortlisted/Applied). 63 puanlı "long shot" ile 59 puanlı "good chance" farkı artık görünüyor.
+- **Karar paneli:** serif başlık, gerçekler satırı, skor · seviye · şans, ilan özeti, gerekçe (yoksa "Explain this match →"), öncelik kontrolleri, "You show / They ask, you don't show", sonraki adım; Open posting (aynı zamanda kısa listeye alır) · I applied · Shortlist · Not for me. Atlayınca sıradaki ilan seçiliyor.
+- Maaş ve para birimi skor açıklamasına da yazılıyor (`SCORER_VERSION` 6; 6 saatlik döngü yeniden skorlar).
+
+### Canlıyı etkileyen hata (bulundu ve düzeltildi)
+- `apiFetch` JSON gövdeli isteklerde `Content-Type` göndermiyordu → **Shortlist / Not for me (`/api/jobs/decide`), profil bağlama (GitHub, ORCID…) ve dismiss 422 dönüyordu.** Artık string gövdeli her istek `application/json` (istemci ve sunucu tarafı tek yerde).
+
+### Doğrulama
+- **Ayrık önizleme ile tarayıcıda denendi** (atılabilir Postgres konteyneri, API 18000, web 13100, oluşturulmuş test hesabı, örnek 14 ilan): Briefing tüm bölümleri; dismiss → yenilemede gizli; Opportunities cümlesi, görünümler, çakışma filtresi (1 gizli), Shortlist 200, Not for me → Skipped ve sıradaki seçili; 375 px'te yatay kaydırma yok. Konteyner ve sunucular kapatıldı.
+- `digest` gerçek Postgres'te: manşet, değişimler, yapılacaklar, hafta, ikinci ziyaret penceresi, dismiss, karar → başvuru.
+- 537 test (yeni `test_briefing_digest.py`), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from careeros.identity.repositories.career_preferences_repo import CareerPreferencesRepository
+from careeros.identity.role_titles import role_titles
 
 router = APIRouter(prefix="/api/preferences", tags=["preferences"])
 
@@ -30,6 +31,8 @@ class SalaryOut(BaseModel):
 class PreferencesOut(BaseModel):
     goal_ids: list[str] = []
     preferred_role_ids: list[str] = []
+    # Titles of the canonical roles above (custom roles have no title here)
+    preferred_role_titles: list[str] = []
     preferred_country_codes: list[str] = []
     work_arrangements: list[str] = []
     requires_sponsorship: Optional[bool] = None
@@ -89,7 +92,9 @@ def get_preferences(
 ):
     repo = CareerPreferencesRepository(session)
     prefs = repo.get_by_user_id(user_id)
-    return _to_response(prefs)
+    out = _to_response(prefs)
+    out.preferred_role_titles = role_titles(session, out.preferred_role_ids)
+    return out
 
 
 @router.patch("", response_model=PreferencesOut)

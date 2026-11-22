@@ -3,64 +3,72 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { NarrativeText } from "@/components/shared/narrative-text";
+import { Search, Zap } from "lucide-react";
 import { Button } from "@/components/shared/button";
 import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact";
 import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel";
 import { ScanOverlay } from "@/components/ui/scan-overlay";
-import { Zap, Settings2, ChevronDown } from "lucide-react";
 import { opportunitiesApi } from "@/features/opportunities/api";
-import { groupByTier, toScanJob } from "@/features/opportunities/tier";
-import type { InboxData, InboxPreferences, Opportunity, ScanJob } from "@/features/opportunities/types";
+import { toScanJob } from "@/features/opportunities/tier";
+import { byRank, companyOf, hasConflict, inView, rulesSentence, type View } from "@/features/opportunities/format";
+import type { InboxData, Opportunity, ScanJob } from "@/features/opportunities/types";
+
+const VIEWS: Array<{ id: View; label: string }> = [
+  { id: "strong", label: "Strong" },
+  { id: "look", label: "Worth a look" },
+  { id: "all", label: "All" },
+  { id: "shortlisted", label: "Shortlisted" },
+  { id: "skipped", label: "Skipped" },
+];
+
+function lastScan(jobs: Opportunity[]): string | null {
+  const latest = Math.max(...jobs.map((j) => (j.scanned_at ? Date.parse(j.scanned_at + (j.scanned_at.endsWith("Z") ? "" : "Z")) : 0)));
+  if (!Number.isFinite(latest) || latest <= 0) return null;
+  const mins = Math.round((Date.now() - latest) / 60_000);
+  if (mins < 60) return `${Math.max(1, mins)} min ago`;
+  const hours = Math.round(mins / 60);
+  return hours < 48 ? `${hours} h ago` : `${Math.round(hours / 24)} days ago`;
+}
 
 export function InboxView({ initial }: { initial: InboxData }) {
   const params = useSearchParams();
   const wantedJob = params.get("job");
   const wantsScan = params.get("scan") === "1";
+
   const [jobs, setJobs] = useState<Opportunity[]>(initial.jobs);
-  // ?job=<url> (from the briefing) opens that opportunity
-  const [selectedUrl, setSelectedUrl] = useState<string | null>(
-    () => initial.jobs.find((j) => j.url === wantedJob)?.url ?? initial.jobs[0]?.url ?? null,
-  );
-  const [loading, setLoading] = useState(false);
-  const [lowFitExpanded, setLowFitExpanded] = useState(false);
-
-  const [scanJob, setScanJob] = useState<ScanJob>({
-    job_id: "",
-    status: "idle",
-    phase: "starting",
-    progress: 0,
-    logs: [],
+  const prefs = initial.prefs;
+  const [view, setView] = useState<View>(() => {
+    if (initial.jobs.some((j) => j.url === wantedJob)) return "all";
+    return initial.jobs.some((j) => inView(j, "strong")) ? "strong" : "all";
   });
-
-  const [prefs] = useState<InboxPreferences | null>(initial.prefs);
+  const [query, setQuery] = useState("");
+  const [hideConflicts, setHideConflicts] = useState(true);
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(
+    () => initial.jobs.find((j) => j.url === wantedJob)?.url ?? null,
+  );
+  const [busy, setBusy] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [scanJob, setScanJob] = useState<ScanJob>({ job_id: "", status: "idle", phase: "starting", progress: 0, logs: [] });
 
-  // First render uses the server's list; this refreshes it after a scan or a decision
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
       setJobs((await opportunitiesApi.list()).jobs);
     } catch (err) {
       console.error("[inbox] refresh failed:", err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  // Scan polling stops when the page unmounts
+  // ── scan ──
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => () => {
     if (pollRef.current) clearInterval(pollRef.current);
   }, []);
 
-  // Scan handler
   const handleScan = async () => {
     setScanJob((prev) => ({ ...prev, status: "running", phase: "starting", progress: 0, logs: [] }));
     try {
       const { job_id } = await opportunitiesApi.startScan();
       setScanJob((prev) => ({ ...prev, job_id }));
-
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         try {
@@ -80,7 +88,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
     }
   };
 
-  // ?scan=1 (from the briefing's "Scan now") starts a scan once
+  // ?scan=1 (from the briefing) starts a scan once
   const autoScanned = useRef(false);
   useEffect(() => {
     if (!wantsScan || autoScanned.current) return;
@@ -89,206 +97,176 @@ export function InboxView({ initial }: { initial: InboxData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival
   }, [wantsScan]);
 
-  // Auto-advance: after Apply/Shortlist/Skip, move to next unreviewed
+  // ── what's shown ──
+  const counts = useMemo(() => {
+    const c = {} as Record<View, number>;
+    for (const v of VIEWS) c[v.id] = jobs.filter((j) => inView(j, v.id)).length;
+    return c;
+  }, [jobs]);
+
+  const filtersConflicts = hideConflicts && view !== "skipped" && view !== "shortlisted";
+  const conflictsHidden = useMemo(
+    () => (filtersConflicts ? jobs.filter((j) => inView(j, view) && hasConflict(j)).length : 0),
+    [jobs, view, filtersConflicts],
+  );
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return jobs
+      .filter((j) => inView(j, view))
+      .filter((j) => !(filtersConflicts && hasConflict(j)))
+      .filter((j) => !q || `${companyOf(j)} ${j.explanation?.title ?? ""}`.toLowerCase().includes(q))
+      .sort(byRank);
+  }, [jobs, view, query, filtersConflicts]);
+
+  const selected = shown.find((j) => j.url === selectedUrl) ?? shown[0] ?? null;
+
+  // ── decisions ──
   const handleDecision = async (url: string, status: "to_apply" | "applied" | "skipped") => {
     setDecisionError(null);
+    setBusy(true);
+    const idx = shown.findIndex((j) => j.url === url);
     try {
       await opportunitiesApi.decide(url, status);
-      // Reload to get updated user_decision
       await refresh();
-      // Auto-advance: select next unreviewed job
-      const currentIdx = jobs.findIndex((j) => j.url === url);
-      const nextUnreviewed = jobs.slice(currentIdx + 1).find((j) => j.user_decision.status === "unreviewed");
-      if (nextUnreviewed) {
-        setSelectedUrl(nextUnreviewed.url);
-      }
+      // Skipping moves on to the next job in the list
+      if (status === "skipped") setSelectedUrl(shown[idx + 1]?.url ?? shown[idx - 1]?.url ?? null);
     } catch (err) {
       console.error("[inbox] decision failed:", err);
       setDecisionError("That didn't save. Try again.");
+    } finally {
+      setBusy(false);
     }
   };
 
-  // Group by tier (with a fallback for rows scored before Decision Contract v1)
-  const grouped = useMemo(() => groupByTier(jobs), [jobs]);
-
-  const selected = jobs.find((j) => j.url === selectedUrl) ?? null;
-
-  // Build criteria chips for header
-  const criteriaChips = useMemo(() => criteriaChipsFor(prefs), [prefs]);
-
-  // Keyboard navigation
+  // ↑ / ↓ move through the list
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        e.preventDefault();
-        const currentIdx = jobs.findIndex((j) => j.url === selectedUrl);
-        const nextIdx = e.key === "ArrowUp" ? currentIdx - 1 : currentIdx + 1;
-        if (nextIdx >= 0 && nextIdx < jobs.length) {
-          setSelectedUrl(jobs[nextIdx].url);
-        }
-      }
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      e.preventDefault();
+      const i = shown.findIndex((j) => j.url === selected?.url);
+      const next = shown[e.key === "ArrowUp" ? i - 1 : i + 1];
+      if (next) setSelectedUrl(next.url);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [jobs, selectedUrl]);
+  }, [shown, selected]);
+
+  const rules = rulesSentence(prefs);
+  const scanned = lastScan(jobs);
 
   return (
     <div className="wide-container px-6 lg:px-8 py-10">
-      {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <NarrativeText size="2xl" weight="semibold" className="mb-1">
-            Opportunities
-          </NarrativeText>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            {jobs.length} scored · {grouped.strong.length} strong · {grouped.look.length} worth a look
+      {/* Header: the search as one sentence */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-[760px]">
+          <h1 className="font-serif-display text-4xl" style={{ color: "var(--text-primary)" }}>Opportunities</h1>
+          {rules && (
+            <p className="mt-3 text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              {rules}{" "}
+              <Link href="/settings?tab=preferences" className="text-sm whitespace-nowrap" style={{ color: "var(--accent)" }}>
+                Change
+              </Link>
+            </p>
+          )}
+          <p className="mt-1.5 text-sm" style={{ color: "var(--text-muted)" }}>
+            {jobs.length} open matches · {counts.strong} strong
+            {scanned ? ` · scored ${scanned}` : ""} · boards re-read every 6 hours
           </p>
         </div>
-        <Button variant="primary" size="md" onClick={handleScan} disabled={scanJob.status === "running"}>
+        <Button variant="outline" size="md" onClick={handleScan} disabled={scanJob.status === "running"}>
           <Zap className="h-4 w-4" />
-          Scan Now
+          Rescore now
         </Button>
       </div>
 
-      {/* Criteria chips */}
-      {criteriaChips.length > 0 && (
-        <div className="mb-6 flex items-center gap-2 flex-wrap">
-          {criteriaChips.map((chip) => (
-            <span
-              key={chip}
-              className="px-3 py-1 rounded-full border text-xs font-medium"
-              style={{
-                borderColor: "var(--accent)",
-                background: "rgba(255, 177, 98, 0.08)",
-                color: "var(--accent)",
-              }}
-            >
-              {chip}
-            </span>
-          ))}
-          <Link
-            href="/settings?tab=preferences"
-            className="flex items-center gap-1 text-xs font-medium transition-colors"
-            style={{ color: "var(--text-muted)" }}
-          >
-            <Settings2 className="h-3 w-3" />
-            Edit
-          </Link>
-        </div>
-      )}
+      {/* Views + search + conflict filter */}
+      <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+        <nav className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Views">
+          {VIEWS.map((v) => {
+            const active = v.id === view;
+            return (
+              <button
+                key={v.id}
+                onClick={() => {
+                  setView(v.id);
+                  setSelectedUrl(null);
+                }}
+                aria-current={active ? "page" : undefined}
+                className="text-sm transition-colors"
+                style={{ color: active ? "var(--text-primary)" : "var(--text-muted)", fontWeight: active ? 600 : 400 }}
+              >
+                {v.label} <span className="font-mono text-xs tabular-nums" style={{ color: "var(--text-muted)" }}>{counts[v.id]}</span>
+              </button>
+            );
+          })}
+        </nav>
+        <label className="ml-auto flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+          <Search className="h-4 w-4" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Company or title"
+            aria-label="Search company or title"
+            className="w-44 bg-transparent border-0 border-b outline-none py-1 text-sm focus:border-[var(--accent)]"
+            style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+          />
+        </label>
+        {view !== "skipped" && view !== "shortlisted" && (
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--text-muted)" }}>
+            <input type="checkbox" checked={hideConflicts} onChange={(e) => setHideConflicts(e.target.checked)}
+                   className="accent-[var(--accent)]" />
+            Hide conflicts with my priorities{conflictsHidden ? ` (${conflictsHidden})` : ""}
+          </label>
+        )}
+      </div>
 
       {decisionError && (
-        <p className="mb-4 text-sm" role="alert" style={{ color: "var(--danger)" }}>
-          {decisionError}
-        </p>
+        <p className="mt-4 text-sm" role="alert" style={{ color: "var(--danger)" }}>{decisionError}</p>
       )}
 
-      {/* Split-panel layout */}
-      {loading ? (
-        <div className="surface p-12 text-center">
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Loading opportunities…
+      {/* List + decision panel: each scrolls in its own column */}
+      {shown.length === 0 ? (
+        <div className="py-20 text-center max-w-md mx-auto">
+          <p className="font-serif-display text-2xl" style={{ color: "var(--text-primary)" }}>
+            {jobs.length === 0 ? "No matches yet." : "Nothing in this view."}
+          </p>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            {jobs.length === 0
+              ? "Run a scan to match your evidence against open roles from 74 company boards."
+              : conflictsHidden
+                ? `${conflictsHidden} hidden because they conflict with your priorities.`
+                : "Try another view or clear the search."}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] lg:grid-rows-[minmax(0,1fr)] gap-8 lg:h-[calc(100vh-240px)]">
-          {/* Left: Scanner (compact list) — scrolls inside its column */}
-          <div className="max-h-[60vh] lg:max-h-none lg:min-h-0 overflow-y-auto custom-scrollbar pr-4 space-y-6">
-            {grouped.strong.length > 0 && (
-              <div className="space-y-2">
-                <div
-                  className="text-[11px] font-semibold tracking-wider uppercase px-2 mb-2"
-                  style={{ color: "var(--success)", fontFamily: "var(--font-display)" }}
-                >
-                  Strong matches ({grouped.strong.length})
-                </div>
-                <div className="space-y-2">
-                  {grouped.strong.map((opp) => (
-                    <OpportunityCardCompact
-                      key={opp.url}
-                      opp={opp}
-                      selected={selectedUrl === opp.url}
-                      onClick={() => setSelectedUrl(opp.url)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {grouped.look.length > 0 && (
-              <div className="space-y-2">
-                <div
-                  className="text-[11px] font-semibold tracking-wider uppercase px-2 mb-2"
-                  style={{ color: "var(--text-secondary)", fontFamily: "var(--font-display)" }}
-                >
-                  Worth a look ({grouped.look.length})
-                </div>
-                <div className="space-y-2">
-                  {grouped.look.map((opp) => (
-                    <OpportunityCardCompact
-                      key={opp.url}
-                      opp={opp}
-                      selected={selectedUrl === opp.url}
-                      onClick={() => setSelectedUrl(opp.url)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {grouped.low.length > 0 && (
-              <div className="space-y-2">
-                <button
-                  onClick={() => setLowFitExpanded(!lowFitExpanded)}
-                  className="w-full text-left text-[11px] font-semibold tracking-wider uppercase px-2 flex items-center gap-2 transition-colors bg-transparent border-0 cursor-pointer mb-2"
-                  style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)" }}
-                >
-                  Low fit ({grouped.low.length})
-                  <ChevronDown
-                    className={`h-3 w-3 transition-transform ${lowFitExpanded ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {lowFitExpanded && (
-                  <div className="space-y-2">
-                    {grouped.low.map((opp) => (
-                      <OpportunityCardCompact
-                        key={opp.url}
-                        opp={opp}
-                        selected={selectedUrl === opp.url}
-                        onClick={() => setSelectedUrl(opp.url)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] gap-8 lg:h-[calc(100vh-300px)]">
+          <div className="max-h-[60vh] lg:max-h-none lg:min-h-0 overflow-y-auto custom-scrollbar -mx-2 px-2 space-y-0.5">
+            {shown.map((opp) => (
+              <OpportunityCardCompact
+                key={opp.url}
+                opp={opp}
+                selected={selected?.url === opp.url}
+                onClick={() => setSelectedUrl(opp.url)}
+              />
+            ))}
           </div>
-
-          {/* Right: Reader (detail panel) */}
-          <div
-            className="rounded-xl border overflow-hidden lg:min-h-0"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-          >
-            {selected ? (
+          <div className="rounded-xl border overflow-hidden lg:min-h-0" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            {selected && (
               <OpportunityDetailPanel
-                key={selected.url} // fresh panel state (fetched reasoning) per opportunity
+                key={selected.url}
                 opp={selected}
+                busy={busy}
                 onApply={() => handleDecision(selected.url, "applied")}
                 onShortlist={() => handleDecision(selected.url, "to_apply")}
                 onSkip={() => handleDecision(selected.url, "skipped")}
               />
-            ) : (
-              <div className="flex items-center justify-center h-full p-12">
-                <NarrativeText size="lg" weight="medium" className="text-center" style={{ color: "var(--text-muted)" }}>
-                  Select an opportunity to see details
-                </NarrativeText>
-              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Scan overlay */}
       <ScanOverlay
         job={scanJob}
         onDismiss={() => setScanJob((prev) => ({ ...prev, status: "idle" }))}
@@ -296,31 +274,4 @@ export function InboxView({ initial }: { initial: InboxData }) {
       />
     </div>
   );
-}
-
-const ARRANGEMENT_LABEL: Record<string, string> = { remote: "Remote", hybrid: "Hybrid", onsite: "On-site" };
-
-/** Header chips from the saved preferences: arrangements, countries, salary floor, visa. */
-function criteriaChipsFor(prefs: InboxPreferences | null): string[] {
-  if (!prefs) return [];
-  const chips: string[] = [];
-  const arrangements = (prefs.work_arrangements ?? []).map((a) => ARRANGEMENT_LABEL[a] ?? a);
-  if (arrangements.length) chips.push(arrangements.join(" / "));
-  if (prefs.preferred_country_codes?.length) {
-    const codes = prefs.preferred_country_codes;
-    chips.push(codes.slice(0, 3).join(", ") + (codes.length > 3 ? ` +${codes.length - 3}` : ""));
-  }
-  const min = prefs.salary?.min ?? prefs.salary_min;
-  if (min) {
-    const money = new Intl.NumberFormat("en", {
-      style: "currency",
-      currency: prefs.salary?.currency || "USD",
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(min);
-    chips.push(`${money}+ / ${prefs.salary?.period === "month" ? "mo" : "yr"}`);
-  }
-  if (prefs.requires_sponsorship === true) chips.push("Needs visa sponsorship");
-  if (prefs.requires_sponsorship === false) chips.push("No visa needed");
-  return chips;
 }

@@ -1,41 +1,10 @@
-import type { BriefLine, FocusItem } from "@/features/briefing/types";
+/**
+ * Every sentence the briefing says, per "Briefing voice" (Settings → Preferences).
+ * warm: a quiet colleague · direct: numbers first · analytical: deltas.
+ */
 
-export type Tone = "warm" | "direct" | "analytical";
+import type { Tone } from "./facts";
 
-export interface BriefingContext {
-  hour: number;
-  dow: number; // 0=Paz .. 6=Cmt
-  skillCount: number;
-  projectCount: number;
-  achievementCount: number;
-  opportunityCount: number;
-  topOpportunity: { company: string; score: number; url: string; gap?: string } | null;
-  hiringCompany: { name: string; openRoles: number } | null;
-  newEvidence24h: number;
-  newScores24h: number;
-  interviews: Array<{ company: string; title: string }>;
-  offers: Array<{ company: string; title: string }>;
-  githubConnected: boolean;
-  tone: Tone;
-}
-
-// ─── Tone vocabulary ────────────────────────────────────────────────────────
-const TONE_PHRASES: Record<Tone, { quiet: string; signoff: string }> = {
-  warm: {
-    quiet: "Nothing changed since yesterday. Quiet days are part of the story too.",
-    signoff: "That's your briefing for today.",
-  },
-  direct: {
-    quiet: "No changes in 24h.",
-    signoff: "End of briefing.",
-  },
-  analytical: {
-    quiet: "Δ24h: 0 new signals. State stable.",
-    signoff: "Summary complete.",
-  },
-};
-
-// ─── Greeting ───────────────────────────────────────────────────────────────
 export function timeGreeting(hour: number): string {
   if (hour < 5) return "Still up";
   if (hour < 12) return "Good morning";
@@ -43,146 +12,37 @@ export function timeGreeting(hour: number): string {
   return "Good evening";
 }
 
-export function greetingFor(ctx: BriefingContext): string {
-  return timeGreeting(ctx.hour);
-}
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-// ─── Subtitle — priority: offer > interview > day > change > hiring ─────────
-export function subtitleFor(ctx: BriefingContext): string | undefined {
-  if (ctx.offers.length > 0)
-    return `You have an offer from ${ctx.offers[0].company} — that changes everything.`;
-  if (ctx.interviews.length > 0)
-    return `${ctx.interviews[0].company} interview on your radar.`;
-  if (ctx.dow === 1)
-    return ctx.opportunityCount > 0
-      ? `The week opens with ${ctx.opportunityCount} strong ${ctx.opportunityCount === 1 ? "match" : "matches"}.`
-      : "A fresh week ahead.";
-  if (ctx.dow === 5) return "Wrapping up the week.";
-  if (ctx.newEvidence24h > 0 || ctx.newScores24h > 0)
-    return "Things moved since yesterday.";
-  if (ctx.hiringCompany)
-    return `${ctx.hiringCompany.name} is hiring (${ctx.hiringCompany.openRoles} open roles).`;
-  return undefined;
-}
-
-// ─── Brief lines — BLUF: change first ───────────────────────────────────────
-export function briefFor(ctx: BriefingContext): BriefLine[] {
-  const lines: BriefLine[] = [];
-  const t = TONE_PHRASES[ctx.tone];
-
-  if (ctx.newEvidence24h > 0) {
-    lines.push({
-      segments: [
-        { text: `+${ctx.newEvidence24h} new ${ctx.newEvidence24h === 1 ? "signal" : "signals"}`, emphasis: "accent" },
-        { text: " since yesterday." },
-      ],
-    });
-  } else if (ctx.newScores24h > 0) {
-    lines.push({
-      segments: [
-        { text: `${ctx.newScores24h} opportunities`, emphasis: "accent" },
-        { text: " freshly scored overnight." },
-      ],
-    });
+export function leadFor(tone: Tone, c: { newMatches: number; newStrong: number; todos: number; hasScores: boolean }): string {
+  if (!c.hasScores) {
+    return tone === "direct"
+      ? "No matches yet — run the first scan."
+      : tone === "analytical"
+        ? "0 scored jobs. A scan maps your evidence against every open role."
+        : "Nothing to compare yet. One scan and this page starts telling you what changed.";
   }
-
-  if (ctx.opportunityCount > 0 && ctx.topOpportunity) {
-    lines.push({
-      segments: [
-        { text: ctx.topOpportunity.company, emphasis: "primary" },
-        { text: ` leads your matches at ${ctx.topOpportunity.score}%.` },
-      ],
-    });
-  } else if (ctx.skillCount > 0) {
-    lines.push({
-      segments: [
-        { text: `${ctx.skillCount} skills`, emphasis: "success" },
-        { text: " mapped in your career graph." },
-      ],
-    });
+  if (c.newMatches === 0) {
+    const rest = c.todos > 0 ? ` ${plural(c.todos, "thing")} to look at.` : "";
+    return tone === "direct"
+      ? `No new matches.${rest}`
+      : tone === "analytical"
+        ? `Δ matches: 0.${rest}`
+        : `A quiet stretch — no new matches since your last visit.${rest}`;
   }
-
-  if (ctx.projectCount > 0)
-    lines.push({
-      segments: [
-        { text: `${ctx.projectCount} projects`, emphasis: "success" },
-        { text: " standing as evidence." },
-      ],
-    });
-
-  if (ctx.achievementCount > 0)
-    lines.push({
-      segments: [
-        { text: `${ctx.achievementCount} achievements`, emphasis: "accent" },
-        { text: " — externally validated proof." },
-      ],
-    });
-
-  if (lines.length === 0) lines.push({ segments: [{ text: t.quiet }] });
-  lines.push({ segments: [{ text: t.signoff }], muted: true });
-  return lines;
+  const strong = c.newStrong > 0 ? `, ${c.newStrong} strong` : "";
+  return tone === "direct"
+    ? `${plural(c.newMatches, "new match", "new matches")}${strong}.`
+    : tone === "analytical"
+      ? `+${c.newMatches} matches${c.newStrong ? ` (+${c.newStrong} APPLY)` : ""} since last visit.`
+      : `${plural(c.newMatches, "new match", "new matches")} since your last visit${c.newStrong ? `, ${c.newStrong} of them strong` : ""}.`;
 }
 
-// ─── Focus — real life beats opportunities ──────────────────────────────────
-export function focusCandidates(ctx: BriefingContext): Omit<FocusItem, "number">[] {
-  const out: Omit<FocusItem, "number">[] = [];
-
-  if (ctx.offers.length > 0) {
-    out.push({
-      action: `Review your offer from ${ctx.offers[0].company}`,
-      reason: "The most time-sensitive item on your desk.",
-      ctaLabel: "Review",
-      ctaHref: "/applications",
-    });
-  } else if (ctx.interviews.length > 0) {
-    out.push({
-      action: `Prepare for ${ctx.interviews[0].company}`,
-      reason: "An interview in your pipeline deserves today's energy.",
-      ctaLabel: "Study plan",
-      ctaHref: "/applications",
-    });
-  } else if (ctx.opportunityCount > 0 && ctx.topOpportunity) {
-    out.push({
-      action: `Review your top match — ${ctx.topOpportunity.company}`,
-      reason: `Scored ${ctx.topOpportunity.score}% — strongest fit right now.`,
-      ctaLabel: "Why strong?",
-      ctaHref: `/inbox?job=${encodeURIComponent(ctx.topOpportunity.url)}`,
-    });
-  } else {
-    out.push({
-      action: "Run your first opportunity scan",
-      reason: `${ctx.skillCount} skills mapped — ready to match against live roles.`,
-      ctaLabel: "Scan now",
-      ctaHref: "/inbox?scan=1",
-    });
-  }
-
-  if (!ctx.githubConnected)
-    out.push({
-      action: "Connect GitHub",
-      reason: "Real code is your strongest evidence and raises skill confidence.",
-      ctaLabel: "Connect",
-      ctaHref: "/settings?tab=account",
-    });
-
-  // The one missing skill in the best match — concrete, and different as matches change
-  if (ctx.topOpportunity?.gap)
-    out.push({
-      action: `Close your ${ctx.topOpportunity.gap} gap`,
-      reason: `It's what your top match at ${ctx.topOpportunity.company} asks for that your evidence doesn't show yet.`,
-      ctaLabel: "Add proof",
-      ctaHref: "/settings?tab=account",
-    });
-
-  return out;
-}
-
-// ─── Closing ────────────────────────────────────────────────────────────────
-export function closingFor(ctx: BriefingContext): string[] {
-  if (ctx.dow === 5)
-    return ["That's everything important for this week.", "Enjoy your weekend. See you Monday."];
-  if (ctx.dow === 0) return ["Rest well tonight.", "Tomorrow is a fresh start."];
-  if (ctx.hour >= 22 || ctx.hour < 5)
-    return ["That's everything for today.", "Rest well. We'll keep watching."];
+export function closingFor(tone: Tone, hour: number, dow: number): string[] {
+  if (tone === "direct") return ["That's it."];
+  if (tone === "analytical") return ["End of briefing. Boards are re-read every 6 hours."];
+  if (dow === 5) return ["That's everything for this week.", "Enjoy your weekend — we'll keep reading the boards."];
+  if (dow === 0) return ["Rest well tonight.", "Tomorrow is a fresh start."];
+  if (hour >= 22 || hour < 5) return ["That's everything for today.", "Rest well. We'll keep watching."];
   return ["That's everything important for today.", "We'll keep watching. See you tomorrow."];
 }

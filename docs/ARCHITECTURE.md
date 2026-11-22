@@ -52,7 +52,7 @@ Enforced by `tests/smoke/test_architecture.py`:
 | `companies` | company profiles, hiring trends, interview memory |
 | `market` | HN "Who is hiring" + TechCrunch signals (`sources/`), skill registry, refresh job |
 | `resume` | target-aware resume generation (prompts, templates) from `evidence_items` |
-| `briefing` | facts for the dashboard home page (the web composes the copy) |
+| `briefing` | `digest.py`: changes since the last visit (new matches, busy companies, closed jobs), the top APPLY pick, dismissable to-dos (no-reply follow-ups, stale shortlists, most-missing skill, proof sources), the week in numbers; the web composes the copy per "Briefing voice" |
 | `knowledge` | reference data: countries, visas, salaries, skill graph; **all seeding** (`seeds.py`) |
 
 A feature typically contains `models/`, `repositories/`, optional `domain/` (pure

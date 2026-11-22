@@ -1,29 +1,11 @@
 /**
- * Facts (GET /api/briefing) → the briefing the page renders. Pure: no I/O.
+ * Digest facts (GET /api/briefing) → the briefing the page renders. Pure: no I/O.
  */
 
-import type { BriefingFacts, CareerGraphStats, HiringCompanyFact, OpportunityFact } from "./facts";
-import type {
-  BriefingData,
-  BriefingResult,
-  EvidenceSignal,
-  EvidenceSummary,
-  Opportunity,
-  ProgressSummary,
-  Recommendation,
-} from "./types";
 import { displayName, safeHttpUrl } from "@/lib/utils";
-import {
-  type BriefingContext,
-  briefFor,
-  closingFor,
-  focusCandidates,
-  greetingFor,
-  subtitleFor,
-  timeGreeting,
-} from "./templates";
-
-const FOCUS_NUMBERS = ["01", "02", "03"] as const;
+import type { DigestFacts, HeadlineFact } from "./facts";
+import type { BriefingHeadline, BriefingView, ChangeLine, WeekNumber } from "./types";
+import { closingFor, leadFor, timeGreeting } from "./templates";
 
 /**
  * "Now" as a wall clock in the user's time zone: a Date whose getHours()/getDay()
@@ -41,147 +23,121 @@ export function zonedNow(tz: string | undefined, now: Date = new Date()): Date {
 /** Opportunities deep link: the inbox with this job selected. */
 export const inboxHref = (url: string) => `/inbox?job=${encodeURIComponent(url)}`;
 
-export function buildBriefing(facts: BriefingFacts, now: Date = new Date()): BriefingResult {
-  const stats = facts.career_graph_stats;
-  const ev = facts.evidence;
-  const skillCount = stats.skills_count ?? ev.skill_count ?? 0;
+const DAY_MS = 86_400_000;
 
-  if (ev.total === 0 && facts.opportunities.length === 0) {
-    return {
-      status: "empty",
-      data: {
-        greeting: timeGreeting(now.getHours()),
-        watching: buildWatchingList(facts.hiring_companies),
-        stats: {
-          skills_count: skillCount,
-          projects_count: stats.projects_count ?? 0,
-          achievements_count: stats.achievements_count ?? 0,
-          companies_count: stats.companies_count ?? 0,
-        },
-      },
-    };
-  }
-
-  const opportunities = facts.opportunities.map(mapOpportunity);
-  const topCompany = facts.hiring_companies[0];
-  const ctx: BriefingContext = {
-    hour: now.getHours(),
-    dow: now.getDay(),
-    skillCount,
-    projectCount: stats.projects_count ?? 0,
-    achievementCount: stats.achievements_count ?? 0,
-    opportunityCount: opportunities.length,
-    topOpportunity: opportunities[0]
-      ? { company: opportunities[0].company, score: opportunities[0].score, url: opportunities[0].id, gap: opportunities[0].gap }
-      : null,
-    hiringCompany: topCompany ? { name: topCompany.name, openRoles: topCompany.open_positions_count } : null,
-    newEvidence24h: facts.last_24h.new_evidence,
-    newScores24h: facts.last_24h.new_scores,
-    interviews: facts.live_applications
-      .filter((a) => a.status === "interview")
-      .map((a) => ({ company: a.company ?? "", title: a.title })),
-    offers: facts.live_applications
-      .filter((a) => a.status === "offer")
-      .map((a) => ({ company: a.company ?? "", title: a.title })),
-    githubConnected: facts.github_connected,
-    tone: facts.tone,
-  };
-
-  const data: BriefingData = {
-    greeting: { name: displayName(facts.first_name) || "there", greeting: greetingFor(ctx), subtitle: subtitleFor(ctx) },
-    brief: briefFor(ctx),
-    focus: focusCandidates(ctx).slice(0, 3).map((c, i) => ({ number: FOCUS_NUMBERS[i], ...c })),
-    opportunities,
-    evidence: buildEvidenceSummary(stats, ev),
-    progress: buildProgressSummary(stats, ev),
-    closing: { lines: closingFor(ctx) },
-  };
-  return { status: "ready", data };
+function ago(iso: string | null, now: Date): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const days = Math.floor((now.getTime() - t) / DAY_MS);
+  if (days <= 0) return "posted today";
+  if (days === 1) return "posted yesterday";
+  if (days < 30) return `posted ${days} days ago`;
+  return `posted ${Math.floor(days / 30)} mo ago`;
 }
 
-function buildWatchingList(companies: HiringCompanyFact[]): string[] {
-  const list = ["Your career graph and evidence profile"];
-  if (companies[0]) {
-    list.push(`${companies[0].name} hiring trend (${companies[0].open_positions_count} open roles)`);
-  }
-  list.push("New opportunities matching your skills");
-  return list;
+function money(salary: HeadlineFact["salary"]): string | null {
+  if (!salary || !(salary.min || salary.max)) return null;
+  const fmt = new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: salary.currency || "USD",
+    notation: "compact",
+    maximumFractionDigits: 0,
+  });
+  if (salary.min && salary.max) return `${fmt.format(salary.min)}–${fmt.format(salary.max)}`;
+  return salary.min ? `${fmt.format(salary.min)}+` : `up to ${fmt.format(salary.max as number)}`;
 }
 
-/** matched_skills holds {name, confidence} objects; the briefing shows names. */
-function skillLabel(skill: unknown): string {
-  if (skill && typeof skill === "object" && "name" in skill) return String((skill as { name: unknown }).name);
-  return String(skill);
+function whyFor(h: HeadlineFact): string {
+  if (h.reasoning) return h.reasoning;
+  const strong = h.matched.slice(0, 3);
+  const parts: string[] = [];
+  if (strong.length) parts.push(`Your evidence covers ${strong.join(", ")}`);
+  if (h.gaps.length) parts.push(`the gap is ${h.gaps.slice(0, 2).join(" and ")}`);
+  const sentence = parts.join("; ");
+  return sentence ? `${sentence}.` : h.next_action ?? "Your strongest open match right now.";
 }
 
-function mapOpportunity(o: OpportunityFact): Opportunity {
-  const ex = o.explanation ?? {};
-  const why = Array.isArray(ex.why)
-    ? ex.why.slice(0, 2)
-    : Array.isArray(ex.matched_skills)
-      ? ex.matched_skills.slice(0, 2).map(skillLabel)
-      : [];
+function headlineView(h: HeadlineFact, now: Date): BriefingHeadline {
+  const where = h.remote ? "Remote" : h.location;
+  const meta = [where, money(h.salary), ago(h.posted_at, now)].filter(Boolean).join(" · ");
   return {
-    id: o.url,
-    postingUrl: safeHttpUrl(ex.application_url) ?? safeHttpUrl(o.url) ?? undefined,
-    whyHref: inboxHref(o.url),
-    company: ex.company ?? hostFromUrl(o.url),
-    role: ex.role ?? ex.title ?? "Open role",
-    location: ex.location ?? "—",
-    score: Math.round(o.career_score ?? 0),
-    recommendation: (o.recommendation as Recommendation) ?? "CONSIDER",
-    why,
-    gap: o.skill_gaps.length > 0 ? o.skill_gaps[0] : undefined,
+    url: h.url,
+    company: h.company,
+    title: h.title,
+    score: h.score,
+    recommendation: h.recommendation,
+    chance: h.chance,
+    why: whyFor(h),
+    meta,
+    criteria: h.criteria.filter((c) => c.label).map((c) => ({ label: c.label, state: c.state })),
+    postingUrl: safeHttpUrl(h.application_url) ?? safeHttpUrl(h.url),
+    inboxHref: inboxHref(h.url),
   };
 }
 
-function buildEvidenceSummary(stats: CareerGraphStats, ev: BriefingFacts["evidence"]): EvidenceSummary {
-  const signals: EvidenceSignal[] = [];
-  const projectCount = stats.projects_count ?? 0;
-  const achievementCount = stats.achievements_count ?? 0;
-
-  if (ev.skill_count > 0) signals.push({ text: `${ev.skill_count} skills mapped from your resume and profile` });
-  if (projectCount > 0) signals.push({ text: `${projectCount} projects analyzed as evidence` });
-  if (achievementCount > 0) signals.push({ text: `${achievementCount} achievements captured` });
-  if (signals.length === 0) signals.push({ text: `${ev.total} evidence signals captured` });
-
-  const avg = ev.avg_confidence;
-  return { signalCount: ev.total, signals, confidence: avg >= 0.8 ? "High" : avg >= 0.6 ? "Medium" : "Low" };
+function changeLines(f: DigestFacts): ChangeLine[] {
+  const c = f.changes;
+  const lines: ChangeLine[] = [];
+  if (c.new_matches > 0) {
+    lines.push({
+      text:
+        `${c.new_matches} new ${c.new_matches === 1 ? "match" : "matches"} fit your roles` +
+        (c.new_strong ? `; ${c.new_strong} ${c.new_strong === 1 ? "is" : "are"} strong.` : "."),
+      href: "/inbox",
+      linkLabel: "See them",
+    });
+  }
+  for (const co of c.busy_companies) {
+    lines.push({ text: `${co.name} posted ${co.count} roles that fit you.`, href: "/inbox", linkLabel: "Open" });
+  }
+  for (const job of c.closed_tracked) {
+    lines.push({ text: `${job.title} at ${job.company} has closed.` });
+  }
+  if (lines.length === 0 && f.has_scores) {
+    lines.push({ text: "Nothing new since your last visit. The company boards are re-read every 6 hours." });
+  }
+  return lines;
 }
 
-function buildProgressSummary(stats: CareerGraphStats, ev: BriefingFacts["evidence"]): ProgressSummary {
-  const { total, skill_count: skillCount } = ev;
-  const projectCount = stats.projects_count ?? 0;
+function weekNumbers(f: DigestFacts): WeekNumber[] {
+  const w = f.week;
+  const delta = w.strong_this_week - w.strong_last_week;
+  return [
+    {
+      value: String(w.strong_this_week),
+      label: "strong matches this week",
+      note: w.strong_last_week || delta ? `${delta >= 0 ? "+" : ""}${delta} vs last week` : undefined,
+    },
+    { value: String(w.applied_this_week), label: "applications sent this week" },
+    { value: String(w.open_strong), label: "strong matches open now", note: `of ${w.open_matches} matches` },
+  ];
+}
 
-  let headline: string;
-  let attribution: string;
-  if (total >= 20) {
-    headline = "Your career graph is rich and well-defined.";
-    attribution = `Built from ${total} evidence signals across ${skillCount} skills and ${projectCount} projects.`;
-  } else if (total >= 10) {
-    headline = "Your career graph is gaining depth.";
-    attribution = `${total} evidence signals and counting.`;
-  } else if (total > 0) {
-    headline = "Your career graph is taking shape.";
-    attribution = `${total} signals captured — keep building your narrative.`;
-  } else {
-    headline = "Your career graph is starting to form.";
-    attribution = "Add more evidence to strengthen your profile.";
-  }
+function dateline(f: DigestFacts, now: Date): string {
+  const day = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const h = f.hours_since_last_visit;
+  if (h == null) return day;
+  const since = h < 24 ? `${Math.round(h)} hours` : `${Math.round(h / 24)} ${Math.round(h / 24) === 1 ? "day" : "days"}`;
+  return `${day} · ${since} since your last visit`;
+}
 
+export function buildBriefing(f: DigestFacts, now: Date = new Date()): BriefingView {
+  const name = displayName(f.first_name);
+  const changes = changeLines(f);
   return {
-    headline,
-    attribution,
-    promise: "We'll keep measuring as you add more proof.",
-    ctaLabel: "Add more proof",
-    ctaHref: "/settings?tab=account",
+    dateline: dateline(f, now),
+    greeting: `${timeGreeting(now.getHours())}${name ? `, ${name}` : ""}.`,
+    lead: leadFor(f.tone, {
+      newMatches: f.changes.new_matches,
+      newStrong: f.changes.new_strong,
+      todos: f.todos.length,
+      hasScores: f.has_scores,
+    }),
+    headline: f.headline ? headlineView(f.headline, now) : null,
+    changes,
+    todos: f.todos,
+    week: f.has_scores ? weekNumbers(f) : [],
+    closing: closingFor(f.tone, now.getHours(), now.getDay()),
   };
-}
-
-function hostFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "Opportunity";
-  }
 }

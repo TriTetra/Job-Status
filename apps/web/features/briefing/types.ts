@@ -1,91 +1,44 @@
-export type EmphasisTone = "primary" | "accent" | "success";
+/** The briefing as the page renders it (built from DigestFacts by build.ts). */
 
-export interface TextSegment {
-  text: string;
-  emphasis?: EmphasisTone;
-}
+import type { Chance, CriterionState, TodoFact } from "./facts";
 
-export interface BriefingGreeting {
-  name: string;
-  greeting: string;
-  subtitle?: string;
-}
-
-/** One sentence in the Brief section, built from emphasized segments */
-export interface BriefLine {
-  segments: TextSegment[];
-  muted?: boolean;
-}
-
-export interface FocusItem {
-  number: "01" | "02" | "03";
-  action: string;
-  reason: string;
-  ctaLabel: string;
-  ctaHref?: string;
-}
-
-export type Recommendation = "APPLY" | "CONSIDER" | "SKIP";
-
-export interface Opportunity {
-  id: string;
-  /** The company's own posting / application page */
-  postingUrl?: string;
-  /** This job selected in Opportunities */
-  whyHref: string;
+export interface BriefingHeadline {
+  url: string;
   company: string;
-  role: string;
-  location: string;
+  title: string;
   score: number;
-  recommendation: Recommendation;
-  why: string[];
-  gap?: string;
+  recommendation: "APPLY" | "CONSIDER" | "SKIP";
+  chance: Chance;
+  /** One or two sentences on why this job — the cached "why", or composed from skills */
+  why: string;
+  /** "Remote · $90K+ / yr · posted 2 days ago" */
+  meta: string;
+  criteria: Array<{ label: string; state: CriterionState }>;
+  postingUrl: string | null;
+  inboxHref: string;
 }
 
-export interface EvidenceSignal {
+export interface ChangeLine {
   text: string;
+  href?: string;
+  linkLabel?: string;
 }
 
-export interface EvidenceSummary {
-  signalCount: number;
-  signals: EvidenceSignal[];
-  confidence: "High" | "Medium" | "Low";
+export interface WeekNumber {
+  value: string;
+  label: string;
+  note?: string;
 }
 
-export interface ProgressSummary {
-  headline: string;
-  attribution: string;
-  promise: string;
-  ctaLabel?: string;
-  ctaHref?: string;
+export interface BriefingView {
+  /** "Sunday, 22 November · 26 hours since your last visit" */
+  dateline: string;
+  greeting: string;
+  /** One sentence that sums the visit up */
+  lead: string;
+  headline: BriefingHeadline | null;
+  changes: ChangeLine[];
+  todos: TodoFact[];
+  week: WeekNumber[];
+  closing: string[];
 }
-
-export interface ClosingCopy {
-  lines: string[];
-}
-
-export interface BriefingData {
-  greeting: BriefingGreeting;
-  brief: BriefLine[];
-  focus: FocusItem[];
-  opportunities: Opportunity[];
-  evidence: EvidenceSummary;
-  progress: ProgressSummary;
-  closing: ClosingCopy;
-}
-
-export interface BriefingEmptyData {
-  watching: string[];
-  stats?: {
-    skills_count?: number;
-    projects_count?: number;
-    achievements_count?: number;
-    companies_count?: number;
-  };
-  greeting?: string;
-}
-
-/** Discriminated union so the page can render the ready or empty narrative cleanly */
-export type BriefingResult =
-  | { status: "ready"; data: BriefingData }
-  | { status: "empty"; data: BriefingEmptyData };

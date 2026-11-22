@@ -60,6 +60,11 @@ export interface OpportunityExplanation {
   application_url?: string;
   posted_at?: string | null;
   matched_skills?: Array<{ name: string; confidence: number }>;
+  /** 25-word summary of the posting (LLM job facts) */
+  summary?: string;
+  salary_min?: number;
+  salary_max?: number;
+  salary_currency?: string;
   [key: string]: unknown;
 }
 
@@ -117,6 +122,7 @@ export interface ScanStatusResponse {
 
 /** The subset of /api/preferences the inbox header summarizes. */
 export interface InboxPreferences {
+  preferred_role_titles?: string[];
   work_arrangements?: string[];
   preferred_country_codes?: string[];
   requires_sponsorship?: boolean | null;

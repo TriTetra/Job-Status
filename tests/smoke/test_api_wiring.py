@@ -25,7 +25,7 @@ EXPECTED_PATHS = {
     "/api/evidence/portfolio", "/api/evidence/portfolio/crawl", "/api/evidence/portfolio/status",
     "/api/evidence/profiles/{source_id}",
     "/api/evidence/skills/aggregated", "/api/evidence/sources",
-    "/api/briefing",
+    "/api/briefing", "/api/briefing/dismiss",
     "/api/goals/catalog",
     "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan", "/api/jobs/decide",
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",

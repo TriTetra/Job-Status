@@ -1,59 +1,38 @@
+/** Mirrors the briefing: header, top pick, changes, to-dos, the week. */
 export function BriefingSkeleton() {
+  const rule = { borderTop: "1px solid var(--border)" };
   return (
-    <div className="max-w-[1000px] mx-auto px-6 lg:px-8 py-14">
-      {/* Greeting + brief */}
-      <div className="max-w-[640px] space-y-4">
-        <div className="h-9 w-64 skeleton-shimmer rounded" />
-        <div className="space-y-3 pt-4">
-          <div className="h-5 w-full skeleton-shimmer rounded" />
-          <div className="h-5 w-11/12 skeleton-shimmer rounded" />
-          <div className="h-5 w-10/12 skeleton-shimmer rounded" />
-          <div className="h-5 w-9/12 skeleton-shimmer rounded" />
-          <div className="h-5 w-7/12 skeleton-shimmer rounded opacity-60" />
-        </div>
+    <div className="max-w-[880px] mx-auto px-6 lg:px-10 py-14" aria-busy="true">
+      <div className="h-3 w-72 skeleton-shimmer rounded mb-6" />
+      <div className="h-12 w-96 max-w-full skeleton-shimmer rounded" />
+      <div className="h-5 w-[34rem] max-w-full skeleton-shimmer rounded mt-6 opacity-70" />
+
+      <div className="pt-14 mt-14" style={rule}>
+        <div className="h-3 w-20 skeleton-shimmer rounded mb-8" />
+        <div className="h-9 w-56 skeleton-shimmer rounded" />
+        <div className="h-5 w-80 max-w-full skeleton-shimmer rounded mt-3 opacity-70" />
+        <div className="h-5 w-full skeleton-shimmer rounded mt-6 opacity-60" />
+        <div className="h-5 w-10/12 skeleton-shimmer rounded mt-2 opacity-60" />
       </div>
 
-      {/* Today's Focus — 3 columns */}
-      <div className="pt-14 mt-14" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="h-3 w-24 skeleton-shimmer rounded mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-3 w-6 skeleton-shimmer rounded" />
+      <div className="pt-14 mt-14" style={rule}>
+        <div className="h-3 w-36 skeleton-shimmer rounded mb-8" />
+        {[1, 2].map((i) => (
+          <div key={i} className="h-5 w-9/12 skeleton-shimmer rounded mb-3 opacity-70" />
+        ))}
+      </div>
+
+      <div className="pt-14 mt-14" style={rule}>
+        <div className="h-3 w-16 skeleton-shimmer rounded mb-8" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="grid grid-cols-[2.5rem_1fr] gap-3 mb-6">
+            <div className="h-4 w-6 skeleton-shimmer rounded" />
+            <div>
               <div className="h-5 w-2/3 skeleton-shimmer rounded" />
-              <div className="h-4 w-full skeleton-shimmer rounded opacity-60" />
-              <div className="h-3 w-20 skeleton-shimmer rounded mt-3" />
+              <div className="h-4 w-full skeleton-shimmer rounded mt-2 opacity-60" />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Opportunities — 2 columns, no box */}
-      <div className="pt-14 mt-14" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="h-3 w-32 skeleton-shimmer rounded mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {[1, 2].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-6 w-40 skeleton-shimmer rounded" />
-              <div className="h-4 w-56 skeleton-shimmer rounded opacity-60" />
-              <div className="h-4 w-full skeleton-shimmer rounded opacity-60 mt-2" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Evidence + Progress — 2 columns */}
-      <div className="pt-14 mt-14" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {[1, 2].map((i) => (
-            <div key={i} className="space-y-3">
-              <div className="h-3 w-36 skeleton-shimmer rounded mb-4" />
-              <div className="h-5 w-48 skeleton-shimmer rounded" />
-              <div className="h-4 w-full skeleton-shimmer rounded opacity-60" />
-              <div className="h-4 w-3/4 skeleton-shimmer rounded opacity-60" />
-            </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );

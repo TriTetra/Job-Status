@@ -19,6 +19,15 @@ export function withCsrf(headers: Headers, method: string | undefined): Headers 
   return headers;
 }
 
+/**
+ * A string body is JSON (callers pass JSON.stringify(...)). Without the header the
+ * API sees text/plain and answers 422. FormData / Blob bodies keep their own type.
+ */
+export function withJsonBody(headers: Headers, body: BodyInit | null | undefined): Headers {
+  if (typeof body === "string" && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  return headers;
+}
+
 /** Non-2xx response from the API. `status` lets callers branch (401 → sign in, 404 → empty state …). */
 export class ApiError extends Error {
   constructor(

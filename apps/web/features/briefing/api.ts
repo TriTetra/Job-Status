@@ -4,14 +4,14 @@ import { cookies } from "next/headers";
 import { serverApiFetch } from "@/lib/api/server";
 
 import { buildBriefing, zonedNow } from "./build";
-import type { BriefingFacts } from "./facts";
-import type { BriefingResult } from "./types";
+import type { DigestFacts } from "./facts";
+import type { BriefingView } from "./types";
 
 /**
- * Today's briefing for the signed-in user (Server Components only).
- * API errors propagate to briefing/error.tsx (retry UI).
+ * Today's briefing for the signed-in user (Server Components only), in the user's
+ * time zone. API errors propagate to briefing/error.tsx (retry UI).
  */
-export async function getBriefing(): Promise<BriefingResult> {
+export async function getBriefing(): Promise<BriefingView> {
   const tz = (await cookies()).get("careeros_tz")?.value;
-  return buildBriefing(await serverApiFetch<BriefingFacts>("/api/briefing"), zonedNow(tz));
+  return buildBriefing(await serverApiFetch<DigestFacts>("/api/briefing"), zonedNow(tz));
 }

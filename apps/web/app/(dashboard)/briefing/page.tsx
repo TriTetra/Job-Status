@@ -1,32 +1,25 @@
 import { getBriefing } from "@/features/briefing/api";
-import { BriefingGreeting } from "./_components/briefing-greeting";
-import { BriefingFocus } from "./_components/briefing-focus";
-import { BriefingOpportunities } from "./_components/briefing-opportunities";
-import { BriefingEvidenceProgress } from "./_components/briefing-evidence-progress";
+import { BriefingHeader } from "./_components/briefing-header";
+import { BriefingHeadline } from "./_components/briefing-headline";
+import { BriefingChanges } from "./_components/briefing-changes";
+import { BriefingTodos } from "./_components/briefing-todos";
+import { BriefingWeek } from "./_components/briefing-week";
 import { BriefingClosing } from "./_components/briefing-closing";
-import { BriefingEmpty } from "./_components/briefing-empty";
 
+/**
+ * The daily briefing: what changed since your last visit, the one job worth your
+ * attention, what to do next, and the week in three numbers.
+ */
 export default async function BriefingPage() {
-  const result = await getBriefing();
-
-  if (result.status === "empty") {
-    return <BriefingEmpty watching={result.data.watching} stats={result.data.stats} greeting={result.data.greeting} />;
-  }
-
-  const { greeting, brief, focus, opportunities, evidence, progress, closing } = result.data;
-
+  const b = await getBriefing();
   return (
-    <div className="max-w-[1000px] mx-auto px-6 lg:px-8 py-14">
-      <BriefingGreeting
-        name={greeting.name}
-        greeting={greeting.greeting}
-        subtitle={greeting.subtitle}
-        brief={brief}
-      />
-      <BriefingFocus items={focus} />
-      <BriefingOpportunities opportunities={opportunities} />
-      <BriefingEvidenceProgress evidence={evidence} progress={progress} />
-      <BriefingClosing lines={closing.lines} />
+    <div className="max-w-[880px] mx-auto px-6 lg:px-10 py-14">
+      <BriefingHeader dateline={b.dateline} greeting={b.greeting} lead={b.lead} />
+      {b.headline && <BriefingHeadline h={b.headline} />}
+      <BriefingChanges lines={b.changes} />
+      <BriefingTodos todos={b.todos} />
+      <BriefingWeek numbers={b.week} />
+      <BriefingClosing lines={b.closing} />
     </div>
   );
 }

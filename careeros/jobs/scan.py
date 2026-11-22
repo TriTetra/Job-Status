@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "5"  # 5: real work-style preferences, user weights
+SCORER_VERSION = "6"  # 5: real work-style preferences, user weights · 6: salary in the explanation
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -267,6 +267,7 @@ def to_scoring_input(rows: list[JobRow]) -> tuple[list[Job], dict[str, dict]]:
             "sponsors_visa": f["sponsors_visa"],
             "salary_min": f["salary_min"],
             "salary_max": f["salary_max"],
+            "salary_currency": f["salary_currency"],
             "required_skills": f["required_skills"],
             "preferred_skills": f["preferred_skills"],
             "source": r.ats or r.site or r.source or "unknown",
