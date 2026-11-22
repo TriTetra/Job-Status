@@ -142,6 +142,7 @@ Sıralama: en yeniden en eskiye.
 - Migration atılabilir Postgres'te upgrade → downgrade → upgrade temiz; anahtar `(user_id, url)`, emails FK bileşik.
 - Ayrık önizlemede (14 örnek başvuru, her aşamadan) tarayıcıda: 1366×768'de Applications ve Analytics sayfası kaymıyor, 9 logo yüklendi; çekmeceden "Got an interview" kartı Interview'a taşıdı ve geçmişe ekledi, not kaydedildi; sürükle-bırak To apply → Applied taşıdı ve kaydetti; 375 px'te yatay taşma yok, çekmece tam ekran.
 - 562 test (yeni `test_applications_pipeline.py`: aşama çıkarımı, analytics rakamları, geçmiş + applied_at), ruff, tsc, eslint, `next build` temiz.
+- **Yayında:** `10ec513` push edildi, Coolify'da yeniden dağıtıldı (Finished). API kaydında `Running upgrade invites_001 -> applications_017` ve hatasız açılış; career.abdullokh.xyz sign-in 200, `/api/applications/` ve `/api/applications/analytics` oturumsuz 401, `/analytics` sign-in'e yönleniyor.
 
 ---
 
