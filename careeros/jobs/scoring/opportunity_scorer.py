@@ -161,8 +161,10 @@ class OpportunityScorer:
         # Factor 3: Remote advantage
         if job.remote and user.preferences.remote:
             prob *= 1.3  # 30% boost for remote match
-        elif not job.remote and not user.preferences.onsite_acceptable:
-            prob *= 0.3  # Major penalty for location mismatch
+        elif not job.remote and not (
+            user.preferences.onsite_acceptable or (job.hybrid and user.preferences.hybrid_acceptable)
+        ):
+            prob *= 0.3  # Major penalty: the job's office time is more than the user accepts
 
         # Factor 4: Visa sponsorship
         if user.preferences.work_visa_required:

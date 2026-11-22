@@ -29,6 +29,10 @@ export type Recommendation = "APPLY" | "CONSIDER" | "SKIP";
 
 export interface Opportunity {
   id: string;
+  /** The company's own posting / application page */
+  postingUrl?: string;
+  /** This job selected in Opportunities */
+  whyHref: string;
   company: string;
   role: string;
   location: string;

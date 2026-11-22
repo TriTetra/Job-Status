@@ -9,7 +9,7 @@ export interface BriefingContext {
   projectCount: number;
   achievementCount: number;
   opportunityCount: number;
-  topOpportunity: { company: string; score: number } | null;
+  topOpportunity: { company: string; score: number; url: string; gap?: string } | null;
   hiringCompany: { name: string; openRoles: number } | null;
   newEvidence24h: number;
   newScores24h: number;
@@ -146,14 +146,14 @@ export function focusCandidates(ctx: BriefingContext): Omit<FocusItem, "number">
       action: `Review your top match — ${ctx.topOpportunity.company}`,
       reason: `Scored ${ctx.topOpportunity.score}% — strongest fit right now.`,
       ctaLabel: "Why strong?",
-      ctaHref: "/inbox",
+      ctaHref: `/inbox?job=${encodeURIComponent(ctx.topOpportunity.url)}`,
     });
   } else {
     out.push({
       action: "Run your first opportunity scan",
       reason: `${ctx.skillCount} skills mapped — ready to match against live roles.`,
       ctaLabel: "Scan now",
-      ctaHref: "/inbox",
+      ctaHref: "/inbox?scan=1",
     });
   }
 
@@ -162,15 +162,17 @@ export function focusCandidates(ctx: BriefingContext): Omit<FocusItem, "number">
       action: "Connect GitHub",
       reason: "Real code is your strongest evidence and raises skill confidence.",
       ctaLabel: "Connect",
-      ctaHref: "/onboarding?step=CONNECTIONS",
+      ctaHref: "/settings?tab=account",
     });
 
-  out.push({
-    action: "Review your extracted evidence",
-    reason: "Precision beats volume — confirm every signal is accurate.",
-    ctaLabel: "Review",
-    ctaHref: "/onboarding?step=EVIDENCE",
-  });
+  // The one missing skill in the best match — concrete, and different as matches change
+  if (ctx.topOpportunity?.gap)
+    out.push({
+      action: `Close your ${ctx.topOpportunity.gap} gap`,
+      reason: `It's what your top match at ${ctx.topOpportunity.company} asks for that your evidence doesn't show yet.`,
+      ctaLabel: "Add proof",
+      ctaHref: "/settings?tab=account",
+    });
 
   return out;
 }

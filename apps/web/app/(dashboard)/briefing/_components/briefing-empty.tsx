@@ -152,7 +152,7 @@ export function BriefingEmpty({ watching, stats, greeting = "Good evening" }: Br
               ? "Your skills are mapped — ready to match against live roles."
               : "Want to expand the search?"}
         </NarrativeText>
-        <Button variant="outline" onClick={() => router.push("/inbox")}>
+        <Button variant="outline" onClick={() => router.push("/inbox?scan=1")}>
           <Zap className="h-4 w-4" strokeWidth={1.75} />
           Scan for new opportunities
         </Button>

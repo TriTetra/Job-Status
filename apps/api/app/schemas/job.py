@@ -16,6 +16,8 @@ class JobWithScore(BaseModel):
     recommendation: Optional[str] = None
     skill_gaps: List[str] = []
     explanation: Dict[str, Any] = {}
+    # Decision Contract v1 (tier, criteria, next action, reasoning) — the web reads it here
+    decision: Optional[Dict[str, Any]] = None
     scanned_at: Optional[str] = None
     user_decision: Dict[str, Any] = {"status": "unreviewed", "decided_at": None}
 

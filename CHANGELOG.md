@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| P0 — Broken Discover/Briefing Fixes | Decision panel filled, Apply/Shortlist/Skip create the application, Settings weights and saved work styles actually score, hybrid/on-site no longer penalised by default, chips show real salary, Briefing actions/time zone/links work, Market counts every mention and Refresh waits | ✅ Tamam | 2026-11-22 |
 | Analysis — Briefing + Discover | End-to-end audit of Briefing, Opportunities, Companies, Market; Dribbble/Pinterest references; redesign + P0–P3 roadmap (no code change) | 📝 Analiz | 2026-11-22 |
 | Evidence — Public Profile Sources | GitHub, GitLab, Stack Overflow, ORCID, Medium and Substack connect by username / link from their public APIs and feeds — no OAuth app, no keys; verified live against all six; onboarding and Settings share one connect flow | ✅ Tamam | 2026-11-22 |
 | Evidence — CV, Portfolio, GitHub Fixes | CV skills cleaned to canonical names (catalog match 15/51 → 39/54 on a real CV), validated extraction with retry, re-upload replaces old evidence, education/certifications/highlights kept, pending papers not counted as verified; portfolio crawler public-only (SSRF closed), whole-word skills, real project blocks, readable errors; GitHub repos analysed after connecting, "Not set up" instead of a raw error | ✅ Tamam | 2026-11-22 |
@@ -102,6 +103,40 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [P0 — Fixes] — 2026-11-22 — What was broken on Briefing and Discover now works ✅
+
+**Neden:** Analizde (bir önceki kayıt) kullanıcının yanlış ya da hiçbir şey görmediği yerler bulundu. Bu tur yalnız onları onarıyor; yeniden tasarım P1+.
+
+### Opportunities
+- **Karar paneli dolu:** `JobWithScore.decision` eklendi (skor açıklamasındaki `explanation.decision`). Kart etiketleri (Strong / Worth a look / Low fit), "Fit against your priorities", "Recommended next step" artık "Why N?"e basmadan geliyor.
+- **Apply / Shortlist / Skip çalışıyor:** yeni `POST /api/jobs/decide` — başvuru kaydı yoksa ilanın kendi başlık/şirketiyle oluşturuyor, sonra durumu ilerletiyor (Apply → `applied_at` da yazılıyor). Eskiden 404 dönüyordu. Hata artık ekranda yazıyor.
+- **Kriter çipleri:** "€60000k+" yerine para birimi ve dönemle "$70K+ / yr"; Remote/Hybrid/On-site hepsi; vize ihtiyacı iki yönde; "Edit" → Settings → Preferences.
+- `?job=<url>` ilgili ilanı seçili açıyor, `?scan=1` taramayı kendisi başlatıyor (Briefing linkleri için).
+
+### Skor
+- **Settings → Scoring ağırlıkları skora giriyor** (toplamı 1'e ölçekleniyor) ve parmak izine dahil → değişince ilanlar yeniden skorlanıyor.
+- **Kaydedilmiş çalışma şekli kullanılıyor:** eskiden web kullanıcıları için "ofis olmaz" varsayılanı her on-site **ve hybrid** ilanın kabul şansını ×0.3 yapıyordu. Artık tercih yoksa her şekil kabul; hybrid ilan "hybrid olur" diyen için cezasız; ülkeler ve maaş alt sınırı da profile geçiyor; tercih yoksa vize gerekmiyor sayılıyor.
+- `SCORER_VERSION` 5 → bir sonraki taramada tüm ilanlar yeni kurallarla.
+
+### Briefing
+- **Saat dilimi:** tarayıcı zaman dilimini çereze yazıyor (`careeros_tz`), selam/gün cümleleri kullanıcının saatine göre (eskiden sunucu UTC → İstanbul'da 3 saat kayma).
+- **Fırsat kartları:** "Apply / Generate resume / Why" yalnız `console.log` idi → "Open posting ↗" (şirketin kendi ilanı), "Shortlist" (Applications'a kaydeder, durumunu gösterir), "Why 84?" (Opportunities'te o ilan açık). Eşleşen beceri yoksa tek "." basma hatası giderildi; satır "Strong on X and Y."
+- **Odak listesi:** her gün aynı "Review your extracted evidence" (onboarding'e geri yolluyordu) kaldırıldı → en iyi eşleşmedeki eksik beceri ("Close your Kafka gap"); "Scan now" taramayı gerçekten başlatıyor; "Why strong?" o ilanı açıyor; GitHub → Settings.
+- "View career graph" grafiği silip yeniden kuruyordu → "Add more proof" (Settings → kaynaklar).
+- Başvurulan / atlanan ilanlar artık Briefing manşetinde çıkmıyor.
+
+### Market
+- **Sayım hatası:** `record_mentions` girdiyi tekilleştirdiği için her beceri ~1 sayılıyordu → her bahis sayılıyor.
+- Aynı kaynaktan yeniden okuma artık mevcut sinyalin sayısını güncelliyor (eski hatalı sayılar ilk Refresh'te düzelir).
+- Etki bantları gerçekçi: LOW artık üretiliyor (HN konu hacmi ≥400 yüksek, beceri ≥40 / ≥10, şirket ≥3 / 2).
+- **Refresh** işin bitmesini bekliyor (durum sorgusu, en çok 3 dk) — eskiden 3 sn sonra eski veriyi yeniliyordu.
+- Varsayılan pencere 7 → 30 gün (HN sinyalleri ayın başı tarihli).
+
+### Doğrulama
+- 529 test (yeni `test_p0_fixes.py`: tercih eşlemesi, ağırlık ölçekleme/parmak izi/skora etkisi, ofis cezası 5 durum, decision serileştirme, karar → başvuru oluşturma, bilinmeyen iş/durum, bahis sayımı, etki bantları); ruff, tsc, eslint, `next build` temiz; saat dilimi yardımcısı UTC sunucuda İstanbul saati ile denendi.
 
 ---
 

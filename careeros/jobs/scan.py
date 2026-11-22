@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "4"
+SCORER_VERSION = "5"  # 5: real work-style preferences, user weights
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -68,12 +68,60 @@ def build_profile_from_evidence(user_id: str) -> Optional[UserProfile]:
             skills=[Skill(a["skill_name"], skill_level_for(a["aggregated_confidence"])) for a in aggregated],
         )
 
-        sponsorship = s.execute(
-            sa.text("SELECT requires_sponsorship FROM career_preferences WHERE user_id = :u"), {"u": user_id}
+        prefs = s.execute(
+            sa.text("SELECT requires_sponsorship, work_arrangements, preferred_country_codes, salary_min, salary_max "
+                    "FROM career_preferences WHERE user_id = :u"), {"u": user_id}
         ).fetchone()
-        if sponsorship is not None:
-            profile.preferences.work_visa_required = bool(sponsorship[0])
+        apply_preferences(profile, prefs)
         return profile
+
+
+def apply_preferences(profile: UserProfile, row) -> None:
+    """Saved career preferences → the scorer's UserPreferences.
+
+    No saved work arrangement means "any": every work style is acceptable, instead of the
+    library default that penalised every on-site and hybrid job.
+    """
+    p = profile.preferences
+    if row is None:
+        p.remote = p.hybrid_acceptable = p.onsite_acceptable = True
+        p.work_visa_required = False
+        return
+    sponsorship, arrangements, countries, salary_min, salary_max = row
+    p.work_visa_required = bool(sponsorship)
+    chosen = set(arrangements or [])
+    if chosen:
+        p.remote = "remote" in chosen
+        p.hybrid_acceptable = "hybrid" in chosen
+        p.onsite_acceptable = "onsite" in chosen
+    else:
+        p.remote = p.hybrid_acceptable = p.onsite_acceptable = True
+    p.preferred_locations = list(countries or [])
+    p.min_salary = salary_min
+    p.max_salary = salary_max
+
+
+def load_weights(user_id: str) -> dict:
+    """The user's Settings → Scoring weights, normalised to sum to 1 (defaults if unset)."""
+    from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
+
+    try:
+        with db.session_scope() as s:
+            raw = UserSettingsRepository(s).get_weights(user_id=user_id)
+    except Exception as e:
+        logger.info("Weights unavailable for %s (%s); using defaults", user_id, e)
+        return {}
+    return normalize_weights(raw)
+
+
+WEIGHT_KEYS = ("fit", "acceptance", "career_value", "market_demand")
+
+
+def normalize_weights(raw: dict) -> dict:
+    """Scoring weights scaled to sum to 1; {} (scorer defaults) if nothing usable."""
+    values = {k: max(0.0, float(raw.get(k, 0) or 0)) for k in WEIGHT_KEYS}
+    total = sum(values.values())
+    return {k: round(v / total, 4) for k, v in values.items()} if total > 0 else {}
 
 
 def load_profile(user_id: str) -> Optional[UserProfile]:
@@ -90,13 +138,14 @@ def load_profile(user_id: str) -> Optional[UserProfile]:
     return profile
 
 
-def profile_fingerprint(profile: UserProfile, prefs: dict) -> str:
-    """Everything about the user that changes a score."""
+def profile_fingerprint(profile: UserProfile, prefs: dict, weights: Optional[dict] = None) -> str:
+    """Everything about the user that changes a score (skills, years, preferences, weights)."""
     data = {
         "skills": sorted((sk.name.lower(), str(sk.level)) for sk in profile.skills),
         "years": profile.years_experience,
         "preferences": {k: str(v) for k, v in sorted(vars(profile.preferences).items())},
         "prefs": prefs,
+        "weights": weights or {},
     }
     return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
 
@@ -244,7 +293,8 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
             return
         job.log(f"✓ Profile: {len(profile.skills)} skills, {profile.years_experience}y")
         service = ScoringService(user_id=user_id)
-        fingerprint = profile_fingerprint(profile, service.load_prefs())
+        weights = load_weights(user_id)
+        fingerprint = profile_fingerprint(profile, service.load_prefs(), weights)
 
         job.update(status="scanning", progress=30)
         job.log("Picking open jobs that match your roles…")
@@ -264,7 +314,8 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         if rows:
             job.log("Scoring against your career graph…")
             jobs, meta = to_scoring_input(rows)
-            result = service.run_pipeline(jobs, profile, semantic=False, job_meta=meta, input_hashes=hashes)
+            result = service.run_pipeline(jobs, profile, weights=weights, semantic=False, job_meta=meta,
+                                          input_hashes=hashes)
         else:
             result = {"total_jobs": 0, "scored": 0, "saved_to_db": 0, "apply": 0, "consider": 0, "skip": 0}
         result.update(matching=len(urls), unchanged=unchanged)

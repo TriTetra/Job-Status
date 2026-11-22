@@ -2,7 +2,8 @@ import type { MarketSignal, MarketSnapshot, MarketSummary, SkillTrend, TimeRange
 
 type Get = <T>(path: string) => Promise<T>;
 
-export const DEFAULT_RANGE: TimeRange = "7d";
+// 30 days: HN "Who is hiring" signals carry the thread date (start of the month)
+export const DEFAULT_RANGE: TimeRange = "30d";
 const TRENDED_SKILLS = 5;
 
 export function toDays(range: TimeRange): number {

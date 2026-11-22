@@ -20,11 +20,22 @@ LIVE_APPLICATIONS = 3
 TONES = {"warm", "direct", "analytical"}
 
 
+# Application statuses that take a job off the briefing (already acted on)
+DONE_STATUSES = ("applied", "interview", "offer", "skipped", "rejected", "withdrawn")
+
+
 def _top_opportunities(session: Session, user_id: str) -> list[dict]:
-    """Open APPLY/CONSIDER opportunities, best first."""
+    """Open APPLY/CONSIDER opportunities the user hasn't acted on yet, best first."""
+    acted = {
+        url for (url,) in session.query(Application.url).filter(
+            Application.user_id == user_id, Application.status.in_(DONE_STATUSES),
+        ).all()
+    }
     rows = CareerScoreRepository(session).get_top_opportunities(
-        min_score=None, recommendations=("APPLY", "CONSIDER"), limit=TOP_OPPORTUNITIES, user_id=user_id,
+        min_score=None, recommendations=("APPLY", "CONSIDER"), limit=TOP_OPPORTUNITIES + len(acted),
+        user_id=user_id,
     )
+    rows = [s for s in rows if s.url not in acted][:TOP_OPPORTUNITIES]
     return [
         {
             "url": s.url,

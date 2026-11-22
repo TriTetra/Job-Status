@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from careeros.applications.models.application import Application
+from careeros.applications.repositories.application_repo import ApplicationRepository
+from careeros.jobs.models.job import Job
 from careeros.jobs.models.career_score import CareerScore
 from careeros.jobs.repositories.career_score_repo import CareerScoreRepository
 from careeros.identity.repositories.career_preferences_repo import CareerPreferencesRepository
@@ -23,6 +25,34 @@ DECISION_BY_APPLICATION_STATUS = {
     "withdrawn": "skipped",
 }
 UNREVIEWED = {"status": "unreviewed", "decided_at": None}
+# What the inbox buttons may record: Shortlist, Apply, Skip
+DECIDABLE_STATUSES = ("to_apply", "applied", "skipped")
+
+
+class UnknownJob(LookupError):
+    """The job URL isn't in the jobs table."""
+
+
+def record_decision(session: Session, user_id: str, url: str, status: str) -> dict:
+    """Shortlist / Apply / Skip an opportunity: create its application row if needed
+    (title and company from the posting), then move it to `status`.
+
+    Returns the new user decision {"status", "decided_at"}.
+    """
+    if status not in DECIDABLE_STATUSES:
+        raise ValueError(f"status must be one of {', '.join(DECIDABLE_STATUSES)}")
+    job = session.get(Job, url)
+    if job is None:
+        raise UnknownJob(url)
+    repo = ApplicationRepository(session)
+    app = repo.upsert(url=url, title=job.title or "Untitled role", company=job.company or None,
+                      status=status, user_id=user_id)
+    if status == "applied":
+        app = repo.mark_applied(url, user_id=user_id) or app
+    elif app.status != status:
+        app = repo.advance_status(url, status, user_id=user_id) or app
+    decided = getattr(app, "updated_at", None) or datetime.utcnow()
+    return {"status": DECISION_BY_APPLICATION_STATUS[status], "decided_at": decided.isoformat()}
 
 
 def user_decisions(session: Session, user_id: str) -> Dict[str, dict]:

@@ -9,11 +9,10 @@ export const opportunitiesApi = {
   preferences: () => apiFetch<InboxPreferences>("/api/preferences"),
   startScan: () => apiFetch<{ job_id: string }>("/api/jobs/scan", { method: "POST" }),
   scanStatus: (jobId: string) => apiFetch<ScanStatusResponse>(`/api/jobs/scan/${jobId}/status`),
-  /** Records the user's decision as an application status (to_apply | applied | skipped …). */
-  decide: (url: string, status: UserDecisionStatus | string) =>
-    apiFetch(`/api/applications/${encodeURIComponent(url)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+  /** Shortlist / Apply / Skip — creates the application if it doesn't exist yet. */
+  decide: (url: string, status: "to_apply" | "applied" | "skipped") =>
+    apiFetch<{ status: UserDecisionStatus; decided_at: string }>("/api/jobs/decide", {
+      method: "POST",
+      body: JSON.stringify({ url, status }),
     }),
 };

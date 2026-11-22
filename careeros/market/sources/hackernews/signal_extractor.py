@@ -22,6 +22,21 @@ from careeros.market.sources.hackernews.who_is_hiring_parser import WhoIsHiringP
 logger = logging.getLogger(__name__)
 
 
+
+# Impact bands. A monthly HN thread has a few hundred top-level postings, most companies
+# post once, and the most asked-for skills appear in dozens of them.
+def volume_impact(posts: int) -> str:
+    return "high" if posts >= 400 else "medium" if posts >= 150 else "low"
+
+
+def skill_impact(mentions: int) -> str:
+    return "high" if mentions >= 40 else "medium" if mentions >= 10 else "low"
+
+
+def company_impact(positions: int) -> str:
+    return "high" if positions >= 3 else "medium" if positions == 2 else "low"
+
+
 class HNSignalExtractor:
     def __init__(self):
         self.client = HackerNewsClient()
@@ -145,7 +160,7 @@ class HNSignalExtractor:
                 title=f"HN Who is Hiring: {len(parsed)} posts ({thread_title})",
                 occurred_at=thread_date,
                 source_id=f"hn_thread_{thread_id}",
-                impact="high" if len(parsed) > 2000 else "medium",
+                impact=volume_impact(len(parsed)),
                 url=thread_url,
                 magnitude=float(len(parsed)),
                 metadata_json={"thread_id": thread_id, "year": year, "month": month},
@@ -160,7 +175,7 @@ class HNSignalExtractor:
                     title=f"{skill}: {count} mentions in {thread_title}",
                     occurred_at=thread_date,
                     source_id=f"hn_skill_{thread_id}_{skill.lower().replace(' ', '_')[:40]}",
-                    impact="high" if count > 50 else "medium",
+                    impact=skill_impact(count),
                     skills_affected=[skill],
                     magnitude=float(count),
                     metadata_json={"skill": skill, "mention_count": count},
@@ -176,7 +191,7 @@ class HNSignalExtractor:
                     title=f"{company}: {count} open position(s) in {thread_title}",
                     occurred_at=thread_date,
                     source_id=f"hn_co_{thread_id}_{slug}",
-                    impact="high" if count > 5 else "medium",
+                    impact=company_impact(count),
                     companies_affected=[company],
                     magnitude=float(count),
                     metadata_json={"company": company, "position_count": count},

@@ -1,8 +1,9 @@
 """Jobs API — HTTP layer over job intelligence (opportunities, reasoning, scan)."""
 
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from careeros.jobs.models.career_score import CareerScore
@@ -33,6 +34,7 @@ def _serialize(s: CareerScore, user_decision: Optional[dict] = None) -> JobWithS
         recommendation=rec,
         skill_gaps=s.skill_gaps or [],
         explanation=s.explanation or {},
+        decision=(s.explanation or {}).get("decision"),
         scanned_at=s.scanned_at.isoformat() if s.scanned_at else None,
         user_decision=user_decision or opportunities.UNREVIEWED,
     )
@@ -50,6 +52,20 @@ def list_jobs(
     decisions = opportunities.user_decisions(session, user_id)
     total = opportunities.count_opportunities(session, user_id, recommendation)
     return JobListResponse(total=total, jobs=[_serialize(s, decisions.get(s.url)) for s in scores])
+
+
+class DecisionRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+    status: Literal["to_apply", "applied", "skipped"]
+
+
+@router.post("/decide", summary="Shortlist / Apply / Skip an opportunity")
+def decide(body: DecisionRequest, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """Records the decision as an application status, creating the application if needed."""
+    try:
+        return opportunities.record_decision(session, user_id, body.url, body.status)
+    except opportunities.UnknownJob:
+        raise HTTPException(status_code=404, detail="This job is no longer available.")
 
 
 @router.get("/pipeline", summary="Pipeline summary counts")

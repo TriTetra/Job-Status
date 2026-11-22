@@ -32,7 +32,8 @@ def record_mentions(
     - Known skills (exact or fuzzy match) → increment count
     - Unknown skills → insert (promote to registry)
 
-    Returns canonical names for signal aggregation.
+    Returns one canonical name **per mention** (duplicates kept), so callers can count
+    how often a skill was asked for; deduplicating here made every count ~1.
     """
     rows: Dict[str, MarketSkill] = {
         r.name.lower(): r
@@ -41,7 +42,7 @@ def record_mentions(
     canonical: List[str] = []
     now = datetime.now(timezone.utc)
 
-    for raw in dict.fromkeys(raw_names):  # dedupe, order-preserving
+    for raw in raw_names:
         name = (raw or "").strip()
         if not name or len(name) < 2:
             continue

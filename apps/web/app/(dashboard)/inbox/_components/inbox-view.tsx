@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { Button } from "@/components/shared/button";
 import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact";
@@ -13,8 +14,14 @@ import { groupByTier, toScanJob } from "@/features/opportunities/tier";
 import type { InboxData, InboxPreferences, Opportunity, ScanJob } from "@/features/opportunities/types";
 
 export function InboxView({ initial }: { initial: InboxData }) {
+  const params = useSearchParams();
+  const wantedJob = params.get("job");
+  const wantsScan = params.get("scan") === "1";
   const [jobs, setJobs] = useState<Opportunity[]>(initial.jobs);
-  const [selectedUrl, setSelectedUrl] = useState<string | null>(initial.jobs[0]?.url ?? null);
+  // ?job=<url> (from the briefing) opens that opportunity
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(
+    () => initial.jobs.find((j) => j.url === wantedJob)?.url ?? initial.jobs[0]?.url ?? null,
+  );
   const [loading, setLoading] = useState(false);
   const [lowFitExpanded, setLowFitExpanded] = useState(false);
 
@@ -27,6 +34,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
   });
 
   const [prefs] = useState<InboxPreferences | null>(initial.prefs);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   // First render uses the server's list; this refreshes it after a scan or a decision
   const refresh = useCallback(async () => {
@@ -72,8 +80,18 @@ export function InboxView({ initial }: { initial: InboxData }) {
     }
   };
 
+  // ?scan=1 (from the briefing's "Scan now") starts a scan once
+  const autoScanned = useRef(false);
+  useEffect(() => {
+    if (!wantsScan || autoScanned.current) return;
+    autoScanned.current = true;
+    void handleScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival
+  }, [wantsScan]);
+
   // Auto-advance: after Apply/Shortlist/Skip, move to next unreviewed
-  const handleDecision = async (url: string, status: string) => {
+  const handleDecision = async (url: string, status: "to_apply" | "applied" | "skipped") => {
+    setDecisionError(null);
     try {
       await opportunitiesApi.decide(url, status);
       // Reload to get updated user_decision
@@ -86,6 +104,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
       }
     } catch (err) {
       console.error("[inbox] decision failed:", err);
+      setDecisionError("That didn't save. Try again.");
     }
   };
 
@@ -95,20 +114,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
   const selected = jobs.find((j) => j.url === selectedUrl) ?? null;
 
   // Build criteria chips for header
-  const criteriaChips = useMemo(() => {
-    const chips: string[] = [];
-    if (prefs?.work_arrangements?.includes("remote")) chips.push("Remote");
-    if (prefs?.preferred_country_codes?.length) {
-      chips.push(prefs.preferred_country_codes.slice(0, 3).join(", "));
-    }
-    const sMin = prefs?.salary_min ?? prefs?.salary?.min;
-    const sMax = prefs?.salary_max ?? prefs?.salary?.max;
-    if (sMin || sMax) {
-      chips.push(`€${sMin ?? 0}k+`);
-    }
-    if (prefs?.requires_sponsorship === false) chips.push("No visa");
-    return chips;
-  }, [prefs]);
+  const criteriaChips = useMemo(() => criteriaChipsFor(prefs), [prefs]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -161,7 +167,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
             </span>
           ))}
           <Link
-            href="/settings"
+            href="/settings?tab=preferences"
             className="flex items-center gap-1 text-xs font-medium transition-colors"
             style={{ color: "var(--text-muted)" }}
           >
@@ -169,6 +175,12 @@ export function InboxView({ initial }: { initial: InboxData }) {
             Edit
           </Link>
         </div>
+      )}
+
+      {decisionError && (
+        <p className="mb-4 text-sm" role="alert" style={{ color: "var(--danger)" }}>
+          {decisionError}
+        </p>
       )}
 
       {/* Split-panel layout */}
@@ -288,4 +300,31 @@ export function InboxView({ initial }: { initial: InboxData }) {
       />
     </div>
   );
+}
+
+const ARRANGEMENT_LABEL: Record<string, string> = { remote: "Remote", hybrid: "Hybrid", onsite: "On-site" };
+
+/** Header chips from the saved preferences: arrangements, countries, salary floor, visa. */
+function criteriaChipsFor(prefs: InboxPreferences | null): string[] {
+  if (!prefs) return [];
+  const chips: string[] = [];
+  const arrangements = (prefs.work_arrangements ?? []).map((a) => ARRANGEMENT_LABEL[a] ?? a);
+  if (arrangements.length) chips.push(arrangements.join(" / "));
+  if (prefs.preferred_country_codes?.length) {
+    const codes = prefs.preferred_country_codes;
+    chips.push(codes.slice(0, 3).join(", ") + (codes.length > 3 ? ` +${codes.length - 3}` : ""));
+  }
+  const min = prefs.salary?.min ?? prefs.salary_min;
+  if (min) {
+    const money = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: prefs.salary?.currency || "USD",
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(min);
+    chips.push(`${money}+ / ${prefs.salary?.period === "month" ? "mo" : "yr"}`);
+  }
+  if (prefs.requires_sponsorship === true) chips.push("Needs visa sponsorship");
+  if (prefs.requires_sponsorship === false) chips.push("No visa needed");
+  return chips;
 }

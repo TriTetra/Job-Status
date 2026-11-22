@@ -12,6 +12,7 @@ import type {
   ProgressSummary,
   Recommendation,
 } from "./types";
+import { safeHttpUrl } from "@/lib/utils";
 import {
   type BriefingContext,
   briefFor,
@@ -23,6 +24,22 @@ import {
 } from "./templates";
 
 const FOCUS_NUMBERS = ["01", "02", "03"] as const;
+
+/**
+ * "Now" as a wall clock in the user's time zone: a Date whose getHours()/getDay()
+ * read the user's local hour and weekday. Unknown or missing zone → server clock.
+ */
+export function zonedNow(tz: string | undefined, now: Date = new Date()): Date {
+  if (!tz) return now;
+  try {
+    return new Date(now.toLocaleString("en-US", { timeZone: decodeURIComponent(tz) }));
+  } catch {
+    return now;
+  }
+}
+
+/** Opportunities deep link: the inbox with this job selected. */
+export const inboxHref = (url: string) => `/inbox?job=${encodeURIComponent(url)}`;
 
 export function buildBriefing(facts: BriefingFacts, now: Date = new Date()): BriefingResult {
   const stats = facts.career_graph_stats;
@@ -54,7 +71,9 @@ export function buildBriefing(facts: BriefingFacts, now: Date = new Date()): Bri
     projectCount: stats.projects_count ?? 0,
     achievementCount: stats.achievements_count ?? 0,
     opportunityCount: opportunities.length,
-    topOpportunity: opportunities[0] ? { company: opportunities[0].company, score: opportunities[0].score } : null,
+    topOpportunity: opportunities[0]
+      ? { company: opportunities[0].company, score: opportunities[0].score, url: opportunities[0].id, gap: opportunities[0].gap }
+      : null,
     hiringCompany: topCompany ? { name: topCompany.name, openRoles: topCompany.open_positions_count } : null,
     newEvidence24h: facts.last_24h.new_evidence,
     newScores24h: facts.last_24h.new_scores,
@@ -104,6 +123,8 @@ function mapOpportunity(o: OpportunityFact): Opportunity {
       : [];
   return {
     id: o.url,
+    postingUrl: safeHttpUrl(ex.application_url) ?? safeHttpUrl(o.url) ?? undefined,
+    whyHref: inboxHref(o.url),
     company: ex.company ?? hostFromUrl(o.url),
     role: ex.role ?? ex.title ?? "Open role",
     location: ex.location ?? "—",
@@ -152,8 +173,8 @@ function buildProgressSummary(stats: CareerGraphStats, ev: BriefingFacts["eviden
     headline,
     attribution,
     promise: "We'll keep measuring as you add more proof.",
-    ctaLabel: "View career graph",
-    ctaHref: "/onboarding?step=BUILDING",
+    ctaLabel: "Add more proof",
+    ctaHref: "/settings?tab=account",
   };
 }
 

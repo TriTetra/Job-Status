@@ -1,12 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { SpotlightCard } from "@/components/patterns/spotlight-card";
 import { SectionLabel } from "@/components/shared/narrative-section";
+import { opportunitiesApi } from "@/features/opportunities/api";
 import { Movement } from "./movement";
 import type { Opportunity } from "@/features/briefing/types";
 
+type ShortlistState = "saving" | "done" | "error";
+const LABEL: Record<ShortlistState, string> = { saving: "Saving…", done: "Shortlisted ✓", error: "Didn't save — retry" };
+
 export function BriefingOpportunities({ opportunities }: { opportunities: Opportunity[] }) {
+  const [shortlist, setShortlist] = useState<Record<string, ShortlistState>>({});
   if (opportunities.length === 0) return null;
+
+  const save = async (id: string) => {
+    if (shortlist[id] === "saving" || shortlist[id] === "done") return;
+    setShortlist((s) => ({ ...s, [id]: "saving" }));
+    try {
+      await opportunitiesApi.decide(id, "to_apply");
+      setShortlist((s) => ({ ...s, [id]: "done" }));
+    } catch {
+      setShortlist((s) => ({ ...s, [id]: "error" }));
+    }
+  };
+
   return (
     <Movement delay={160}>
       <SectionLabel>Today&apos;s Opportunities</SectionLabel>
@@ -25,9 +43,10 @@ export function BriefingOpportunities({ opportunities }: { opportunities: Opport
               recommendation={opp.recommendation}
               why={opp.why}
               gap={opp.gap}
-              onApply={() => console.log(`[Opportunity] Apply — ${opp.company}`)}
-              onGenerateResume={() => console.log(`[Opportunity] Generate resume — ${opp.company}`)}
-              onWhy={() => console.log(`[Opportunity] Why ${opp.score} — ${opp.company}`)}
+              postingUrl={opp.postingUrl}
+              whyHref={opp.whyHref}
+              onShortlist={() => save(opp.id)}
+              shortlistLabel={shortlist[opp.id] ? LABEL[shortlist[opp.id]] : "Shortlist"}
             />
           </div>
         ))}

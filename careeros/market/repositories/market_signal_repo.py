@@ -32,7 +32,13 @@ class MarketSignalRepository(BaseRepository[MarketSignal]):
         if source_id:
             existing = self.get(source_id=source_id)
             if existing:
-                return existing
+                # A re-read (e.g. the same month's HN thread a week later) refreshes the numbers
+                return self.update(
+                    existing, title=title, impact=impact, summary=summary or existing.summary,
+                    magnitude=magnitude, metadata_json=metadata_json or existing.metadata_json,
+                    companies_affected=companies_affected or existing.companies_affected,
+                    skills_affected=skills_affected or existing.skills_affected,
+                )
         return self.create(
             signal_type=signal_type,
             source=source,

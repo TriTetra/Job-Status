@@ -1,8 +1,9 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import { serverApiFetch } from "@/lib/api/server";
 
-import { buildBriefing } from "./build";
+import { buildBriefing, zonedNow } from "./build";
 import type { BriefingFacts } from "./facts";
 import type { BriefingResult } from "./types";
 
@@ -11,5 +12,6 @@ import type { BriefingResult } from "./types";
  * API errors propagate to briefing/error.tsx (retry UI).
  */
 export async function getBriefing(): Promise<BriefingResult> {
-  return buildBriefing(await serverApiFetch<BriefingFacts>("/api/briefing"));
+  const tz = (await cookies()).get("careeros_tz")?.value;
+  return buildBriefing(await serverApiFetch<BriefingFacts>("/api/briefing"), zonedNow(tz));
 }

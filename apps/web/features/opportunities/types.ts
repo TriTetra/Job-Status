@@ -120,7 +120,7 @@ export interface InboxPreferences {
   work_arrangements?: string[];
   preferred_country_codes?: string[];
   requires_sponsorship?: boolean | null;
-  salary?: { min?: number; max?: number } | null;
+  salary?: { min?: number; max?: number; currency?: string | null; period?: string } | null;
   salary_min?: number;
   salary_max?: number;
 }

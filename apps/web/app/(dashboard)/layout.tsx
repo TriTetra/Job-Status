@@ -1,6 +1,7 @@
 import { redirect, unstable_rethrow } from "next/navigation";
 import { type ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { TimezoneSync } from "@/components/layout/timezone-sync";
 import { getOnboardingState } from "@/features/onboarding/server";
 import { stepUrl } from "@/features/onboarding/state-machine";
 import type { OnboardingState } from "@/features/onboarding/types";
@@ -19,5 +20,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
   if (state !== "READY") redirect(stepUrl(state));
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AppShell>
+      <TimezoneSync />
+      {children}
+    </AppShell>
+  );
 }

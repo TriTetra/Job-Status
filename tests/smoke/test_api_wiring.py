@@ -27,7 +27,7 @@ EXPECTED_PATHS = {
     "/api/evidence/skills/aggregated", "/api/evidence/sources",
     "/api/briefing",
     "/api/goals/catalog",
-    "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan",
+    "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan", "/api/jobs/decide",
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",
     "/api/jobs/boards", "/api/jobs/sync", "/api/jobs/sync/{job_id}/status",
     "/api/settings/llm-usage",

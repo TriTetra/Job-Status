@@ -45,15 +45,22 @@ export function MarketView({ initial }: { initial: MarketSnapshot }) {
     void loadData(range);
   };
 
+  // Start the refresh, wait for it to finish (HN + TechCrunch take ~10–60 s), then reload
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await apiFetch(`/api/market/refresh`, { method: "POST" });
-      setTimeout(() => loadData(timeRange), 3000);
+      const { job_id } = await apiFetch<{ job_id: string }>(`/api/market/refresh`, { method: "POST" });
+      const deadline = Date.now() + 3 * 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const st = await apiFetch<{ status: string }>(`/api/market/refresh/${job_id}/status`);
+        if (st.status === "completed" || st.status === "failed") break;
+      }
+      await loadData(timeRange);
     } catch (err) {
       console.error("[market] refresh failed:", err);
     } finally {
-      setTimeout(() => setRefreshing(false), 2000);
+      setRefreshing(false);
     }
   };
 

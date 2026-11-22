@@ -25,6 +25,7 @@ export interface OpportunityFact {
     location?: string;
     why?: string[];
     matched_skills?: unknown[];
+    application_url?: string;
   };
 }
 
