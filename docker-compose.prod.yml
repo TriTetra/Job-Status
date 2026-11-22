@@ -44,7 +44,7 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
-      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}                  # ${WEB_APP_URL}/api/oauth/github/callback
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}                  # empty = ${WEB_APP_URL}/api/oauth/github/callback
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - uploads:/app/personal                                        # uploaded CVs

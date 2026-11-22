@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { ProfileTab } from "./profile-tab";
 import { PreferencesTab } from "./preferences-tab";
@@ -37,7 +38,9 @@ const NAV = [
 type TabId = (typeof NAV)[number][0];
 
 export function SettingsShell({ initialProfile }: { initialProfile: InitialProfile | null }) {
-  const [tab, setTab] = useState<TabId>("profile");
+  // ?tab=account (e.g. back from GitHub) opens that tab
+  const wanted = useSearchParams().get("tab");
+  const [tab, setTab] = useState<TabId>(() => NAV.find(([id]) => id === wanted)?.[0] ?? "profile");
 
   return (
     <div className="narrative-container px-6 lg:px-8 py-14">

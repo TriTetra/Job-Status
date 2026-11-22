@@ -15,7 +15,8 @@ def _skill(id, name, aliases=()):
     return SimpleNamespace(id=id, name=name, aliases=list(aliases))
 
 
-SKILLS = [_skill(1, "Python", ["py"]), _skill(2, "JavaScript", ["js"]), _skill(3, "PostgreSQL", ["postgres"])]
+SKILLS = [_skill(1, "Python", ["py"]), _skill(2, "JavaScript", ["js"]), _skill(3, "PostgreSQL", ["postgres"]),
+          _skill(4, "Hugging Face"), _skill(5, "OpenAI API"), _skill(6, "C"), _skill(7, "C++")]
 
 
 @pytest.mark.parametrize("raw, expected", [
@@ -24,14 +25,17 @@ SKILLS = [_skill(1, "Python", ["py"]), _skill(2, "JavaScript", ["js"]), _skill(3
     ("js", "JavaScript"),          # alias
     ("Postgres", "PostgreSQL"),    # alias
     ("Postgresql", "PostgreSQL"),  # exact
-    ("Pythn", "Python"),           # fuzzy (>= 0.8)
+    ("HuggingFace", "Hugging Face"),  # spelling-insensitive
+    ("c++", "C++"),                # C, C++ stay apart
 ])
 def test_find_canonical_matches(raw, expected):
     assert find_canonical(raw, SKILLS).name == expected
 
 
-def test_find_canonical_returns_none_for_unknown():
-    assert find_canonical("Haskell", SKILLS) is None
+@pytest.mark.parametrize("raw", ["Haskell", "OpenAlex API", "Pythn"])
+def test_find_canonical_never_guesses(raw):
+    # No fuzzy matching: a wrong merge ("OpenAlex API" → "OpenAI API") is worse than none
+    assert find_canonical(raw, SKILLS) is None
 
 
 # ── GitHub quality signals ────────────────────────────────────────────────

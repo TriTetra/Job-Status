@@ -239,3 +239,43 @@ def test_role_relevance_ranking():
     assert relevance(exact, q) > relevance(alias, q) > relevance(partial, q) > 0
     assert relevance(unrelated, q) == 0
     assert relevance(role("Data Scientist", "data_scientist", category="AI/ML"), "ai/ml") == 50  # category only
+
+
+# ── GitHub: return pages, unconfigured state, callback outcomes ───────────
+
+def test_state_carries_the_return_page_and_cannot_be_swapped(oauth_env):
+    state = github_account.oauth_states.issue("user_1", "settings")
+    assert state.endswith(".settings")
+    assert github_account.return_url(state, "connected").endswith("/settings?tab=account&github=connected")
+    forged = state.rpartition(".")[0] + ".onboarding"
+    assert github_account.oauth_states.consume(forged) is None       # tampered state is unknown
+    assert github_account.oauth_states.consume(state) == "user_1"
+
+
+def test_unknown_return_page_falls_back_to_onboarding(oauth_env):
+    assert github_account.oauth_states.issue("u", "https://evil.example").endswith(".onboarding")
+    assert "/onboarding?step=CONNECTIONS&github=error" in github_account.return_url("garbage", "error")
+
+
+def test_redirect_uri_defaults_to_the_sites_own_callback(monkeypatch):
+    monkeypatch.delenv("GITHUB_REDIRECT_URI", raising=False)
+    monkeypatch.setenv("WEB_APP_URL", "https://career.example/")
+    get_settings.cache_clear()
+    try:
+        assert get_settings().github_redirect_uri == "https://career.example/api/oauth/github/callback"
+    finally:
+        get_settings.cache_clear()
+
+
+def test_not_configured_means_unavailable(monkeypatch):
+    monkeypatch.delenv("GITHUB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GITHUB_CLIENT_SECRET", raising=False)
+    monkeypatch.setattr("careeros.shared.config._env_loaded", True)
+    get_settings.cache_clear()
+    try:
+        assert github_account.configured() is False
+        with pytest.raises(github_account.GitHubAccountError) as e:
+            github_account.authorize_url("user_1")
+        assert e.value.status_code == 503
+    finally:
+        get_settings.cache_clear()

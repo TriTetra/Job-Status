@@ -26,6 +26,11 @@ USER_URL = "https://api.github.com/user"
 # `repo` lets evidence include private repos the user owns
 SCOPES = "read:user user:email repo"
 STATE_TTL = timedelta(minutes=10)
+# Where the browser goes after GitHub: the page the user connected from
+RETURN_PAGES = {
+    "onboarding": "/onboarding?step=CONNECTIONS",
+    "settings": "/settings?tab=account",
+}
 SYNC_REPO_LIMIT = 20
 
 
@@ -45,8 +50,11 @@ class OAuthStates:
         self._lock = threading.Lock()
         self._ttl = ttl
 
-    def issue(self, user_id: str) -> str:
-        state = secrets.token_urlsafe(32)
+    def issue(self, user_id: str, return_to: str = "onboarding") -> str:
+        # The page to return to rides in the state ("<random>.<page>"); the whole string
+        # is the single-use key, so it can't be swapped without invalidating the state.
+        page = return_to if return_to in RETURN_PAGES else "onboarding"
+        state = f"{secrets.token_urlsafe(32)}.{page}"
         now = datetime.utcnow()
         with self._lock:
             self._states = {s: v for s, v in self._states.items() if now - v[1] < self._ttl}
@@ -72,15 +80,28 @@ def _account(session: Session, user_id: str) -> Optional[ConnectedAccount]:
     ).first()
 
 
-def authorize_url(user_id: str) -> str:
+def configured() -> bool:
+    """True when the GitHub OAuth app is set up (GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET)."""
     s = get_settings()
-    if not s.github_client_id or not s.github_redirect_uri:
-        raise GitHubAccountError("GitHub OAuth not configured", 500)
+    return bool(s.github_client_id and s.github_client_secret and s.github_redirect_uri)
+
+
+def return_url(state: Optional[str], outcome: str) -> str:
+    """The web page to send the browser back to, with ?github=<outcome>."""
+    page = (state or "").rpartition(".")[2]
+    path = RETURN_PAGES.get(page, RETURN_PAGES["onboarding"])
+    return f"{get_settings().web_app_url}{path}&github={outcome}"
+
+
+def authorize_url(user_id: str, return_to: str = "onboarding") -> str:
+    s = get_settings()
+    if not configured():
+        raise GitHubAccountError("GitHub OAuth not configured", 503)
     params = {
         "client_id": s.github_client_id,
         "redirect_uri": s.github_redirect_uri,
         "scope": SCOPES,
-        "state": oauth_states.issue(user_id),
+        "state": oauth_states.issue(user_id, return_to),
     }
     return f"{AUTHORIZE_URL}?{urlencode(params)}"
 
@@ -179,3 +200,15 @@ def sync_evidence(session: Session, user_id: str) -> dict:
         "skills_created": stats["skills_created"],
         "projects_created": stats["projects_created"],
     }
+
+
+def sync_in_background(user_id: str) -> None:
+    """Analyse the repos right after connecting (own DB session; errors only logged)."""
+    from careeros.db.connection import db
+
+    try:
+        with db.session_scope() as session:
+            result = sync_evidence(session, user_id)
+        logger.info("GitHub sync for %s: %s", user_id, result)
+    except Exception:
+        logger.exception("GitHub sync failed for %s", user_id)

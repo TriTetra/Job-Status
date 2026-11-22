@@ -1,7 +1,7 @@
 """Uploaded CV (PDF) → LLM extraction → evidence items (source="resume")."""
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
 
 from sqlalchemy.orm import Session
 
@@ -10,10 +10,18 @@ from careeros.evidence.models.resume_document import ResumeDocument
 
 from careeros.evidence.resume_llm import extract_resume
 from careeros.evidence.skills import find_canonical, load_all_skills
+from careeros.knowledge.skill_names import split_skill_names
 
 logger = logging.getLogger(__name__)
 
 LogFn = Callable[[str], None]
+
+# Fewer characters than this means the PDF is a scan / image, not text
+MIN_TEXT_CHARS = 200
+
+
+class ResumeTextError(ValueError):
+    """The PDF has no usable text (message is safe to show the user)."""
 
 
 def extract_pdf_text(pdf_path: str) -> str:
@@ -40,6 +48,31 @@ ACHIEVEMENT_CONFIDENCE: dict[str, float] = {
     "teaching":     0.86,
     "volunteering": 0.85,
 }
+# A submitted paper or pending grant is a claim, not yet external validation
+PENDING_ACHIEVEMENT_CONFIDENCE = 0.6
+EDUCATION_CONFIDENCE = 0.9
+CERTIFICATION_CONFIDENCE = 0.88
+
+
+def merge_skills(raw_skills) -> list[tuple[str, float, str]]:
+    """LLM skills → (canonical name, best confidence, evidence), split and de-duplicated.
+
+    "Redis (Asynq)" → Redis + Asynq, "React 19" → React; the same skill twice keeps
+    its highest confidence.
+    """
+    merged: dict[str, list] = {}
+    for raw in raw_skills:
+        for name in split_skill_names(raw.name):
+            key = name.lower()
+            if key not in merged:
+                merged[key] = [name, raw.confidence, raw.evidence]
+            elif raw.confidence > merged[key][1]:
+                merged[key][1:] = [raw.confidence, raw.evidence or merged[key][2]]
+    return [(n, c, e) for n, c, e in merged.values()]
+
+
+def _techs(raw: list[str]) -> list[str]:
+    return [t for item in raw for t in split_skill_names(item)]
 
 
 def process_resume(
@@ -50,8 +83,8 @@ def process_resume(
     """
     Full pipeline: parse PDF → LLM extract → match skills → write evidence items.
 
-    `log` is called with status messages so callers can stream progress.
-    Returns summary dict.
+    A new CV replaces the previous CV's evidence. `log` is called with status
+    messages so callers can stream progress. Returns summary dict.
     """
     try:
         # ── 1. Parse PDF ──────────────────────────────────────────────────────
@@ -59,8 +92,12 @@ def process_resume(
         db.commit()
 
         log("Parsing PDF structure...")
-        file_path = resume_doc.storage_key
-        text = extract_pdf_text(file_path)
+        text = extract_pdf_text(resume_doc.storage_key)
+        if len(text) < MIN_TEXT_CHARS:
+            raise ResumeTextError(
+                "This PDF has no selectable text (it looks like a scan or an image). "
+                "Export your CV from Word, Google Docs or LaTeX as a PDF and upload that."
+            )
         resume_doc.parsed_text = text[:50000]  # cap at 50k chars
         log(f"Extracted {len(text):,} characters from {len(text.splitlines())} lines")
 
@@ -72,130 +109,121 @@ def process_resume(
         structured = extract_resume(text, user_id=resume_doc.user_id)
         resume_doc.parse_result = structured.model_dump()
 
-        skills_raw   = structured.skills
+        skills       = merge_skills(structured.skills)
         experience   = structured.experience
         projects     = structured.projects
-        education    = structured.education
+        education    = [e for e in structured.education if e.institution or e.degree]
         certs        = structured.certifications
-        achievements = structured.achievements
+        achievements = [a for a in structured.achievements if a.title]
 
         log(
-            f"Found {len(skills_raw)} skills, "
+            f"Found {len(skills)} skills, "
             f"{len(experience)} positions, "
             f"{len(projects)} projects, "
             f"{len(achievements)} achievements"
         )
 
-        # ── 3. Match & create skill evidence items ────────────────────────────
-        log("Matching skills to taxonomy...")
-        canonical_skills = load_all_skills(db)
+        # A new CV replaces the previous one's evidence (no duplicates on re-upload)
+        db.query(EvidenceItem).filter(
+            EvidenceItem.user_id == resume_doc.user_id,
+            EvidenceItem.source == "resume",
+        ).delete(synchronize_session=False)
 
-        created = 0
-        for raw in skills_raw:
-            name       = (raw.get("name") or "").strip()
-            confidence = float(raw.get("confidence") or 0.5)
-            evidence_t = raw.get("evidence") or ""
-            if not name:
-                continue
-
-            canonical = find_canonical(name, canonical_skills)
-            item = EvidenceItem(
+        def add(name: str, confidence: float, data: dict,
+                text: Optional[str] = None, skill_id: Optional[int] = None) -> None:
+            db.add(EvidenceItem(
                 user_id=resume_doc.user_id,
-                skill_name=name,
-                skill_id=canonical.id if canonical else None,
+                skill_name=name[:200],
+                skill_id=skill_id,
                 source="resume",
                 source_ref=str(resume_doc.id),
                 confidence_score=round(confidence, 3),
-                evidence_text=evidence_t[:500] if evidence_t else None,
-                evidence_data={"matched_canonical": canonical.name if canonical else None},
+                evidence_text=text[:500] if text else None,
+                evidence_data=data,
                 resume_document_id=resume_doc.id,
-            )
-            db.add(item)
-            created += 1
+            ))
 
-        # ── 4. Create experience evidence items ───────────────────────────────
+        # ── 3. Skills, matched to the taxonomy ────────────────────────────────
+        log("Matching skills to taxonomy...")
+        canonical_skills = load_all_skills(db)
+        matched = 0
+        for name, confidence, evidence in skills:
+            canonical = find_canonical(name, canonical_skills)
+            matched += canonical is not None
+            add(canonical.name if canonical else name, confidence,
+                {"type": "skill", "matched_canonical": canonical.name if canonical else None},
+                text=evidence, skill_id=canonical.id if canonical else None)
+        log(f"{matched} of {len(skills)} skills matched the skill catalog")
+
+        # ── 4. Experience, with its measurable highlights ─────────────────────
         for exp in experience:
-            role = exp.get("role", "Unknown Role")
-            company = exp.get("company", "Unknown Company")
-            db.add(EvidenceItem(
-                user_id=resume_doc.user_id,
-                skill_name=f"{role} @ {company}",
-                source="resume",
-                source_ref=str(resume_doc.id),
-                confidence_score=0.90,
-                evidence_data={
-                    "type": "experience",
-                    "company": company,
-                    "role": role,
-                    "duration": exp.get("duration"),
-                    "technologies": exp.get("technologies", []),
-                },
-                resume_document_id=resume_doc.id,
-            ))
+            role = exp.role or "Unknown Role"
+            company = exp.company or "Unknown Company"
+            add(f"{role} @ {company}", 0.90, {
+                "type": "experience",
+                "company": company,
+                "role": role,
+                "duration": exp.duration,
+                "technologies": _techs(exp.technologies),
+                "highlights": exp.highlights[:3],
+            })
 
-        # ── 5. Create project evidence items ──────────────────────────────────
+        # ── 5. Projects ───────────────────────────────────────────────────────
         for proj in projects:
-            db.add(EvidenceItem(
-                user_id=resume_doc.user_id,
-                skill_name=proj.get("name", "Project"),
-                source="resume",
-                source_ref=str(resume_doc.id),
-                confidence_score=0.85,
-                evidence_data={
-                    "type": "project",
-                    "description": proj.get("description", ""),
-                    "technologies": proj.get("technologies", []),
-                },
-                resume_document_id=resume_doc.id,
-            ))
+            add(proj.name or "Project", 0.85, {
+                "type": "project",
+                "description": proj.description,
+                "technologies": _techs(proj.technologies),
+                "url": proj.url or None,
+            })
 
-        # ── 6. Achievements — the proof most parsers lose (medals, papers, patents…)
+        # ── 6. Education and certifications ───────────────────────────────────
+        for edu in education:
+            title = ", ".join(x for x in (edu.degree, edu.field) if x) or edu.institution
+            add(title, EDUCATION_CONFIDENCE, {
+                "type": "education", "institution": edu.institution, "degree": edu.degree,
+                "field": edu.field, "year": edu.year,
+            })
+        for cert in certs:
+            add(cert, CERTIFICATION_CONFIDENCE, {"type": "certification"})
+
+        # ── 7. Achievements — the proof most parsers lose (medals, papers, patents…)
         for ach in achievements:
-            if not ach.title:
-                continue
-            db.add(EvidenceItem(
-                user_id=resume_doc.user_id,
-                skill_name=ach.title,
-                source="resume",
-                source_ref=str(resume_doc.id),
-                confidence_score=ACHIEVEMENT_CONFIDENCE.get(ach.type, 0.88),
-                evidence_data={
-                    "type": ach.type,
-                    "title": ach.title,
-                    "detail": ach.detail,
-                    "year": ach.year,
-                },
-                resume_document_id=resume_doc.id,
-            ))
-
+            confidence = (PENDING_ACHIEVEMENT_CONFIDENCE if ach.pending
+                          else ACHIEVEMENT_CONFIDENCE.get(ach.type, 0.88))
+            add(ach.title, confidence, {
+                "type": ach.type,
+                "title": ach.title,
+                "detail": ach.detail,
+                "year": ach.year,
+                "status": ach.status,
+            })
         if achievements:
             log(f"🏆 Captured {len(achievements)} achievements (awards, papers, medals, OSS)")
 
-        # ── 7. Finalize ───────────────────────────────────────────────────────
+        # ── 8. Finalize ───────────────────────────────────────────────────────
         resume_doc.parse_status = "completed"
         db.commit()
 
         summary = {
             "status": "completed",
-            "skills_count": created,
+            "skills_count": len(skills),
+            "skills_matched": matched,
             "experience_count": len(experience),
             "projects_count": len(projects),
             "education_count": len(education),
             "certifications_count": len(certs),
             "achievements_count": len(achievements),
-            "evidence_items": (
-                created
-                + len(experience)
-                + len(projects)
-                + len(achievements)
-            ),
+            "evidence_items": (len(skills) + len(experience) + len(projects)
+                               + len(education) + len(certs) + len(achievements)),
         }
-        log(f"Saved {created} skill evidence items")
+        log(f"Saved {len(skills)} skill evidence items")
         logger.info("Resume pipeline complete: %s", summary)
         return summary
 
     except Exception as exc:
         logger.exception("Resume pipeline failed: %s", exc)
+        db.rollback()
         resume_doc.parse_status = "failed"
         db.commit()
         raise

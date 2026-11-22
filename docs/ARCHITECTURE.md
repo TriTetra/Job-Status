@@ -168,7 +168,15 @@ scorer, so they are reproducible, cheap and testable.
   (`LLM_DATA_COLLECTION=allow` widens the provider pool).
 - **Untrusted input**: job postings are scraped text; they only ever become a validated
   `JobFacts` object (no tool calls, no actions), and model text is rendered as text, never HTML.
-  User-supplied prompt input is bounded (resume `job_description` ≤ 20 000 chars, CV ≤ 12 000).
+  User-supplied prompt input is bounded (resume `job_description` ≤ 20 000 chars, CV ≤ 20 000).
+- **CV extraction**: one `cv_extract` call validated by pydantic (`complete_model`, one corrective
+  retry). Skill names are cleaned before they become evidence (`split_skill_names`: "React 19" →
+  React, "Redis (Asynq)" → Redis + Asynq) so they meet job postings on the same canonical key;
+  matching to the taxonomy is exact / alias / spelling-insensitive, never fuzzy. A new CV
+  replaces the previous CV's evidence; scanned PDFs (no text layer) are refused with a message.
+- **Portfolio crawler**: home page + up to 3 linked project/about pages on the same host; only
+  public addresses on ports 80/443 (every redirect re-checked), 2 MB per page. Technologies are
+  whole-word taxonomy matches.
 
 Facts are only trusted for the posting version they were read from
 (`llm_facts_hash == content_hash`); a job is rescored when facts arrive. Skill names on

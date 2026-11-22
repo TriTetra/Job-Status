@@ -167,7 +167,9 @@ def get_settings() -> Settings:
         github_token=os.getenv("GITHUB_TOKEN") or None,
         github_client_id=os.getenv("GITHUB_CLIENT_ID") or None,
         github_client_secret=os.getenv("GITHUB_CLIENT_SECRET") or None,
-        github_redirect_uri=os.getenv("GITHUB_REDIRECT_URI") or None,
+        # Default: the site's own callback (the web app proxies /api to the API)
+        github_redirect_uri=os.getenv("GITHUB_REDIRECT_URI")
+        or os.getenv("WEB_APP_URL", "http://localhost:3000").rstrip("/") + "/api/oauth/github/callback",
         # Secure cookies also work on http://localhost in current browsers; set false only for odd dev setups
         session_cookie_secure=_bool("SESSION_COOKIE_SECURE", True),
         token_encryption_key=os.getenv("TOKEN_ENCRYPTION_KEY") or None,

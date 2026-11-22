@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Evidence — CV, Portfolio, GitHub Fixes | CV skills cleaned to canonical names (catalog match 15/51 → 39/54 on a real CV), validated extraction with retry, re-upload replaces old evidence, education/certifications/highlights kept, pending papers not counted as verified; portfolio crawler public-only (SSRF closed), whole-word skills, real project blocks, readable errors; GitHub repos analysed after connecting, "Not set up" instead of a raw error | ✅ Tamam | 2026-11-22 |
 | Web Accounts — Clear Admin Setup Screen | The one-time first-account screen now says what it is: "Create the admin account", shown once because the site has no accounts yet; later people join by invite link. Design reference of every screen published | ✅ Tamam | 2026-11-22 |
 | LLM — Native Anthropic Provider | With ANTHROPIC_API_KEY the gateway calls Claude via the official SDK: claude-opus-5-5 for interactive tasks (effort medium, server-side refusal fallback), claude-haiku-5-5 for bulk (effort low); cost from list prices; OpenRouter stays as fallback provider | ✅ Tamam | 2026-11-22 |
 | LLM — Data Policy + Resume Guard | OpenRouter requests restricted to providers that don't store/train on prompts (data_collection=deny, verified live); resume generation input bounded and LLM failures mapped to 429/502/503 instead of raw 500s; env audit | ✅ Tamam | 2026-11-22 |
@@ -99,6 +100,34 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Evidence — Fixes] — 2026-11-22 — CV extraction, portfolio crawler, GitHub connection ✅
+
+**Neden:** Denetimde (bir önceki kayıt) CV becerilerinin çoğunun ilanlarla eşleşmediği, portfolyo okuyucunun hem kaba hem güvensiz olduğu, GitHub bağlantısının hiç çalışmadığı görüldü.
+
+### CV
+- **Beceri adları temizleniyor** (`knowledge/skill_names.split_skill_names`): "React 19" → React, "PostgreSQL 17" → PostgreSQL, "Redis (Asynq)" → Redis + Asynq, "LangChain / CrewAI" → iki beceri, "Python (advanced)" → Python; katalogdaki "OAuth 2.0" gibi adlar bozulmuyor. Skorlama ilanlarla aynı anahtarı kullandığı için bu doğrudan eşleşme demek.
+- **Bulanık eşleşme kaldırıldı:** tam ad / alias / yazım farkı ("Hugging Face" = "HuggingFace"); "OpenAlex API" artık "OpenAI API" sayılmıyor.
+- **Katalog 87 → 137 beceri:** Linux, Bash, Git, C#, .NET, HTML/CSS, Tailwind CSS, test araçları, Nginx, RabbitMQ, JWT, Supabase, pgvector, LLM, OpenCV, ROS 2, Power BI… (seed yalnız ekler; deploy'da gelir).
+- **Çıkarım** (`resume_llm.py`): tipli pydantic şema + `complete_model` (bozuk JSON'da bir düzeltme denemesi), katalog adları prompt'ta, dürüst güven dağılımı istemi, deneyimde ölçülebilir sonuçlar (`highlights`), başarılarda `status` (submitted / under_review / in_progress → güven 0.6, "doğrulanmış" sayılmıyor), 20 000 karakter, 12 000 token tavanı.
+- **Pipeline** (`resume.py`): yeni CV eskisinin kanıtını siliyor (çift kayıt yok; hata olursa eskisi kalıyor), aynı beceri bir kez (en yüksek güvenle), eğitim ve sertifikalar kanıt olarak yazılıyor, taranmış PDF (metin yok) anlaşılır mesajla reddediliyor, ham LLM/HTTP hataları tarayıcıya gitmiyor.
+- **Gerçek CV ile ölçüm** (Haiku 5.5, OpenRouter, $0.0045, 31 sn, tek çağrı): katalogla eşleşen beceri 15/51 → **39/54**; güven dağılımı 8 yüksek / 40 orta / 6 düşük (önce neredeyse hepsi 0.9); %30 FCP, %92 mAP, ~40 ms, %25 sonuçları yakalandı; IEEE makalesi "submitted". Üretim Opus 5.5 kullanıyor.
+
+### Portfolio
+- **Güvenlik:** yalnız herkese açık adresler (localhost, özel ağlar, 169.254.169.254, konteyner adları reddediliyor; IPv4-mapped IPv6 dahil), yalnız 80/443, her yönlendirme yeniden kontrol, sayfa başı 2 MB.
+- **Okuma:** ana sayfa + aynı sitedeki en çok 3 proje/çalışma/hakkında sayfası; script/style metni yok sayılıyor; teknolojiler taksonomiden tam kelime eşleşmesiyle ("google" içindeki "go", "digital" içindeki "git", "javascript" içindeki "java" artık sayılmıyor; "Rust" büyük harfle); proje bloğu class/id **token**'ıyla ("network", "framework" proje sayılmıyor), "Projects" gibi bölüm başlıkları proje sayılmıyor.
+- JavaScript ile çizilen siteye açık mesaj; tarama başarısızsa hiçbir şey kaydedilmiyor; arayüz hata ve sonucu gösteriyor ("Found 4 projects and 9 technologies across 2 pages.").
+
+### GitHub
+- OAuth uygulaması yoksa satır **"Not set up"** gösteriyor (ham `{"detail": …}` sayfası yerine); `GITHUB_REDIRECT_URI` artık isteğe bağlı (varsayılan `WEB_APP_URL/api/oauth/github/callback`).
+- Bağlanınca depolar **arka planda analiz ediliyor** (eskiden sync hiç çağrılmıyordu → kanıt üretmiyordu).
+- Dönüş sayfası state içinde (değiştirilemez): onboarding → 4. adım (CONNECTIONS), Settings → Account sekmesi (`?tab=account` artık çalışıyor). İptal / hata / yapılandırılmamış durumları sayfada cümleyle gösteriliyor.
+- `docs/DEVELOPMENT.md`: GitHub OAuth App kurulum adımları.
+
+### Doğrulama
+- 480 test (yeni: `test_resume_extraction.py`, `test_portfolio.py`, GitHub dönüş/state/yapılandırma testleri); ruff, tsc, eslint temiz; `next build` başarılı.
 
 ---
 

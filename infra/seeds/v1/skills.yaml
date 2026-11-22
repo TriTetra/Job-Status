@@ -436,3 +436,302 @@ skills:
   category: Architecture
   subcategory: Core
   aliases: [distributed systems]
+- name: Linux
+  slug: linux
+  category: Engineering
+  subcategory: Core
+  aliases: []
+
+- name: Bash
+  slug: bash
+  category: Engineering
+  subcategory: Languages
+  aliases: [shell scripting, shell]
+
+- name: Git
+  slug: git
+  category: Engineering
+  subcategory: Core
+  aliases: []
+
+- name: "C#"
+  slug: csharp
+  category: Engineering
+  subcategory: Languages
+  aliases: [c sharp]
+
+- name: ".NET"
+  slug: dotnet
+  category: Engineering
+  subcategory: Frameworks
+  aliases: [dotnet, asp.net, .net core]
+
+- name: R
+  slug: r-lang
+  category: Data
+  subcategory: Languages
+  aliases: [r language]
+
+- name: MATLAB
+  slug: matlab
+  category: Engineering
+  subcategory: Languages
+  aliases: []
+
+- name: Dart
+  slug: dart
+  category: Engineering
+  subcategory: Languages
+  aliases: []
+
+- name: HTML
+  slug: html
+  category: Engineering
+  subcategory: Frontend
+  aliases: [html5]
+
+- name: CSS
+  slug: css
+  category: Engineering
+  subcategory: Frontend
+  aliases: [css3]
+
+- name: Tailwind CSS
+  slug: tailwind-css
+  category: Engineering
+  subcategory: Frontend
+  aliases: [tailwind, tailwindcss]
+
+- name: Redux
+  slug: redux
+  category: Engineering
+  subcategory: Frontend
+  aliases: [redux toolkit]
+
+- name: Vite
+  slug: vite
+  category: Engineering
+  subcategory: Frontend
+  aliases: []
+
+- name: Jest
+  slug: jest
+  category: Engineering
+  subcategory: Testing
+  aliases: []
+
+- name: Pytest
+  slug: pytest
+  category: Engineering
+  subcategory: Testing
+  aliases: []
+
+- name: Playwright
+  slug: playwright
+  category: Engineering
+  subcategory: Testing
+  aliases: []
+
+- name: Cypress
+  slug: cypress
+  category: Engineering
+  subcategory: Testing
+  aliases: []
+
+- name: Selenium
+  slug: selenium
+  category: Engineering
+  subcategory: Testing
+  aliases: []
+
+- name: Puppeteer
+  slug: puppeteer
+  category: Engineering
+  subcategory: Testing
+  aliases: []
+
+- name: Nginx
+  slug: nginx
+  category: Engineering
+  subcategory: DevOps
+  aliases: []
+
+- name: Jenkins
+  slug: jenkins
+  category: Engineering
+  subcategory: DevOps
+  aliases: []
+
+- name: GitLab CI
+  slug: gitlab-ci
+  category: Engineering
+  subcategory: DevOps
+  aliases: [gitlab ci/cd]
+
+- name: Prometheus
+  slug: prometheus
+  category: Engineering
+  subcategory: DevOps
+  aliases: []
+
+- name: Grafana
+  slug: grafana
+  category: Engineering
+  subcategory: DevOps
+  aliases: []
+
+- name: RabbitMQ
+  slug: rabbitmq
+  category: Engineering
+  subcategory: Backend
+  aliases: []
+
+- name: Celery
+  slug: celery
+  category: Engineering
+  subcategory: Backend
+  aliases: []
+
+- name: WebSockets
+  slug: websockets
+  category: Engineering
+  subcategory: APIs
+  aliases: [websocket]
+
+- name: JWT
+  slug: jwt
+  category: Security
+  subcategory: Auth
+  aliases: [json web tokens]
+
+- name: Firebase
+  slug: firebase
+  category: Engineering
+  subcategory: Backend
+  aliases: []
+
+- name: Supabase
+  slug: supabase
+  category: Engineering
+  subcategory: Backend
+  aliases: []
+
+- name: Prisma
+  slug: prisma
+  category: Engineering
+  subcategory: Databases
+  aliases: []
+
+- name: SQLAlchemy
+  slug: sqlalchemy
+  category: Engineering
+  subcategory: Databases
+  aliases: []
+
+- name: pgvector
+  slug: pgvector
+  category: Data
+  subcategory: Databases
+  aliases: []
+
+- name: Vector Databases
+  slug: vector-databases
+  category: AI/ML
+  subcategory: LLMs
+  aliases: [vector search, vector database, pinecone, weaviate, qdrant, chroma]
+
+- name: LLM
+  slug: llm
+  category: AI/ML
+  subcategory: LLMs
+  aliases: [large language model]
+
+- name: Prompt Engineering
+  slug: prompt-engineering
+  category: AI/ML
+  subcategory: LLMs
+  aliases: []
+
+- name: Keras
+  slug: keras
+  category: AI/ML
+  subcategory: Libraries
+  aliases: []
+
+- name: XGBoost
+  slug: xgboost
+  category: AI/ML
+  subcategory: Libraries
+  aliases: []
+
+- name: OpenCV
+  slug: opencv
+  category: AI/ML
+  subcategory: Computer Vision
+  aliases: []
+
+- name: Object Detection
+  slug: object-detection
+  category: AI/ML
+  subcategory: Computer Vision
+  aliases: []
+
+- name: Transformers
+  slug: transformers
+  category: AI/ML
+  subcategory: Libraries
+  aliases: [transformer]
+
+- name: Streamlit
+  slug: streamlit
+  category: Data
+  subcategory: Processing
+  aliases: []
+
+- name: Power BI
+  slug: power-bi
+  category: Data
+  subcategory: Processing
+  aliases: [powerbi]
+
+- name: Tableau
+  slug: tableau
+  category: Data
+  subcategory: Processing
+  aliases: []
+
+- name: Excel
+  slug: excel
+  category: Data
+  subcategory: Processing
+  aliases: [microsoft excel]
+
+- name: ROS 2
+  slug: ros2
+  category: Engineering
+  subcategory: Robotics
+  aliases: [ros2, ros]
+
+- name: Embedded Systems
+  slug: embedded-systems
+  category: Engineering
+  subcategory: Robotics
+  aliases: [embedded]
+
+- name: Unity
+  slug: unity
+  category: Engineering
+  subcategory: Frameworks
+  aliases: [unity3d]
+
+- name: Figma
+  slug: figma
+  category: Engineering
+  subcategory: Frontend
+  aliases: []
+
+- name: Agile
+  slug: agile
+  category: Architecture
+  subcategory: Operations
+  aliases: [scrum, kanban]

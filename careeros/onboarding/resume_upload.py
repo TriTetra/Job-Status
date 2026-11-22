@@ -8,7 +8,7 @@ from careeros.db.connection import db
 from careeros.evidence.models.resume_document import ResumeDocument
 from careeros.identity.repositories.user_repo import UserRepository
 from careeros.identity.domain.onboarding import OnboardingState
-from careeros.evidence.resume import process_resume
+from careeros.evidence.resume import ResumeTextError, process_resume
 from careeros.shared.background import BackgroundJob
 from careeros.shared.config import ROOT
 
@@ -64,12 +64,17 @@ def run_extraction(job: BackgroundJob, file_path: Path, user_id: str, filename: 
                     "skills_extracted": summary["skills_count"],
                     "experience_count": summary["experience_count"],
                     "projects_count": summary["projects_count"],
-                    "evidence_items": summary["skills_count"] + summary["experience_count"] + summary["projects_count"],
+                    "evidence_items": summary["evidence_items"],
                 },
                 progress=100,
                 status="completed",
             )
             job.log("Extraction complete — Career Graph ready")
-    except Exception as exc:
+    except ResumeTextError as exc:
+        logger.info("CV for %s has no text layer", user_id)
+        job.fail(exc, str(exc))
+    except Exception:
+        # Details (LLM / HTTP errors) go to the log, not to the browser
         logger.exception("CV extraction failed for %s", user_id)
-        job.fail(exc, f"Extraction failed: {exc}")
+        friendly = "We couldn't read this CV right now. Try again in a minute, or skip this step."
+        job.fail(friendly, friendly)

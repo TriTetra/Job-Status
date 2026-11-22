@@ -3,7 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from careeros.evidence import items, portfolio
@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 class PortfolioCrawlRequest(BaseModel):
-    url: str
+    url: str = Field(min_length=3, max_length=2000)
 
 
 @router.get("/items")

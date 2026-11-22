@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { API_BASE } from "@/lib/api/client";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { onboardingApi } from "@/features/onboarding/api";
+import {
+  crawlErrorMessage, crawlSummary, githubNotice, NOTICE_COLOR, type Notice,
+} from "@/features/onboarding/connect-messages";
 import {
   Github, Globe, Code, Gitlab, Dribbble, Figma, Database,
   GraduationCap, FlaskConical, Linkedin, Palette, Check, X,
@@ -37,7 +41,8 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [crawling, setCrawling] = useState(false);
-
+  const [portfolioNotice, setPortfolioNotice] = useState<Notice | null>(null);
+  const notice = githubNotice(useSearchParams().get("github"));
 
   const fetchSources = useCallback(() => {
     onboardingApi.getEvidenceSources()
@@ -55,7 +60,7 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
 
   const handleConnect = (s: Source) => {
     if (s.connect_kind === "oauth" && s.oauth_provider) {
-      window.location.assign(`${API_BASE}/api/oauth/${s.oauth_provider}/authorize`);
+      window.location.assign(`${API_BASE}/api/oauth/${s.oauth_provider}/authorize?return_to=onboarding`);
     } else if (s.connect_kind === "url") {
       setPortfolioOpen(true);
     }
@@ -72,18 +77,22 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
   const handleCrawl = async () => {
     if (!portfolioUrl) return;
     setCrawling(true);
+    setPortfolioNotice(null);
     try {
-      await onboardingApi.crawlPortfolio(portfolioUrl);
+      const result = await onboardingApi.crawlPortfolio(portfolioUrl);
       setPortfolioOpen(false);
       setPortfolioUrl("");
+      setPortfolioNotice({ tone: "ok", text: crawlSummary(result) });
       fetchSources();
-    } catch (e) { console.error(e); }
-    finally { setCrawling(false); }
+    } catch (e) {
+      setPortfolioNotice({ tone: "error", text: crawlErrorMessage(e) });
+    } finally { setCrawling(false); }
   };
 
   const renderRecommended = (s: Source) => {
     const Icon = ICONS[s.icon] || Globe;
     const soon = s.status === "coming_soon";
+    const unavailable = s.status === "unavailable";
     return (
       <div key={s.id}>
         <div
@@ -91,7 +100,7 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
           style={{
             borderColor: s.connected ? "var(--accent)" : "var(--border)",
             background: s.connected ? "rgba(255,177,98,0.05)" : "var(--surface)",
-            opacity: soon ? 0.55 : 1,
+            opacity: soon || unavailable ? 0.55 : 1,
           }}
         >
           <Icon className="h-5 w-5 shrink-0" style={{ color: s.connected ? "var(--accent)" : "var(--text-muted)" }} />
@@ -101,6 +110,13 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
           </div>
           {soon ? (
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--border)] text-[var(--text-muted)]">Soon</span>
+          ) : unavailable ? (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--border)] text-[var(--text-muted)]"
+              title="The site admin hasn't set up GitHub sign-in yet"
+            >
+              Not set up
+            </span>
           ) : s.connected ? (
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: "rgba(255,177,98,0.15)", color: "var(--accent)" }}>
@@ -128,9 +144,15 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
               onKeyDown={(e) => e.key === "Enter" && handleCrawl()}
             />
             <button onClick={handleCrawl} disabled={!portfolioUrl || crawling} className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40" style={{ background: "var(--accent)", color: "var(--accent-fg)" }}>
-              {crawling ? "…" : "Add"}
+              {crawling ? "Reading…" : "Add"}
             </button>
           </div>
+        )}
+        {s.connect_kind === "url" && portfolioNotice && (
+          <p className="text-xs mt-1.5 ml-8" role={portfolioNotice.tone === "error" ? "alert" : "status"}
+             style={{ color: NOTICE_COLOR[portfolioNotice.tone] }}>
+            {portfolioNotice.text}
+          </p>
         )}
       </div>
     );
@@ -147,6 +169,12 @@ export function StepConnections({ onComplete }: StepConnectionsProps) {
         <p className="text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
           {roleTitle ? `Recommended for ${roleTitle}.` : "Link accounts to strengthen your signals."}
         </p>
+        {notice && (
+          <p className="text-xs mt-2" role={notice.tone === "error" ? "alert" : "status"}
+             style={{ color: NOTICE_COLOR[notice.tone] }}>
+            {notice.text}
+          </p>
+        )}
       </div>
 
       {recommended.length > 0 && (

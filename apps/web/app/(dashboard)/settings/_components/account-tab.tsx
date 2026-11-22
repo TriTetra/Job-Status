@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMe } from "@/features/auth/use-me";
 import { settingsApi, API_BASE } from "@/features/settings/api";
 import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
+import {
+  crawlErrorMessage, crawlSummary, githubNotice, type Notice,
+} from "@/features/onboarding/connect-messages";
 import { Section, Row, UnderlineInput } from "./kit";
 import { InvitesSection, PasswordRow } from "./access-section";
 
@@ -14,6 +18,8 @@ export function AccountTab() {
   const [urlOpen, setUrlOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [portfolioNotice, setPortfolioNotice] = useState<Notice | null>(null);
+  const ghNotice = githubNotice(useSearchParams().get("github"));
 
   const refresh = () => {
     settingsApi
@@ -29,17 +35,21 @@ export function AccountTab() {
   useEffect(refresh, []);
 
   const connectGithub = () => {
-    window.location.assign(`${API_BASE}/api/oauth/github/authorize`);
+    window.location.assign(`${API_BASE}/api/oauth/github/authorize?return_to=settings`);
   };
 
   const addPortfolio = async () => {
     if (!url) return;
     setBusy(true);
+    setPortfolioNotice(null);
     try {
-      await settingsApi.crawlPortfolio(url);
+      const result = await settingsApi.crawlPortfolio(url);
       setUrlOpen(false);
       setUrl("");
+      setPortfolioNotice({ tone: "ok", text: crawlSummary(result) });
       refresh();
+    } catch (e) {
+      setPortfolioNotice({ tone: "error", text: crawlErrorMessage(e) });
     } finally {
       setBusy(false);
     }
@@ -66,7 +76,7 @@ export function AccountTab() {
       {me?.is_admin && <InvitesSection />}
 
       <Section title="Proof sources">
-        <Row label="GitHub" hint="Repository analysis raises skill confidence">
+        <Row label="GitHub" hint={ghNotice?.text ?? "Repository analysis raises skill confidence"}>
           {github?.connected ? (
             <span className="flex items-center gap-4">
               <span className="text-sm" style={{ color: "var(--success)" }}>
@@ -83,6 +93,10 @@ export function AccountTab() {
                 Disconnect
               </button>
             </span>
+          ) : github?.available === false ? (
+            <span className="text-xs" style={{ color: "var(--text-muted)" }} title="The site admin hasn't set up GitHub sign-in yet">
+              Not set up
+            </span>
           ) : (
             <button
               className={textBtn}
@@ -94,7 +108,7 @@ export function AccountTab() {
           )}
         </Row>
 
-        <Row label="Portfolio" hint="Crawled for projects and technologies">
+        <Row label="Portfolio" hint={portfolioNotice?.text ?? "Crawled for projects and technologies"}>
           {portfolio?.connected ? (
             <span className="flex items-center gap-4 min-w-0">
               <span className="text-sm truncate" style={{ color: "var(--success)" }}>
@@ -126,7 +140,7 @@ export function AccountTab() {
                 onClick={addPortfolio}
                 disabled={busy}
               >
-                {busy ? "Crawling…" : "Add"}
+                {busy ? "Reading…" : "Add"}
               </button>
             </span>
           ) : (

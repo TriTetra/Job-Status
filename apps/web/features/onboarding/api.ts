@@ -137,6 +137,7 @@ export const onboardingApi = {
 
   crawlPortfolio(url: string): Promise<{
     status: string;
+    pages_read?: number;
     projects_found: number;
     technologies_found: number;
     evidence_created: number;

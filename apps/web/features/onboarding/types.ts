@@ -106,6 +106,8 @@ export interface EvidenceReview {
 
 export interface GithubStatus {
   connected: boolean;
+  /** false until the site admin configures a GitHub OAuth app */
+  available?: boolean;
   username?: string;
   provider_user_id?: string;
   metadata?: { avatar_url?: string; public_repos?: number; followers?: number; bio?: string | null };

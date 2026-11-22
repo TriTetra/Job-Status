@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from careeros.identity.models.connected_account import ConnectedAccount
 from careeros.evidence.models.evidence_source import EvidenceSource
+from careeros.identity import github_account
 from careeros.identity.current_role import CurrentRole, get_current_role
 from careeros.knowledge.seeds import load_seed
 
@@ -63,6 +64,10 @@ def list_sources(session: Session, user_id: str) -> dict:
         ).all()
     }
     view = present_sources(sources, suggested, connected)
+    if not github_account.configured():
+        for row in view["all"]:
+            if row["oauth_provider"] == "github" and row["status"] == "available" and not row["connected"]:
+                row["status"] = "unavailable"  # "Not set up" instead of a dead Connect button
     return {
         "recommended": view["recommended"],
         "all": view["all"],

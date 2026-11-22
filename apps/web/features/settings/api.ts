@@ -62,7 +62,7 @@ export const settingsApi = {
   disconnectGithub: () => apiFetch<{ status: string }>("/api/oauth/github", { method: "DELETE" }),
   disconnectPortfolio: () => apiFetch<{ status: string }>("/api/evidence/portfolio", { method: "DELETE" }),
   crawlPortfolio: (url: string) =>
-    apiFetch<{ status: string; projects_found: number; technologies_found: number; evidence_created: number }>("/api/evidence/portfolio/crawl", {
+    apiFetch<{ status: string; pages_read?: number; projects_found: number; technologies_found: number; evidence_created: number }>("/api/evidence/portfolio/crawl", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
