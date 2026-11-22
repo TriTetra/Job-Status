@@ -127,6 +127,7 @@ Sıralama: en yeniden en eskiye.
 ### Doğrulama
 - Ayrık önizlemede (atılabilir Postgres, 7 pano örnek verisi) tarayıcıda: 1366×768 ve 1920×1080'de Companies, şirket sayfası ve Market'te sayfa kaymıyor; logolar yükleniyor (128 px); şirket seçimi paneli değiştiriyor; 375 px'te yatay taşma yok.
 - 555 test (yeni `test_weekly_new_buckets_oldest_first`), ruff, tsc, eslint, `next build` temiz.
+- **Yayında:** `c5560cf` push edildi, Coolify'da yeniden dağıtıldı (Finished, 1 dk). career.abdullokh.xyz 200 (sign-in), `/api/companies/boards/{key}` ve `/api/market/jobs` oturumsuz 401.
 
 ---
 
