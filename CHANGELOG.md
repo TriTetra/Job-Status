@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Analysis — Briefing + Discover | End-to-end audit of Briefing, Opportunities, Companies, Market; Dribbble/Pinterest references; redesign + P0–P3 roadmap (no code change) | 📝 Analiz | 2026-11-22 |
 | Evidence — Public Profile Sources | GitHub, GitLab, Stack Overflow, ORCID, Medium and Substack connect by username / link from their public APIs and feeds — no OAuth app, no keys; verified live against all six; onboarding and Settings share one connect flow | ✅ Tamam | 2026-11-22 |
 | Evidence — CV, Portfolio, GitHub Fixes | CV skills cleaned to canonical names (catalog match 15/51 → 39/54 on a real CV), validated extraction with retry, re-upload replaces old evidence, education/certifications/highlights kept, pending papers not counted as verified; portfolio crawler public-only (SSRF closed), whole-word skills, real project blocks, readable errors; GitHub repos analysed after connecting, "Not set up" instead of a raw error | ✅ Tamam | 2026-11-22 |
 | Web Accounts — Clear Admin Setup Screen | The one-time first-account screen now says what it is: "Create the admin account", shown once because the site has no accounts yet; later people join by invite link. Design reference of every screen published | ✅ Tamam | 2026-11-22 |
@@ -101,6 +102,25 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Analysis — Briefing + Discover] — 2026-11-22 — How the home and Discover pages really work 📝
+
+**Neden:** "Sistem akıllı mı?" sorusu — Briefing ve Discover (Opportunities, Companies, Market) kod düzeyinde uçtan uca incelendi; Dribbble ve Pinterest'ten referans toplandı. Kod değişmedi; sonuç bir analiz sayfası olarak yayınlandı.
+
+**Doğrulanmış kritik bulgular**
+- Opportunities: skor kararı API'de `explanation.decision` içinde, `JobWithScore` bunu taşımıyor, web `opp.decision` okuyor → kart etiketi hep "Worth a look", kriterler ve "next step" boş (ancak "Why N?" ile doluyor).
+- Apply / Shortlist / Skip: başvuru kaydı yoksa `advance_status` → None → 404; kararlar hiçbir yerde okunmuyor.
+- Settings → Scoring ağırlıkları taramada hiç kullanılmıyor.
+- Briefing: tüm metin web'de şablon (LLM yok); en iyi 2 ilan; butonlar `console.log`; saat web sunucusunun (UTC) saatinden; "View career graph" grafiği yeniden kuruyor.
+- Companies: elle seed (14 şirket), panolarla bağ yok; `hiring_trend` / `open_positions_count` hiç yazılmıyor → herkes STABLE / 0.
+- Market: yalnız elle Refresh; beceri sayımları tekilleştirme yüzünden ~1; LOW etki hiç yok; Refresh işi beklemiyor.
+- Skor: konum/maaş/vize elemiyor; web varsayılanı on-site/hybrid ilanları ×0.3 cezalandırıyor; "market demand" 17 becerilik sabit tablo; "career value" eksik beceri arttıkça yükseliyor.
+
+**Referanslar:** Merit (düzenlenebilir kural cümlesi, satır içi kanıt onayı), "Your briefing is ready" (bulgu + Dismiss + fiil), "A morning briefing in one scroll" (bedelli dürtmeler), Northline (büyük serif rakam), Pinterest gazete ızgarası; kart+grafik SaaS panoları kaçınılacak örnek.
+
+**Yol haritası:** P0 kırıklar (~2 gün) → P1 Briefing v2: "dünden beri ne değişti" (~3 gün) → P2 Opportunities v2: kural cümlesi, gerçek filtreler, öğrenen Atla (~3 gün) → P3 Companies + Market panolardan (~4 gün).
 
 ---
 
