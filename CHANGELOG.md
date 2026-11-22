@@ -135,6 +135,9 @@ Sıralama: en yeniden en eskiye.
 - **Refresh** işin bitmesini bekliyor (durum sorgusu, en çok 3 dk) — eskiden 3 sn sonra eski veriyi yeniliyordu.
 - Varsayılan pencere 7 → 30 gün (HN sinyalleri ayın başı tarihli).
 
+### Canlıda
+- 2026-11-22 14:11, `9e5ff44` (≈1 dk): API sağlıklı, seed temiz (137 beceri, 19 kaynak), hata logu yok; `/api/jobs/decide` oturumsuz 401. Kullanıcıya not: bir kez **Scan Now** (SCORER_VERSION 5 → tüm ilanlar yeni kurallarla) ve Market'te bir kez **Refresh** (eski sayımlar düzelir).
+
 ### Doğrulama
 - 529 test (yeni `test_p0_fixes.py`: tercih eşlemesi, ağırlık ölçekleme/parmak izi/skora etkisi, ofis cezası 5 durum, decision serileştirme, karar → başvuru oluşturma, bilinmeyen iş/durum, bahis sayımı, etki bantları); ruff, tsc, eslint, `next build` temiz; saat dilimi yardımcısı UTC sunucuda İstanbul saati ile denendi.
 
