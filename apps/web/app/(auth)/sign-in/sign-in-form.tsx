@@ -32,11 +32,17 @@ export function SignInForm() {
   if (setupNeeded) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
-          Set up this workspace. The first account is the admin — you&apos;ll invite everyone else from Settings.
-        </p>
+        <div className="text-center space-y-1.5">
+          <h1 className="text-base font-medium" style={{ color: "var(--text-primary)" }}>
+            Create the admin account
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            This workspace has no accounts yet, so this screen appears once. After this, everyone signs in
+            with email and password, and new people join through invite links you create in Settings.
+          </p>
+        </div>
         <AccountForm
-          submitLabel="Create account"
+          submitLabel="Create admin account"
           onSubmit={async (account) => {
             await authApi.setup(account);
             window.location.assign("/onboarding");

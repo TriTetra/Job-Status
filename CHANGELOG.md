@@ -8,6 +8,8 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+|---|---|---|---|
+| Web Accounts — Clear Admin Setup Screen | The one-time first-account screen now says what it is: "Create the admin account", shown once because the site has no accounts yet; later people join by invite link. Design reference of every screen published | ✅ Tamam | 2026-11-22 |
 | LLM — Native Anthropic Provider | With ANTHROPIC_API_KEY the gateway calls Claude via the official SDK: claude-opus-5-5 for interactive tasks (effort medium, server-side refusal fallback), claude-haiku-5-5 for bulk (effort low); cost from list prices; OpenRouter stays as fallback provider | ✅ Tamam | 2026-11-22 |
 | LLM — Data Policy + Resume Guard | OpenRouter requests restricted to providers that don't store/train on prompts (data_collection=deny, verified live); resume generation input bounded and LLM failures mapped to 429/502/503 instead of raw 500s; env audit | ✅ Tamam | 2026-11-22 |
 | Deploy — Separate Database + Backups | PostgreSQL moved out of the compose stack into its own Coolify resource (PGVector 17) with daily scheduled backups; app joins its network via DATABASE_URL (postgres:// accepted); build args no longer injected (secrets out of image builds) | ✅ Tamam | 2026-11-22 |
@@ -97,6 +99,18 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Web Accounts — Setup Copy] — 2026-11-22 — Admin setup screen explains itself + design reference ✅
+
+**Neden:** Canlı sitede ilk açılışta gelen ekran "kayıt ol" sayfası gibi görünüyordu; aslında bir kerelik yönetici kurulumu. Ayrıca mevcut tasarımın tüm ekranlarıyla belgelenmesi istendi.
+
+- `apps/web/app/(auth)/sign-in/sign-in-form.tsx`: kurulum modunda başlık **"Create the admin account"**, açıklama: hesap yok → bu ekran bir kez çıkar; sonrası e-posta + şifre ile giriş, yeni kişiler Settings'teki davet linkleriyle. Buton: "Create admin account".
+- Mevcut tasarımın referans belgesi (token'lar, uygulama kabuğu, menüler, tüm ekranlar ve durumları, bileşenler, tespit edilen tutarsızlıklar) artifact olarak yayınlandı.
+- Tespit edilen tasarım borçları (henüz düzeltilmedi): sidebar'da sayfası olmayan 4 link (Evidence, Learning, Resume, Analytics → 404), mobilde menü yok, bildirim zili ve kullanıcı satırı işlevsiz, briefing'deki "Apply / Generate resume" yalnız console.log, `Outfit` fontu yüklenmiyor, tanımsız `animate-fade-in` / `custom-scrollbar` sınıfları, global 404/hata sayfası yok.
+- Phase tablosuna eksik olan başlık ayırıcı satırı eklendi (tablo artık düzgün görünüyor).
+- Doğrulama: tsc + eslint temiz; canlıda `/api/auth/setup` → `{"needed": true}` (henüz hesap yok).
 
 ---
 
