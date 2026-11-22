@@ -9,6 +9,8 @@ Every call names a task. The task picks the model (bulk tasks → the fast model
 LLM_TASK_MODELS overrides) and the budget it draws from. Before a call the usage
 guard may refuse it (LLMBudgetExceeded); after it, tokens, cost and latency are
 recorded — never the prompt. At most LLM_MAX_CONCURRENCY calls run at once.
+On OpenRouter, requests go only to providers that don't collect prompt data
+(LLM_DATA_COLLECTION=allow widens that).
 
 Transient failures (timeouts, connection errors, HTTP 429/5xx) are retried with
 exponential backoff; anything else raises immediately. Every LLMError subclass is
@@ -113,6 +115,7 @@ class LLMClient:
         task_models: Optional[dict] = None,
         guard: Optional[UsageGuard] = None,
         max_concurrency: int = 4,
+        data_collection: str = "deny",
         max_retries: int = 2,
         backoff_seconds: float = 1.0,
         session: Optional[requests.Session] = None,
@@ -124,6 +127,7 @@ class LLMClient:
         self._slots = threading.BoundedSemaphore(max(1, max_concurrency))
         self._url = f"{base_url.rstrip('/')}/chat/completions"
         self._openrouter = "openrouter.ai" in base_url
+        self._data_collection = "allow" if data_collection == "allow" else "deny"
         self._headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -174,6 +178,8 @@ class LLMClient:
             payload["response_format"] = {"type": "json_object"}
         if self._openrouter:
             payload["usage"] = {"include": True}  # OpenRouter reports the real cost
+            # Route only to providers that don't store or train on prompts (CVs, profiles)
+            payload["provider"] = {"data_collection": self._data_collection}
 
         started = time.monotonic()
         try:
@@ -273,4 +279,5 @@ def get_llm_client() -> LLMClient:
         task_models=s.llm_task_models,
         guard=DbUsageGuard(s.llm_daily_budget_usd, s.llm_user_daily_budget_usd, s.llm_bulk_budget_share),
         max_concurrency=s.llm_max_concurrency,
+        data_collection=s.llm_data_collection,
     )

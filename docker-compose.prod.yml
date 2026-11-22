@@ -37,6 +37,7 @@ services:
       LLM_TASK_MODELS: ${LLM_TASK_MODELS:-}
       LLM_DAILY_BUDGET_USD: ${LLM_DAILY_BUDGET_USD:-2.0}            # all users together, per UTC day
       LLM_USER_DAILY_BUDGET_USD: ${LLM_USER_DAILY_BUDGET_USD:-0.5}
+      LLM_DATA_COLLECTION: ${LLM_DATA_COLLECTION:-deny}           # providers that don't keep prompts
       JOB_SYNC_INTERVAL_HOURS: ${JOB_SYNC_INTERVAL_HOURS:-6}        # company boards refresh
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}

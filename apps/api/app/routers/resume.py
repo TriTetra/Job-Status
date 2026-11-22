@@ -1,12 +1,17 @@
 """Resume generation router."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
+
+from careeros.shared.llm import LLMBudgetExceeded, LLMError, LLMNotConfiguredError
 
 from ..dependencies import get_user_id
 
 from ..schemas.resume import ResumeGenerateRequest, ResumeGenerateResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/generate", response_model=ResumeGenerateResponse)
@@ -37,5 +42,13 @@ def generate_resume(
         )
     except ImportError as e:
         raise HTTPException(status_code=501, detail=f"Resume generator not available: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except LLMBudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except LLMNotConfiguredError:
+        raise HTTPException(status_code=503, detail="The AI service isn't configured on this server")
+    except LLMError:
+        logger.exception("Resume generation: LLM failed for %s", user_id)
+        raise HTTPException(status_code=502, detail="The AI service failed — try again in a minute")
+    except Exception:
+        logger.exception("Resume generation failed for %s", user_id)
+        raise HTTPException(status_code=500, detail="Resume generation failed")

@@ -106,6 +106,7 @@ class Settings:
     llm_user_daily_budget_usd: float    # per signed-in user; <= 0 = no limit
     llm_bulk_budget_share: float        # bulk tasks stop at this share of the daily budget
     llm_max_concurrency: int
+    llm_data_collection: str            # OpenRouter provider policy: deny (default) | allow
 
     # GitHub
     github_token: Optional[str]
@@ -147,6 +148,8 @@ def get_settings() -> Settings:
         llm_user_daily_budget_usd=_float("LLM_USER_DAILY_BUDGET_USD", 0.5),
         llm_bulk_budget_share=_float("LLM_BULK_BUDGET_SHARE", 0.7),
         llm_max_concurrency=_int("LLM_MAX_CONCURRENCY", 4),
+        # "deny": only providers that don't store or train on prompts (CVs are personal data)
+        llm_data_collection=(os.getenv("LLM_DATA_COLLECTION") or "deny").strip().lower(),
         github_token=os.getenv("GITHUB_TOKEN") or None,
         github_client_id=os.getenv("GITHUB_CLIENT_ID") or None,
         github_client_secret=os.getenv("GITHUB_CLIENT_SECRET") or None,

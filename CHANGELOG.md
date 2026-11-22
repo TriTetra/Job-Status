@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| LLM — Data Policy + Resume Guard | OpenRouter requests restricted to providers that don't store/train on prompts (data_collection=deny, verified live); resume generation input bounded and LLM failures mapped to 429/502/503 instead of raw 500s; env audit | ✅ Tamam | 2026-11-22 |
 | Deploy — Separate Database + Backups | PostgreSQL moved out of the compose stack into its own Coolify resource (PGVector 17) with daily scheduled backups; app joins its network via DATABASE_URL (postgres:// accepted); build args no longer injected (secrets out of image builds) | ✅ Tamam | 2026-11-22 |
 | Web Accounts — Setup + Invite Links | First account created on the site (becomes admin, setup then closes), single-use invite links (7 days, optional email binding, revocable) in Settings, own password change (other devices signed out); verified with 28 end-to-end checks | ✅ Tamam | 2026-11-22 |
 | Deploy — Production Images + Coolify (live) | Multi-stage API image (no pip/setuptools at runtime, auto migrate + seed on start), cached web build, Coolify-generated secrets, memory caps and log rotation; fixed /api trailing-slash redirect that sent browsers to the internal API host; full stack smoke-tested locally | ✅ Tamam | 2026-11-22 |
@@ -95,6 +96,36 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [LLM — Audit] — 2026-11-22 — Data policy, resume guard, env audit ✅
+
+### LLM haritası (denetlendi)
+| Adım | Nerede | Task / model | Kim tetikler | Veri | Koruma |
+|---|---|---|---|---|---|
+| İlan okuma → `JobFacts` | `jobs/llm_extract.py` | `job_extract` · hızlı model | scheduler (6 saatte 300 ilan), `career-os jobs enrich` | ilan metni (≤ 7 000 karakter, kamuya açık) | bulk bütçe payı %70, ilan sürümü başına 1 kez, pydantic şema + 1 düzeltme denemesi |
+| Fırsat açıklaması | `jobs/decision_builder.py` | `reasoning` · ana model | kullanıcı "neden?" açınca | iş başlığı/şirket, kriter özetleri, beceri adları | kullanıcı bütçesi, skor satırında önbellek, LLM yoksa şablon |
+| CV okuma | `evidence/resume_llm.py` | `cv_extract` · ana model | CV yükleme | CV metni (≤ 12 000 karakter, kişisel veri) | kullanıcı bütçesi, şema doğrulama |
+| Özgeçmiş üretme | `resume/resume_generator.py` | `resume` · ana model (4 çağrı) | `POST /api/resume/generate` | kanıtlar + iş tanımı | kullanıcı bütçesi; **yeni:** iş tanımı ≤ 20 000 karakter |
+| HN "Who is hiring" | `market/sources/hackernews/llm_extractor.py` | `hn_extract` · hızlı model | market refresh (tek seferde bir tane) | kamuya açık yorumlar | run başına en çok 4 parti, bulk bütçe |
+
+Ortak: tek gateway (mimari test zorunlu kılıyor), günlük toplam/kullanıcı/bulk bütçe, 4 eşzamanlı çağrı, `llm_calls` logu (prompt saklanmaz), 429/5xx retry, anahtar yalnız API konteynerinde (web'e hiç gitmiyor).
+
+### Bu turda kapatılan açıklar
+- **Veri politikası:** OpenRouter'a her istek `provider.data_collection=deny` ile gidiyor → CV gibi kişisel metinler yalnız prompt saklamayan/eğitimde kullanmayan sağlayıcılara. Canlı denendi: `openai/gpt-4o-mini` OpenAI'ye yönlendi, maliyet $0.0000023. `LLM_DATA_COLLECTION=allow` ile genişletilebilir.
+- **Özgeçmiş API'si:** her hata ham metniyle 500 dönüyordu → bütçe 429, yapılandırma yok 503, LLM hatası 502, diğerleri genel 500 (detay logda). Girdi sınırları: şirket/başlık ≤ 200, iş tanımı ≤ 20 000.
+
+### Coolify env denetimi (Production, 20 değişken; isimler + dolu/boş, değerler okunmadı)
+- Zorunlu ve dolu: `DATABASE_URL` (postgres://, iç konteyner adı), `WEB_APP_URL`, `SERVICE_PASSWORD_64_TOKENKEY` (Coolify üretti).
+- **Boş:** `OPENROUTER_API_KEY` → LLM özellikleri yedek yollarla çalışıyor (keyword, şablon).
+- Artık kullanılmayan: `SERVICE_PASSWORD_POSTGRES` (eski gömülü DB) — silinebilir.
+- Coolify'ın kendi yönettiği: `SERVICE_URL_WEB`, `SERVICE_FQDN_WEB` (domainden), `API_URL`, `TOKEN_ENCRYPTION_KEY` (compose'tan türetilen).
+- İsteğe bağlı (varsayılanlar iyi): `DEFAULT_MODEL`, `LLM_FAST_MODEL`, `LLM_TASK_MODELS`, `LLM_DAILY_BUDGET_USD`, `LLM_USER_DAILY_BUDGET_USD`, `JOB_SYNC_INTERVAL_HOURS`, `LOG_LEVEL`, `GITHUB_*` (GitHub bağlantısı istenirse).
+- "Preview deployments" altındaki kopyalar kullanılmıyor.
+
+### Yeni veritabanı canlıda
+- `75a94e1` deploy edildi (1 dk 47 sn); API ayrı `careeros-db`'ye bağlı, migration'lar orada çalıştı (`/api/auth/setup` ve davet kontrolü yeni tablolardan cevap veriyor).
 
 ---
 

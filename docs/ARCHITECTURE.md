@@ -159,6 +159,12 @@ scorer, so they are reproducible, cheap and testable.
   reports, or a pessimistic estimate.
 - **Schemas**: `complete_model(prompt, Schema)` validates JSON with pydantic and retries
   once, showing the model its validation error.
+- **Data policy**: on OpenRouter every request carries `provider.data_collection=deny`,
+  so prompts (CV text, profiles) only go to providers that don't store or train on them
+  (`LLM_DATA_COLLECTION=allow` widens the provider pool).
+- **Untrusted input**: job postings are scraped text; they only ever become a validated
+  `JobFacts` object (no tool calls, no actions), and model text is rendered as text, never HTML.
+  User-supplied prompt input is bounded (resume `job_description` ≤ 20 000 chars, CV ≤ 12 000).
 
 Facts are only trusted for the posting version they were read from
 (`llm_facts_hash == content_hash`); a job is rescored when facts arrive. Skill names on

@@ -39,6 +39,7 @@ Notable ones:
 | `LLM_FAST_MODEL`, `LLM_TASK_MODELS` | bulk model (default = `DEFAULT_MODEL`); per-task overrides `task=model,…` |
 | `LLM_DAILY_BUDGET_USD`, `LLM_USER_DAILY_BUDGET_USD`, `LLM_BULK_BUDGET_SHARE` | daily caps (2.00 / 0.50 / 0.7); `0` = no cap |
 | `LLM_MAX_CONCURRENCY` | calls in flight per process (4) |
+| `LLM_DATA_COLLECTION` | `deny` (default): OpenRouter only uses providers that don't store or train on prompts |
 | `SESSION_COOKIE_SECURE` | `true` (default) in production; `false` for http://localhost |
 | `DB_CONNECT_TIMEOUT`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW` | fail fast on an unreachable DB; pool 5 + 5 |
 | `TOKEN_ENCRYPTION_KEY` | Fernet key for stored OAuth tokens |

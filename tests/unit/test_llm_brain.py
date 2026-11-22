@@ -303,3 +303,13 @@ def test_cipher_accepts_fernet_keys_and_long_secrets():
     assert c.decrypt(c.encrypt("gho_secret")) == "gho_secret"
     with pytest.raises(ValueError):
         TokenCipher("short")
+
+
+
+def test_openrouter_requests_deny_data_collection_by_default():
+    client, session = _client(_ok())
+    client.complete("x")
+    assert session.calls[0]["json"]["provider"] == {"data_collection": "deny"}
+    allow, s2 = _client(_ok(), data_collection="allow")
+    allow.complete("x")
+    assert s2.calls[0]["json"]["provider"] == {"data_collection": "allow"}
