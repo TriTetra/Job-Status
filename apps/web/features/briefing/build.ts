@@ -12,7 +12,7 @@ import type {
   ProgressSummary,
   Recommendation,
 } from "./types";
-import { safeHttpUrl } from "@/lib/utils";
+import { displayName, safeHttpUrl } from "@/lib/utils";
 import {
   type BriefingContext,
   briefFor,
@@ -88,7 +88,7 @@ export function buildBriefing(facts: BriefingFacts, now: Date = new Date()): Bri
   };
 
   const data: BriefingData = {
-    greeting: { name: facts.first_name ?? "there", greeting: greetingFor(ctx), subtitle: subtitleFor(ctx) },
+    greeting: { name: displayName(facts.first_name) || "there", greeting: greetingFor(ctx), subtitle: subtitleFor(ctx) },
     brief: briefFor(ctx),
     focus: focusCandidates(ctx).slice(0, 3).map((c, i) => ({ number: FOCUS_NUMBERS[i], ...c })),
     opportunities,

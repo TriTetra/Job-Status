@@ -15,3 +15,15 @@ export function safeHttpUrl(value: unknown): string | null {
     return null;
   }
 }
+
+/** Scores are stored as floats (62.7468…); people read whole numbers. */
+export function formatScore(score: number | null | undefined): number {
+  return Math.round(score ?? 0);
+}
+
+/** "ABDULLOKH" or "abdullokh" (as typed / read from a CV) → "Abdullokh"; mixed case is kept. */
+export function displayName(name: string | null | undefined): string {
+  const n = (name ?? "").trim();
+  if (!n || (n !== n.toUpperCase() && n !== n.toLowerCase())) return n;
+  return n.toLowerCase().replace(/(^|[\s\-'])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
+}

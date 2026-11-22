@@ -6,7 +6,7 @@ import { NarrativeText } from "@/components/shared/narrative-text";
 import { Check, X, Minus, Loader2, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api/client";
-import { safeHttpUrl } from "@/lib/utils";
+import { formatScore, safeHttpUrl } from "@/lib/utils";
 import { WhyModal } from "./why-modal";
 
 interface OpportunityDetailPanelProps {
@@ -272,7 +272,7 @@ export function OpportunityDetailPanel({
             </>
           ) : (
             <>
-              Why {opp.career_score ?? 0}?
+              Why {formatScore(opp.career_score)}?
             </>
           )}
         </button>

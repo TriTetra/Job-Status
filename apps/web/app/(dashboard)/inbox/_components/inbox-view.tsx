@@ -191,9 +191,9 @@ export function InboxView({ initial }: { initial: InboxData }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 h-[calc(100vh-280px)]">
-          {/* Left: Scanner (compact list) */}
-          <div className="overflow-y-auto custom-scrollbar pr-4 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] lg:grid-rows-[minmax(0,1fr)] gap-8 lg:h-[calc(100vh-240px)]">
+          {/* Left: Scanner (compact list) — scrolls inside its column */}
+          <div className="max-h-[60vh] lg:max-h-none lg:min-h-0 overflow-y-auto custom-scrollbar pr-4 space-y-6">
             {grouped.strong.length > 0 && (
               <div className="space-y-2">
                 <div
@@ -266,12 +266,8 @@ export function InboxView({ initial }: { initial: InboxData }) {
 
           {/* Right: Reader (detail panel) */}
           <div
-            className="rounded-xl border overflow-hidden"
-            style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              maxHeight: "calc(100vh - 280px)",
-            }}
+            className="rounded-xl border overflow-hidden lg:min-h-0"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
           >
             {selected ? (
               <OpportunityDetailPanel

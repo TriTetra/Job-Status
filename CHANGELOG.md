@@ -135,6 +135,14 @@ Sıralama: en yeniden en eskiye.
 - **Refresh** işin bitmesini bekliyor (durum sorgusu, en çok 3 dk) — eskiden 3 sn sonra eski veriyi yeniliyordu.
 - Varsayılan pencere 7 → 30 gün (HN sinyalleri ayın başı tarihli).
 
+### Canlı ekran düzeltmeleri (kullanıcı ekran görüntüsü üzerine)
+- **Opportunities listesi sayfayı uzatıyordu** (400+ satır tek sayfa): grid sabit yükseklikliydi ama satırı içeriğe göre büyüyordu → `grid-rows-[minmax(0,1fr)]` + `min-h-0`; liste ve detay paneli kendi sütunlarında kayıyor.
+- **Skorlar ham ondalık** ("59.465235…") → tam sayı (liste, panel, Why modalı).
+- Her kartta tekrarlanan "High career value" satırı listeden kaldırıldı (career value eksik beceriyle şiştiği için neredeyse her ilanda çıkıyordu; panelde kalıyor).
+- **Briefing manşeti:** APPLY önerili ilanlar, skoru biraz daha yüksek CONSIDER'ların önünde.
+- **İsim:** "ABDULLOKH" → "Abdullokh" (tamamı büyük/küçük yazılmış isimler, Briefing + sidebar).
+- 530 test, `next build` temiz.
+
 ### Canlıda
 - 2026-11-22 14:11, `9e5ff44` (≈1 dk): API sağlıklı, seed temiz (137 beceri, 19 kaynak), hata logu yok; `/api/jobs/decide` oturumsuz 401. Kullanıcıya not: bir kez **Scan Now** (SCORER_VERSION 5 → tüm ilanlar yeni kurallarla) ve Market'te bir kez **Refresh** (eski sayımlar düzelir).
 

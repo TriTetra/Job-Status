@@ -1,7 +1,7 @@
 "use client";
 
 import type { Opportunity } from "@/features/opportunities/types";
-import { cn } from "@/lib/utils";
+import { cn, formatScore } from "@/lib/utils";
 
 interface OpportunityCardCompactProps {
   opp: Opportunity;
@@ -19,7 +19,6 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
   const label = decision?.semantic.label ?? "Worth a look";
   const company = opp.explanation?.company ?? new URL(opp.url).hostname.replace(/^www\./, "");
   const title = opp.explanation?.title ?? "Open role";
-  const secondary = decision?.semantic.secondary;
 
   const tierColor =
     tier === "strong" ? "var(--success)" : tier === "low" ? "var(--text-muted)" : "var(--text-secondary)";
@@ -40,7 +39,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
           className="font-mono text-sm font-semibold tabular-nums"
           style={{ color: "var(--text-primary)" }}
         >
-          {career_score ?? 0}
+          {formatScore(career_score)}
         </span>
         <span className="text-xs font-medium" style={{ color: tierColor }}>
           {label}
@@ -57,12 +56,6 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
         </div>
       </div>
 
-      {/* Secondary signal */}
-      {secondary && (
-        <div className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-          {secondary}
-        </div>
-      )}
     </button>
   );
 }

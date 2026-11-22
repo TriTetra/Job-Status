@@ -1,5 +1,6 @@
 "use client";
 
+import { formatScore } from "@/lib/utils";
 import type { Opportunity } from "@/features/opportunities/types";
 import { NarrativeText } from "@/components/shared/narrative-text";
 import { X } from "lucide-react";
@@ -48,7 +49,7 @@ export function WhyModal({ opp, onClose }: WhyModalProps) {
 
         {/* Header */}
         <NarrativeText size="xl" weight="semibold" className="mb-1">
-          Why {opp.career_score ?? avg}?
+          Why {opp.career_score != null ? formatScore(opp.career_score) : avg}?
         </NarrativeText>
         <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
           Scoring breakdown and weights
@@ -78,7 +79,7 @@ export function WhyModal({ opp, onClose }: WhyModalProps) {
                 className="font-mono text-lg font-bold tabular-nums"
                 style={{ color: "var(--accent)" }}
               >
-                {opp.career_score ?? avg}
+                {opp.career_score != null ? formatScore(opp.career_score) : avg}
               </span>
             </div>
           </div>

@@ -177,3 +177,32 @@ def test_market_impact_bands_include_low(fn, value, expected):
     from careeros.market.sources.hackernews import signal_extractor
 
     assert getattr(signal_extractor, fn)(value) == expected
+
+
+# ── briefing headline ─────────────────────────────────────────────────────
+
+def test_briefing_puts_apply_before_a_higher_consider_and_skips_acted_on(monkeypatch):
+    from careeros.briefing import facts
+
+    rows = [SimpleNamespace(url="nuro", career_score=63.0, recommendation="CONSIDER", skill_gaps=[], explanation={}),
+            SimpleNamespace(url="cohere", career_score=59.4, recommendation="APPLY - strong", skill_gaps=[], explanation={}),
+            SimpleNamespace(url="done", career_score=70.0, recommendation="APPLY", skill_gaps=[], explanation={}),
+            SimpleNamespace(url="rivian", career_score=57.0, recommendation="APPLY", skill_gaps=[], explanation={})]
+
+    class Repo:
+        def __init__(self, session):
+            pass
+
+        def get_top_opportunities(self, **kwargs):
+            return rows
+
+    class Q:
+        def filter(self, *a):
+            return self
+
+        def all(self):
+            return [("done",)]
+
+    monkeypatch.setattr(facts, "CareerScoreRepository", Repo)
+    out = facts._top_opportunities(SimpleNamespace(query=lambda *a: Q()), "u1")
+    assert [o["url"] for o in out] == ["cohere", "rivian"]

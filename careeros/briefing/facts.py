@@ -32,10 +32,13 @@ def _top_opportunities(session: Session, user_id: str) -> list[dict]:
         ).all()
     }
     rows = CareerScoreRepository(session).get_top_opportunities(
-        min_score=None, recommendations=("APPLY", "CONSIDER"), limit=TOP_OPPORTUNITIES + len(acted),
-        user_id=user_id,
+        min_score=None, recommendations=("APPLY", "CONSIDER"), limit=50 + len(acted), user_id=user_id,
     )
-    rows = [s for s in rows if s.url not in acted][:TOP_OPPORTUNITIES]
+    # APPLY before CONSIDER (a recommendation, not just a higher number), then by score
+    rows = sorted(
+        (s for s in rows if s.url not in acted),
+        key=lambda s: (not (s.recommendation or "").upper().startswith("APPLY"), -(s.career_score or 0)),
+    )[:TOP_OPPORTUNITIES]
     return [
         {
             "url": s.url,

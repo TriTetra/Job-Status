@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMe } from "@/features/auth/use-me";
-import { cn } from "@/lib/utils";
+import { cn, displayName } from "@/lib/utils";
 import { NAV_GROUPS, type NavItem } from "@/lib/nav-items";
 import { useUIStore } from "@/lib/store";
 import { AplioLogo } from "@/components/shared/aplio-logo";
@@ -87,7 +87,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const me = useMe();
-  const displayName = me?.first_name ?? me?.email?.split("@")[0] ?? "You";
+  const shownName = displayName(me?.first_name) || me?.email?.split("@")[0] || "You";
   const initials = (me?.first_name?.[0] ?? me?.email?.[0] ?? "A").toUpperCase();
   const badgeCounts = useBadgeCounts();
 
@@ -205,7 +205,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                {displayName}
+                {shownName}
               </div>
             </div>
           )}
