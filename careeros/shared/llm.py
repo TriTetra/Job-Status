@@ -1,4 +1,4 @@
-"""The one LLM gateway (OpenRouter-compatible chat completions).
+"""The one LLM gateway: Anthropic (official SDK) or any OpenRouter-compatible API.
 
     from careeros.shared.llm import get_llm_client
     llm = get_llm_client()                                    # LLMNotConfiguredError without a key
@@ -11,6 +11,10 @@ guard may refuse it (LLMBudgetExceeded); after it, tokens, cost and latency are
 recorded — never the prompt. At most LLM_MAX_CONCURRENCY calls run at once.
 On OpenRouter, requests go only to providers that don't collect prompt data
 (LLM_DATA_COLLECTION=allow widens that).
+
+Provider: with ANTHROPIC_API_KEY set, calls go straight to Anthropic through the
+`anthropic` SDK (interactive tasks on Claude Opus 5.5 with server-side refusal
+fallbacks, bulk tasks on Claude Haiku 5.5); otherwise to OpenRouter.
 
 Transient failures (timeouts, connection errors, HTTP 429/5xx) are retried with
 exponential backoff; anything else raises immediately. Every LLMError subclass is
@@ -50,6 +54,22 @@ TASKS = {
 # Cost estimate when the provider doesn't report one (USD per million tokens).
 # Deliberately pessimistic so an unreported cost never under-counts the budget.
 FALLBACK_PRICE_IN, FALLBACK_PRICE_OUT = 1.0, 4.0
+
+# Anthropic list prices (USD per million input / output tokens); Anthropic doesn't
+# return a cost, so it is computed from usage. Unknown models use the fallback above.
+ANTHROPIC_PRICES = {
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-sonnet-5": (2.00, 10.00),
+}
+ANTHROPIC_DEFAULT_MODEL = "claude-opus-5-5"
+ANTHROPIC_FAST_MODEL = "claude-haiku-5-5"
+# max_tokens is only a ceiling (thinking counts towards it); the prompt sets length
+ANTHROPIC_MAX_TOKENS = 16000
+# Server-side refusal fallback (Claude Opus 5.5 / Sonnet 5.5 …; Haiku 5.5 has none)
+FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 M = TypeVar("M", bound=BaseModel)
 
@@ -97,10 +117,14 @@ class UsageGuard(Protocol):
         ...
 
 
-def _cost(usage: dict) -> tuple[float, bool]:
+def _cost(usage: dict, model: str = "") -> tuple[float, bool]:
+    """(USD, estimated?) — the provider's own figure, a known list price, or a pessimistic guess."""
     if isinstance(usage.get("cost"), (int, float)):
         return float(usage["cost"]), False
     tokens_in, tokens_out = usage.get("prompt_tokens") or 0, usage.get("completion_tokens") or 0
+    if model in ANTHROPIC_PRICES:
+        price_in, price_out = ANTHROPIC_PRICES[model]
+        return (tokens_in * price_in + tokens_out * price_out) / 1_000_000, False
     return (tokens_in * FALLBACK_PRICE_IN + tokens_out * FALLBACK_PRICE_OUT) / 1_000_000, True
 
 
@@ -119,6 +143,8 @@ class LLMClient:
         max_retries: int = 2,
         backoff_seconds: float = 1.0,
         session: Optional[requests.Session] = None,
+        provider: str = "openrouter",
+        anthropic_client: Any = None,
     ) -> None:
         self.model = model
         self.fast_model = fast_model or model
@@ -137,6 +163,12 @@ class LLMClient:
         self._max_retries = max_retries
         self._backoff = backoff_seconds
         self._http = session or requests.Session()
+        self.provider = provider
+        self._anthropic = anthropic_client
+        if provider == "anthropic" and anthropic_client is None:
+            import anthropic
+
+            self._anthropic = anthropic.Anthropic(api_key=api_key, max_retries=max_retries)
 
     def model_for(self, task: str) -> str:
         if task in self._task_models:
@@ -165,6 +197,32 @@ class LLMClient:
                 self._record(CallRecord(task, model, user_id, "budget", error=str(e)))
                 raise
 
+        started = time.monotonic()
+        try:
+            with self._slots:
+                if self.provider == "anthropic":
+                    text, usage, served = self._send_anthropic(
+                        model, tier, system, prompt, max_tokens, json_mode, timeout)
+                else:
+                    text, usage, served = self._send_openai(
+                        model, system, prompt, temperature, max_tokens, json_mode, timeout)
+        except LLMError as e:
+            self._record(CallRecord(task, model, user_id, "error", error=str(e)[:300],
+                                    latency_ms=int((time.monotonic() - started) * 1000)))
+            raise
+
+        cost, estimated = _cost(usage, served)
+        self._record(CallRecord(
+            task, served, user_id, "ok",
+            prompt_tokens=usage.get("prompt_tokens") or 0,
+            completion_tokens=usage.get("completion_tokens") or 0,
+            cost_usd=cost, cost_estimated=estimated,
+            latency_ms=int((time.monotonic() - started) * 1000),
+        ))
+        return text
+
+    def _send_openai(self, model, system, prompt, temperature, max_tokens, json_mode, timeout):
+        """OpenRouter / OpenAI-compatible chat completions → (text, usage, served model)."""
         messages = ([{"role": "system", "content": system}] if system else []) + [
             {"role": "user", "content": prompt}
         ]
@@ -180,31 +238,51 @@ class LLMClient:
             payload["usage"] = {"include": True}  # OpenRouter reports the real cost
             # Route only to providers that don't store or train on prompts (CVs, profiles)
             payload["provider"] = {"data_collection": self._data_collection}
-
-        started = time.monotonic()
+        body = self._post(payload, timeout)
         try:
-            with self._slots:
-                body = self._post(payload, timeout)
             text = body["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError, TypeError, AttributeError) as e:
-            self._record(CallRecord(task, model, user_id, "error", error="bad response shape",
-                                    latency_ms=int((time.monotonic() - started) * 1000)))
             raise LLMError(f"Unexpected LLM response shape: {str(body)[:200]}") from e
-        except LLMError as e:
-            self._record(CallRecord(task, model, user_id, "error", error=str(e)[:300],
-                                    latency_ms=int((time.monotonic() - started) * 1000)))
-            raise
+        return text, body.get("usage") or {}, body.get("model") or model
 
-        usage = body.get("usage") or {}
-        cost, estimated = _cost(usage)
-        self._record(CallRecord(
-            task, body.get("model") or model, user_id, "ok",
-            prompt_tokens=usage.get("prompt_tokens") or 0,
-            completion_tokens=usage.get("completion_tokens") or 0,
-            cost_usd=cost, cost_estimated=estimated,
-            latency_ms=int((time.monotonic() - started) * 1000),
-        ))
-        return text
+    def _send_anthropic(self, model, tier, system, prompt, max_tokens, json_mode, timeout):
+        """Anthropic Messages API via the official SDK → (text, usage, served model).
+
+        Current Claude models think adaptively; effort sets the depth (low for bulk
+        extraction, medium for user-facing work). No temperature: these models reject it.
+        """
+        import anthropic
+
+        if json_mode:
+            prompt += "\n\nRespond with a single JSON object and nothing else."
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "max_tokens": max(max_tokens, ANTHROPIC_MAX_TOKENS),
+            "messages": [{"role": "user", "content": prompt}],
+            "output_config": {"effort": "low" if tier == "bulk" else "medium"},
+            "timeout": timeout,
+        }
+        if system:
+            kwargs["system"] = system
+        try:
+            if model.startswith("claude-haiku"):
+                response = self._anthropic.messages.create(**kwargs)
+            else:
+                # On a policy decline the API re-runs the request on a suitable model
+                response = self._anthropic.beta.messages.create(
+                    betas=[FALLBACK_BETA], fallbacks="default", **kwargs)
+        except anthropic.APIStatusError as e:
+            raise LLMError(f"Anthropic HTTP {e.status_code}: {str(e.message)[:200]}") from e
+        except anthropic.APIConnectionError as e:  # includes timeouts
+            raise LLMError(f"Anthropic request failed: {e}") from e
+
+        if response.stop_reason == "refusal":
+            raise LLMError("Claude declined this request")
+        text = "".join(b.text for b in response.content if b.type == "text").strip()
+        if not text:
+            raise LLMError(f"Claude returned no text (stop_reason={response.stop_reason})")
+        usage = {"prompt_tokens": response.usage.input_tokens, "completion_tokens": response.usage.output_tokens}
+        return text, usage, response.model
 
     def complete_json(self, prompt: str, **kwargs: Any) -> Any:
         """complete() + parse_json(). Pass json_mode=True to force a JSON object."""
@@ -269,10 +347,15 @@ def get_llm_client() -> LLMClient:
     from careeros.shared.llm_usage import DbUsageGuard
 
     s = get_settings()
-    if not s.openrouter_api_key:
-        raise LLMNotConfiguredError("OPENROUTER_API_KEY not set")
+    if s.llm_provider == "anthropic":
+        api_key = s.anthropic_api_key
+    else:
+        api_key = s.openrouter_api_key
+    if not api_key:
+        raise LLMNotConfiguredError("No LLM key: set ANTHROPIC_API_KEY or OPENROUTER_API_KEY")
     return LLMClient(
-        api_key=s.openrouter_api_key,
+        api_key=api_key,
+        provider=s.llm_provider,
         model=s.llm_model,
         base_url=s.llm_base_url,
         fast_model=s.llm_fast_model,

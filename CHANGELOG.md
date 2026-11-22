@@ -8,6 +8,7 @@ Sıralama: en yeniden en eskiye.
 ## Phase Tamamlanma Tablosu
 
 | Phase | İçerik | Durum | Tarih |
+| LLM — Native Anthropic Provider | With ANTHROPIC_API_KEY the gateway calls Claude via the official SDK: claude-opus-5-5 for interactive tasks (effort medium, server-side refusal fallback), claude-haiku-5-5 for bulk (effort low); cost from list prices; OpenRouter stays as fallback provider | ✅ Tamam | 2026-11-22 |
 | LLM — Data Policy + Resume Guard | OpenRouter requests restricted to providers that don't store/train on prompts (data_collection=deny, verified live); resume generation input bounded and LLM failures mapped to 429/502/503 instead of raw 500s; env audit | ✅ Tamam | 2026-11-22 |
 | Deploy — Separate Database + Backups | PostgreSQL moved out of the compose stack into its own Coolify resource (PGVector 17) with daily scheduled backups; app joins its network via DATABASE_URL (postgres:// accepted); build args no longer injected (secrets out of image builds) | ✅ Tamam | 2026-11-22 |
 | Web Accounts — Setup + Invite Links | First account created on the site (becomes admin, setup then closes), single-use invite links (7 days, optional email binding, revocable) in Settings, own password change (other devices signed out); verified with 28 end-to-end checks | ✅ Tamam | 2026-11-22 |
@@ -96,6 +97,21 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [LLM — Anthropic] — 2026-11-22 — Native Anthropic provider ✅
+
+**Neden:** Elde Anthropic anahtarı var; OpenRouter aracısı olmadan doğrudan Claude kullanılacak.
+
+- `careeros/shared/llm.py`: ikinci sağlayıcı — resmi `anthropic` SDK (2.12, `requirements.txt`'e eklendi). Bütçe, eşzamanlılık, `llm_calls` logu, şema doğrulama aynen geçerli; sadece istek gönderme kısmı sağlayıcıya göre ayrıldı (`_send_anthropic` / `_send_openai`).
+- **Sağlayıcı seçimi:** `ANTHROPIC_API_KEY` varsa Anthropic, yoksa OpenRouter (`LLM_PROVIDER` ile zorlanabilir).
+- **Modeller:** etkileşimli işler (açıklama, CV okuma, özgeçmiş) → `claude-opus-5-5`; toplu işler (ilan okuma, HN) → `claude-haiku-5-5`. `DEFAULT_MODEL` / `LLM_FAST_MODEL` / `LLM_TASK_MODELS` ile değiştirilebilir; `DEFAULT_MODEL` değişse de toplu işler ucuz modelde kalır.
+- **İstek biçimi (güncel API, sürüm `2026-10-21`):** `temperature` gönderilmez (güncel modeller reddediyor); düşünme adaptif, derinlik `output_config.effort` ile (toplu `low`, etkileşimli `medium`); `max_tokens` 16 000 tavan (düşünme de buna dahil, uzunluğu prompt belirliyor); Opus için sunucu tarafı ret yedeği (`server-side-fallback-2026-07-01`, `fallbacks: "default"`), Haiku 5.5'te bu özellik yok.
+- **Ret / boş cevap / SDK hataları** → `LLMError` → mevcut yedek yollar (şablon, keyword).
+- **Maliyet:** Anthropic maliyet döndürmüyor → liste fiyatlarından hesaplanıyor (Opus 5.5 $4/$20, Haiku 5.5 $0.10/$0.50, Sonnet 5.5 $2/$10 / milyon token).
+- Doğrulama: 441 test (6 yeni: model/effort/fallback seçimi, temperature yok, fiyat, ret, SDK hataları, sağlayıcı/model varsayılanları); gerçek SDK sahte bir HTTP katmanına karşı çalıştırıldı → istekler beklenen başlık ve gövdeyle oluşuyor.
+- Compose: `ANTHROPIC_API_KEY`, `LLM_PROVIDER`; `DEFAULT_MODEL` varsayılanı boş (sağlayıcıya göre).
 
 ---
 

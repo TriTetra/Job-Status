@@ -313,3 +313,106 @@ def test_openrouter_requests_deny_data_collection_by_default():
     allow, s2 = _client(_ok(), data_collection="allow")
     allow.complete("x")
     assert s2.calls[0]["json"]["provider"] == {"data_collection": "allow"}
+
+
+# ── Anthropic provider (SDK client faked) ─────────────────────────────────
+
+class FakeAnthropic:
+    """Records create() kwargs on .messages and .beta.messages; returns a canned response."""
+
+    def __init__(self, response=None, error=None):
+        self.calls, self._response, self._error = [], response, error
+        self.messages = SimpleNamespace(create=self._create("messages"))
+        self.beta = SimpleNamespace(messages=SimpleNamespace(create=self._create("beta")))
+
+    def _create(self, kind):
+        def create(**kwargs):
+            self.calls.append((kind, kwargs))
+            if self._error:
+                raise self._error
+            return self._response
+        return create
+
+
+def _claude_response(text="ok", model="claude-opus-5-5", stop="end_turn", tokens=(1000, 200)):
+    content = [SimpleNamespace(type="thinking", thinking=""), SimpleNamespace(type="text", text=text)]
+    return SimpleNamespace(content=content, stop_reason=stop, model=model,
+                           usage=SimpleNamespace(input_tokens=tokens[0], output_tokens=tokens[1]))
+
+
+def _claude(response=None, error=None, guard=None):
+    fake = FakeAnthropic(response or _claude_response(), error)
+    client = LLMClient("sk-ant-test", "claude-opus-5-5", provider="anthropic", anthropic_client=fake,
+                       fast_model="claude-haiku-5-5", guard=guard)
+    return client, fake
+
+
+def test_anthropic_interactive_call_uses_opus_with_refusal_fallback_and_no_temperature():
+    client, fake = _claude()
+    assert client.complete("why?", system="sys", task="reasoning", temperature=0.9, max_tokens=220) == "ok"
+    kind, kw = fake.calls[0]
+    assert kind == "beta" and kw["betas"] == [llm_mod.FALLBACK_BETA] and kw["fallbacks"] == "default"
+    assert kw["model"] == "claude-opus-5-5" and kw["system"] == "sys"
+    assert kw["output_config"] == {"effort": "medium"} and kw["max_tokens"] >= 16000
+    assert "temperature" not in kw  # current Claude models reject sampling parameters
+
+
+def test_anthropic_bulk_call_uses_haiku_at_low_effort_without_fallback_beta():
+    client, fake = _claude(_claude_response('{"a": 1}', model="claude-haiku-5-5"))
+    assert client.complete_json("extract", task="job_extract", json_mode=True) == {"a": 1}
+    kind, kw = fake.calls[0]
+    assert kind == "messages" and kw["model"] == "claude-haiku-5-5"
+    assert kw["output_config"] == {"effort": "low"} and "fallbacks" not in kw
+    assert "single JSON object" in kw["messages"][0]["content"]
+
+
+def test_anthropic_cost_comes_from_list_prices():
+    guard = RecordingGuard()
+    client, _ = _claude(_claude_response(tokens=(1_000_000, 100_000)), guard=guard)
+    client.complete("x", task="reasoning")
+    rec = guard.records[0]
+    assert rec.cost_usd == pytest.approx(4.00 + 2.00) and rec.cost_estimated is False  # $4 in + $20/M × 0.1M out
+
+
+def test_anthropic_refusal_and_empty_text_become_llm_errors():
+    client, _ = _claude(_claude_response(stop="refusal"))
+    with pytest.raises(LLMError, match="declined"):
+        client.complete("x")
+    client, _ = _claude(_claude_response(text="  ", stop="max_tokens"))
+    with pytest.raises(LLMError, match="max_tokens"):
+        client.complete("x")
+
+
+def test_anthropic_sdk_errors_become_llm_errors():
+    import anthropic
+    import httpx2
+
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    for error in (
+        anthropic.APIStatusError("overloaded", response=httpx2.Response(529, request=request), body=None),
+        anthropic.APIConnectionError(request=request),
+    ):
+        client, _ = _claude(error=error)
+        with pytest.raises(LLMError):
+            client.complete("x")
+
+
+def test_provider_is_chosen_by_key_with_matching_defaults(monkeypatch):
+    from careeros.shared import config
+
+    monkeypatch.setattr(config, "_env_loaded", True)
+    for var in ("LLM_PROVIDER", "DEFAULT_MODEL", "LLM_FAST_MODEL", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-x")
+    config.get_settings.cache_clear()
+    s = config.get_settings()
+    assert (s.llm_provider, s.llm_model, s.llm_fast_model) == ("anthropic", "claude-opus-5-5", "claude-haiku-5-5")
+    monkeypatch.setenv("DEFAULT_MODEL", "claude-sonnet-5-5")
+    config.get_settings.cache_clear()
+    s = config.get_settings()
+    assert (s.llm_model, s.llm_fast_model) == ("claude-sonnet-5-5", "claude-haiku-5-5")  # bulk stays cheap
+    monkeypatch.delenv("ANTHROPIC_API_KEY")
+    monkeypatch.delenv("DEFAULT_MODEL")
+    config.get_settings.cache_clear()
+    assert config.get_settings().llm_provider == "openrouter"
+    config.get_settings.cache_clear()

@@ -146,6 +146,10 @@ scorer, so they are reproducible, cheap and testable.
 
 **Gateway** (`shared/llm.py` + `shared/llm_usage.py`), the only way to call a model:
 
+- **Provider**: with `ANTHROPIC_API_KEY` the gateway calls Claude through the official
+  `anthropic` SDK: interactive tasks on `claude-opus-5-5` (effort `medium`, server-side refusal
+  fallback `fallbacks: "default"`), bulk tasks on `claude-haiku-5-5` (effort `low`). Cost is
+  computed from list prices (`ANTHROPIC_PRICES`). Without it, OpenRouter (OpenAI-compatible).
 - **Routing**: bulk tasks use `LLM_FAST_MODEL`, interactive ones `DEFAULT_MODEL`;
   `LLM_TASK_MODELS="reasoning=…"` overrides per task.
 - **Budgets** (USD per UTC day, checked before every call): `LLM_DAILY_BUDGET_USD` for

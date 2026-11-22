@@ -96,7 +96,9 @@ class Settings:
     db_echo: bool
     db_connect_timeout: int
 
-    # LLM (OpenRouter-compatible chat completions API)
+    # LLM: Anthropic (anthropic_api_key) or an OpenRouter-compatible API
+    llm_provider: str                   # anthropic | openrouter (auto: whichever key is set)
+    anthropic_api_key: Optional[str]
     openrouter_api_key: Optional[str]
     llm_model: str
     llm_base_url: str
@@ -131,6 +133,13 @@ class Settings:
 def get_settings() -> Settings:
     """Read settings once per process. Tests: get_settings.cache_clear() after changing env."""
     load_env()
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY") or None
+    provider = (os.getenv("LLM_PROVIDER") or ("anthropic" if anthropic_key else "openrouter")).strip().lower()
+    # Provider defaults: interactive model / bulk model (DEFAULT_MODEL, LLM_FAST_MODEL override)
+    default_model, fast_model = (
+        ("claude-opus-5-5", "claude-haiku-5-5") if provider == "anthropic" else ("openai/gpt-4o-mini", None)
+    )
+    fast_model = fast_model or default_model
     return Settings(
         database_url=_database_url(),
         # A handful of users and one API worker: small pool by default
@@ -139,10 +148,15 @@ def get_settings() -> Settings:
         db_pool_timeout=_int("DB_POOL_TIMEOUT", 30),
         db_echo=_bool("DB_ECHO"),
         db_connect_timeout=_int("DB_CONNECT_TIMEOUT", 5),
+        llm_provider=provider,
+        anthropic_api_key=anthropic_key,
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY") or None,
-        llm_model=os.getenv("DEFAULT_MODEL", "openai/gpt-4o-mini"),
+        llm_model=os.getenv("DEFAULT_MODEL") or default_model,
         llm_base_url=os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/"),
-        llm_fast_model=os.getenv("LLM_FAST_MODEL") or os.getenv("DEFAULT_MODEL", "openai/gpt-4o-mini"),
+        # Bulk work stays on the cheap model unless LLM_FAST_MODEL says otherwise (OpenRouter:
+        # same as the main model by default)
+        llm_fast_model=os.getenv("LLM_FAST_MODEL") or (
+            fast_model if provider == "anthropic" else (os.getenv("DEFAULT_MODEL") or default_model)),
         llm_task_models=_pairs("LLM_TASK_MODELS"),
         llm_daily_budget_usd=_float("LLM_DAILY_BUDGET_USD", 2.0),
         llm_user_daily_budget_usd=_float("LLM_USER_DAILY_BUDGET_USD", 0.5),

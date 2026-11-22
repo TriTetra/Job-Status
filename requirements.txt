@@ -25,6 +25,7 @@ networkx>=3.0                    # skill graph
 
 # ── Sources & parsing ───────────────────────────────────────────────────────
 requests>=2.31                   # GitHub, OpenRouter, HN
+anthropic>=2.12                  # Claude API (careeros/shared/llm.py)
 feedparser>=6.0                  # TechCrunch RSS
 beautifulsoup4>=4.12             # portfolio crawler
 PyMuPDF==1.24.10                 # CV PDF text
