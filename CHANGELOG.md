@@ -123,6 +123,9 @@ Sıralama: en yeniden en eskiye.
 - **Sayfa:** tek cümle özet ("48 open roles match yours. 38 arrived in the last 30 days…"), "en çok istenip sende olmayan beceri", büyük rakamlar, beceri tablosu (ince çubuklar), "Adding the most roles", altta **In the news** (HN / TechCrunch, Refresh işin bitmesini bekliyor).
 - **Haberler artık günde bir kendiliğinden** yenileniyor (zamanlayıcının 6 saatlik döngüsünde, en çok 20 saatte bir).
 
+### Canlıda
+- 2026-11-22, `0680aff` (1 dk 1 sn): site 200; `/api/companies/boards`, `/api/companies/boards/{key}`, `/api/market/jobs` oturumsuz 401 (mevcut, korumalı; bilinmeyen rota 404). Haberler ilk zamanlayıcı döngüsünde okunur.
+
 ### Doğrulama
 - Ayrık önizlemede (atılabilir Postgres, API 18000, web 13100, test hesabı, 7 gerçek pano anahtarıyla 48 örnek ilan) tarayıcıda: Companies listesi, şirket sayfası, 404, Market 30/90 gün, 375 px'te yatay kaydırma yok, konsol hatası yok. Konteyner ve sunucular kapatıldı.
 - 548 test (yeni `test_companies_market.py`: tempo kuralı, beceri okuma), ruff, tsc, eslint, `next build` temiz.
