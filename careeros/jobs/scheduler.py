@@ -43,7 +43,31 @@ def run_cycle() -> Optional[dict]:
         if job.status == "completed":
             r = job.result or {}
             logger.info("Rescored %s: %s scored, %s unchanged", user_id, r.get("scored"), r.get("unchanged"))
+    refresh_market_news()
     return summary.totals
+
+
+MARKET_NEWS_EVERY = 20 * 3600  # seconds; HN "Who is hiring" + TechCrunch about once a day
+_last_market_news = float("-inf")
+
+
+def refresh_market_news() -> None:
+    """Re-read market news once a day from the scheduler (it used to need the Refresh button)."""
+    import time
+
+    from careeros.market.refresh import run_refresh, start_refresh
+
+    global _last_market_news
+    if time.monotonic() - _last_market_news < MARKET_NEWS_EVERY:
+        return
+    _last_market_news = time.monotonic()
+    try:
+        job, created = start_refresh("scheduler")
+        if created:
+            run_refresh(job, 168)
+            logger.info("Market news refreshed: %s", job.status)
+    except Exception:
+        logger.exception("Market news refresh failed")
 
 
 class JobScheduler:

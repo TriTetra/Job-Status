@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| P3 — Companies + Market from the Boards | Companies list and company pages built from the 74 boards (open roles, hiring pace, your matches, skills asked vs your evidence); Market read from your own matching postings (pace, pay, remote/visa share, skill demand + trend, busiest companies); news refreshed daily | ✅ Tamam | 2026-11-22 |
 | Briefing v2 + Opportunities v2 | Briefing answers "what changed since your last visit, what should I do": top APPLY pick with reason/criteria/actions, changes, dismissable to-dos, the week in numbers. Opportunities: the search as one sentence, views (Strong / Worth a look / All / Shortlisted / Skipped), conflict filter, chance per job, decision panel. Fixes JSON requests sent without Content-Type (Shortlist/Skip, profile connect returned 422) | ✅ Tamam | 2026-11-22 |
 | P0 — Broken Discover/Briefing Fixes | Decision panel filled, Apply/Shortlist/Skip create the application, Settings weights and saved work styles actually score, hybrid/on-site no longer penalised by default, chips show real salary, Briefing actions/time zone/links work, Market counts every mention and Refresh waits | ✅ Tamam | 2026-11-22 |
 | Analysis — Briefing + Discover | End-to-end audit of Briefing, Opportunities, Companies, Market; Dribbble/Pinterest references; redesign + P0–P3 roadmap (no code change) | 📝 Analiz | 2026-11-22 |
@@ -104,6 +105,30 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [P3 — Companies + Market] — 2026-11-22 — Both pages now come from the job boards and your own matches ✅
+
+**Neden:** Analizde Companies'in 14 şirketlik elle yazılmış listeden geldiği (herkes STABLE / 0 açık pozisyon), Market'in ise yalnız elle Refresh ile ve kişiselleştirilmeden çalıştığı görülmüştü.
+
+### Companies
+- **Yeni** `careeros/companies/directory.py` + `GET /api/companies/boards`, `GET /api/companies/boards/{key}`: liste artık okunan 74 pano (`companies.yaml`). Her şirket için: alanındaki açık rol sayısı, **bu hafta yeni / geçen hafta yeni / bu hafta kapanan** ve buna göre gerçek tempo (hiring fast / picking up / steady / slowing), sana uyan rol sayısı · güçlü olanlar · en iyi skor, en çok istenen 6 beceri ve kaçının senin kanıtında olduğu, uzaktan oranı, panonun son okunma zamanı; seed profili varsa sektör/merkez/kademe.
+- **Liste sayfası:** "74 şirketten 7'sinde sana uyan rol var; 3'ü geçen haftadan hızlı ilan açıyor." Görünümler: Fit you / Posted this week / All, arama; kart ızgarası yerine hairline satırlar (şirket + sana uyanlar, büyük rakamla açık rol, tempo, istenen beceriler — sende olanlar yeşil).
+- **Şirket sayfası** (`/companies/[key]`, eskiden boş klasör): büyük rakamlar, "What they ask for most" (✓/✗ kanıtına göre), açık roller senin skoruna göre sıralı (skorluysa Opportunities'te o ilan, değilse ilanın kendisi), panonun son okunması. Bilinmeyen şirket → 404.
+- Eski elle-liste istemci dosyaları kaldırıldı (`features/companies/api|server|types.ts`).
+
+### Market
+- **Yeni** `careeros/market/own_market.py` + `GET /api/market/jobs?days=30|90`: rollerine uyan ilanlardan açık rol sayısı, bu dönem / önceki dönem gelen ilan ve % değişim, maaş (en yaygın para birimi, medyan + orta yarı, kaç ilanın maaş yazdığı), uzaktan oranı, vize sponsoru oranı (söyleyenler içinde), en çok istenen 15 beceri: payı, payın dönemler arası değişimi (puan), sende var mı, eşleşmelerinin kaçında eksik; en çok ilan açan şirketler (şirket sayfasına bağlı).
+- **Sayfa:** tek cümle özet ("48 open roles match yours. 38 arrived in the last 30 days…"), "en çok istenip sende olmayan beceri", büyük rakamlar, beceri tablosu (ince çubuklar), "Adding the most roles", altta **In the news** (HN / TechCrunch, Refresh işin bitmesini bekliyor).
+- **Haberler artık günde bir kendiliğinden** yenileniyor (zamanlayıcının 6 saatlik döngüsünde, en çok 20 saatte bir).
+
+### Doğrulama
+- Ayrık önizlemede (atılabilir Postgres, API 18000, web 13100, test hesabı, 7 gerçek pano anahtarıyla 48 örnek ilan) tarayıcıda: Companies listesi, şirket sayfası, 404, Market 30/90 gün, 375 px'te yatay kaydırma yok, konsol hatası yok. Konteyner ve sunucular kapatıldı.
+- 548 test (yeni `test_companies_market.py`: tempo kuralı, beceri okuma), ruff, tsc, eslint, `next build` temiz.
+
+### Kalan (yol haritasından)
+- Skordaki sabit "market demand" tablosunun bu talep verisiyle değiştirilmesi; "Atla"nın benzer ilanları düşürmesi; gerekçe önbelleğinin yeniden skorlamada korunması.
 
 ---
 

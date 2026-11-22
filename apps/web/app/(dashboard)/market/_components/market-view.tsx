@@ -1,62 +1,69 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { NarrativeText } from "@/components/shared/narrative-text";
-import { Button } from "@/components/shared/button";
-import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Building2,
-  Zap,
-  RefreshCw,
-  ExternalLink,
-  Loader2,
-} from "lucide-react";
+import { ArrowUpRight, Check, RefreshCw } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
-import { DEFAULT_RANGE, loadMarketSnapshot } from "@/features/market/snapshot";
-import type { MarketSignal, MarketSnapshot, MarketSummary, SkillTrend, TimeRange } from "@/features/market/types";
+import { loadMarket } from "@/features/market/snapshot";
+import type { MarketData, OwnMarket, Period } from "@/features/market/types";
 
-export function MarketView({ initial }: { initial: MarketSnapshot }) {
-  const [summary, setSummary] = useState<MarketSummary | null>(initial.summary);
-  const [signals, setSignals] = useState<MarketSignal[]>(initial.signals);
-  const [trends, setTrends] = useState<SkillTrend[]>(initial.trends);
+const LABEL = "text-[11px] uppercase tracking-[0.08em] mb-6";
+const LABEL_STYLE = { color: "var(--text-muted)", fontFamily: "var(--font-display)" } as const;
+
+function money(currency: string, n: number): string {
+  try {
+    return new Intl.NumberFormat("en", { style: "currency", currency, notation: "compact", maximumFractionDigits: 0 }).format(n);
+  } catch {
+    return String(n);
+  }
+}
+
+const pct = (x: number | null | undefined) => (x == null ? "—" : `${Math.round(x * 100)}%`);
+
+function lead(m: OwnMarket): string {
+  if (m.open_matches === 0) return "No open roles match your roles yet — the boards are read every 6 hours.";
+  const pace =
+    m.change_pct == null
+      ? ""
+      : m.change_pct > 5
+        ? `, ${m.change_pct}% more than the ${m.days} days before`
+        : m.change_pct < -5
+          ? `, ${Math.abs(m.change_pct)}% fewer than the ${m.days} days before`
+          : ", about the same pace as before";
+  return `${m.open_matches.toLocaleString()} open roles match yours. ${m.new_this_period} arrived in the last ${m.days} days${pace}.`;
+}
+
+/** Your market, from the postings that match your roles — then the news. */
+export function MarketView({ initial }: { initial: MarketData }) {
+  const [data, setData] = useState(initial);
+  const [period, setPeriod] = useState<Period>(initial.own.days === 90 ? 90 : 30);
   const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRangeState] = useState<TimeRange>(DEFAULT_RANGE);
   const [refreshing, setRefreshing] = useState(false);
+  const m = data.own;
+  const topGap = m.skills.filter((s) => !s.you_show).sort((a, b) => b.open_jobs - a.open_jobs)[0];
 
-  // First render uses the server snapshot; range changes and refreshes fetch from the browser
-  const loadData = async (range: TimeRange) => {
+  const changePeriod = async (p: Period) => {
+    setPeriod(p);
     setLoading(true);
     try {
-      const snap = await loadMarketSnapshot(apiFetch, range);
-      setSummary(snap.summary);
-      setSignals(snap.signals);
-      setTrends(snap.trends);
-    } catch (err) {
-      console.error("[market] load failed:", err);
+      setData(await loadMarket(apiFetch, p));
     } finally {
       setLoading(false);
     }
   };
 
-  const setTimeRange = (range: TimeRange) => {
-    setTimeRangeState(range);
-    void loadData(range);
-  };
-
-  // Start the refresh, wait for it to finish (HN + TechCrunch take ~10–60 s), then reload
-  const handleRefresh = async () => {
+  // News refresh (HN + TechCrunch): wait for the job, then reload
+  const refreshNews = async () => {
     setRefreshing(true);
     try {
-      const { job_id } = await apiFetch<{ job_id: string }>(`/api/market/refresh`, { method: "POST" });
+      const { job_id } = await apiFetch<{ job_id: string }>("/api/market/refresh", { method: "POST" });
       const deadline = Date.now() + 3 * 60_000;
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 2000));
         const st = await apiFetch<{ status: string }>(`/api/market/refresh/${job_id}/status`);
         if (st.status === "completed" || st.status === "failed") break;
       }
-      await loadData(timeRange);
+      setData(await loadMarket(apiFetch, period));
     } catch (err) {
       console.error("[market] refresh failed:", err);
     } finally {
@@ -64,377 +71,133 @@ export function MarketView({ initial }: { initial: MarketSnapshot }) {
     }
   };
 
-  const formatImpact = (impact: string) => {
-    if (impact === "high") return { label: "HIGH", color: "var(--warning)" };
-    if (impact === "medium") return { label: "MED", color: "var(--text-secondary)" };
-    return { label: "LOW", color: "var(--text-muted)" };
-  };
-
-  const SignalIcon = ({ type }: { type: string }) => {
-    if (type === "hiring_spike")
-      return <TrendingUp className="h-3.5 w-3.5" style={{ color: "var(--success)" }} />;
-    if (type === "layoff")
-      return <TrendingDown className="h-3.5 w-3.5" style={{ color: "var(--danger)" }} />;
-    if (type === "funding" || type === "funding_round")
-      return <Zap className="h-3.5 w-3.5" style={{ color: "var(--accent)" }} />;
-    return <Minus className="h-3.5 w-3.5" style={{ color: "var(--text-muted)" }} />;
-  };
-
-  const totalSignals = summary
-    ? Object.values(summary.signal_counts).reduce((a, b) => a + b, 0)
-    : 0;
-
-  const rangeLabel =
-    timeRange === "7d" ? "week" : timeRange === "30d" ? "month" : "quarter";
+  const numbers = [
+    m.salary
+      ? { value: money(m.salary.currency, m.salary.median), label: "median starting pay",
+          note: `${money(m.salary.currency, m.salary.low)}–${money(m.salary.currency, m.salary.high)} middle half · ${m.salary.postings} postings state pay` }
+      : { value: "—", label: "median starting pay", note: "too few postings state pay" },
+    { value: pct(m.remote_share), label: "fully remote" },
+    m.visa
+      ? { value: pct(m.visa.sponsor_share), label: "sponsor visas", note: `of ${m.visa.stated} postings that say` }
+      : { value: "—", label: "sponsor visas", note: "postings rarely say" },
+    { value: String(m.new_this_period), label: `new in ${m.days} days`,
+      note: m.change_pct == null ? undefined : `${m.change_pct >= 0 ? "+" : ""}${m.change_pct}% vs before` },
+  ];
 
   return (
-    <div className="narrative-container px-6 lg:px-8 py-10">
-      {/* Header */}
-      <div className="mb-10">
-        <NarrativeText size="3xl" weight="semibold" as="h1" className="mb-2">
-          Market Intelligence
-        </NarrativeText>
-        <p className="text-base" style={{ color: "var(--text-secondary)" }}>
-          {loading
-            ? "Loading signals…"
-            : `${totalSignals} signals in the last ${rangeLabel}`}
-        </p>
-      </div>
-
-      {/* Controls */}
-      <div
-        className="flex items-center justify-between mb-8 pb-6 border-b"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <div className="flex items-center gap-1">
-          {(["7d", "30d", "90d"] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => setTimeRange(r)}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                background: timeRange === r ? "var(--surface)" : "transparent",
-                color: timeRange === r ? "var(--text-primary)" : "var(--text-muted)",
-              }}
-            >
-              {r}
+    <div className="max-w-[1000px] mx-auto px-6 lg:px-10 py-14" aria-busy={loading}>
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h1 className="font-serif-display text-4xl" style={{ color: "var(--text-primary)" }}>Market</h1>
+        <div className="flex gap-4 text-sm" role="group" aria-label="Period">
+          {([30, 90] as Period[]).map((p) => (
+            <button key={p} onClick={() => changePeriod(p)} aria-pressed={p === period}
+                    style={{ color: p === period ? "var(--text-primary)" : "var(--text-muted)", fontWeight: p === period ? 600 : 400 }}>
+              {p} days
             </button>
           ))}
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
-        >
-          <RefreshCw
-            className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
-          />
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
       </div>
-
-      {loading ? (
-        <div className="py-24 text-center">
-          <Loader2
-            className="h-6 w-6 animate-spin mx-auto mb-3"
-            style={{ color: "var(--text-muted)" }}
-          />
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Loading market signals…
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Summary grid */}
-          <div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 pb-12 border-b"
-            style={{ borderColor: "var(--border)" }}
-          >
-            {/* Signal breakdown */}
-            <div>
-              <div
-                className="text-[11px] font-semibold tracking-wider uppercase mb-4"
-                style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)" }}
-              >
-                Signal Breakdown
-              </div>
-              <div className="space-y-2">
-                {summary &&
-                  Object.entries(summary.signal_counts).map(([type, count], i) => (
-                    <div
-                      key={`sig-${type}-${i}`}
-                      className="flex items-center justify-between"
-                    >
-                      <span
-                        className="text-sm capitalize"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {type.replace(/_/g, " ")}
-                      </span>
-                      <span
-                        className="text-sm font-semibold tabular-nums"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {count}
-                      </span>
-                    </div>
-                  ))}
-                {(!summary ||
-                  Object.keys(summary.signal_counts).length === 0) && (
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    No signals
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Hottest companies */}
-            <div>
-              <div
-                className="text-[11px] font-semibold tracking-wider uppercase mb-4"
-                style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)" }}
-              >
-                Hottest Companies
-              </div>
-              <div className="space-y-2">
-                {summary?.top_companies.slice(0, 5).map((c, i) => (
-                  <div
-                    key={`co-${c.name ?? i}-${i}`}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Building2
-                        className="h-3.5 w-3.5 shrink-0"
-                        style={{ color: "var(--text-muted)" }}
-                      />
-                      <span
-                        className="text-sm truncate"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {c.name}
-                      </span>
-                    </div>
-                    <span
-                      className="text-sm font-semibold tabular-nums shrink-0"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {c.count}
-                    </span>
-                  </div>
-                ))}
-                {!summary?.top_companies.length && (
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    No data
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Trending skills */}
-            <div>
-              <div
-                className="text-[11px] font-semibold tracking-wider uppercase mb-4"
-                style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)" }}
-              >
-                Trending Skills
-              </div>
-              <div className="space-y-2">
-                {trends.map((t, i) => (
-                  <div
-                    key={`trend-${t.skill}-${i}`}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      {t.direction === "up" ? (
-                        <TrendingUp
-                          className="h-3.5 w-3.5 shrink-0"
-                          style={{ color: "var(--success)" }}
-                        />
-                      ) : t.direction === "down" ? (
-                        <TrendingDown
-                          className="h-3.5 w-3.5 shrink-0"
-                          style={{ color: "var(--danger)" }}
-                        />
-                      ) : (
-                        <Minus
-                          className="h-3.5 w-3.5 shrink-0"
-                          style={{ color: "var(--text-muted)" }}
-                        />
-                      )}
-                      <span
-                        className="text-sm truncate"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {t.skill}
-                      </span>
-                    </div>
-                    <span
-                      className="text-sm font-semibold tabular-nums shrink-0"
-                      style={{
-                        color:
-                          t.change_percent > 0
-                            ? "var(--success)"
-                            : t.change_percent < 0
-                            ? "var(--danger)"
-                            : "var(--text-muted)",
-                      }}
-                    >
-                      {t.change_percent > 0 ? "+" : ""}
-                      {t.change_percent.toFixed(1)}%
-                    </span>
-                  </div>
-                ))}
-                {trends.length === 0 && (
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    No trend data
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Recent signals */}
-          <div>
-            <NarrativeText size="xl" weight="semibold" className="mb-6">
-              Recent Signals
-            </NarrativeText>
-
-            {signals.length === 0 ? (
-              <div className="py-16 text-center">
-                <NarrativeText size="lg" weight="medium" className="mb-2">
-                  No market signals yet
-                </NarrativeText>
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Signals will appear as we monitor hiring trends and industry news.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {signals.map((signal) => {
-                  const imp = formatImpact(signal.impact);
-                  return (
-                    <div
-                      key={signal.id}
-                      className="py-5 border-b last:border-b-0"
-                      style={{ borderColor: "var(--border)" }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 shrink-0">
-                          <SignalIcon type={signal.signal_type} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {/* Meta row */}
-                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span
-                              className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
-                              style={{
-                                color: imp.color,
-                                background: "var(--surface)",
-                              }}
-                            >
-                              {imp.label}
-                            </span>
-                            <span
-                              className="text-[11px] uppercase tracking-wider"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {signal.signal_type.replace(/_/g, " ")}
-                            </span>
-                            <span
-                              className="text-[11px]"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              · {signal.source}
-                            </span>
-                          </div>
-
-                          {/* Title — clickable if url present */}
-                          {signal.url ? (
-                            <a
-                              href={signal.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="group/link inline-flex items-center gap-1.5 mb-2 hover:opacity-80 transition-opacity"
-                            >
-                              <span
-                                className="text-base font-medium"
-                                style={{ color: "var(--text-primary)" }}
-                              >
-                                {signal.title}
-                              </span>
-                              <ExternalLink
-                                className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover/link:opacity-60 transition-opacity"
-                                strokeWidth={1.75}
-                                style={{ color: "var(--text-muted)" }}
-                              />
-                            </a>
-                          ) : (
-                            <NarrativeText
-                              size="base"
-                              weight="medium"
-                              className="mb-2"
-                            >
-                              {signal.title}
-                            </NarrativeText>
-                          )}
-
-                          {signal.summary && (
-                            <p
-                              className="text-sm mb-3 leading-relaxed"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              {signal.summary}
-                            </p>
-                          )}
-
-                          {signal.companies_affected.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {signal.companies_affected
-                                .slice(0, 3)
-                                .map((co, ci) => (
-                                  <span
-                                    key={`${signal.id}-co-${ci}`}
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium"
-                                    style={{
-                                      background: "var(--surface)",
-                                      color: "var(--text-secondary)",
-                                    }}
-                                  >
-                                    {co}
-                                  </span>
-                                ))}
-                              {signal.companies_affected.length > 3 && (
-                                <span
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-[11px]"
-                                  style={{ color: "var(--text-muted)" }}
-                                >
-                                  +{signal.companies_affected.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        <div
-                          className="text-[11px] tabular-nums shrink-0"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {new Date(signal.occurred_at).toLocaleDateString(
-                            undefined,
-                            { month: "short", day: "numeric" }
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </>
+      <p className="mt-4 text-lg leading-relaxed max-w-[720px]" style={{ color: "var(--text-secondary)" }}>{lead(m)}</p>
+      {topGap && (
+        <p className="mt-2 text-base max-w-[720px]" style={{ color: "var(--text-secondary)" }}>
+          The most asked-for skill you don&apos;t show yet is <span style={{ color: "var(--text-primary)" }}>{topGap.name}</span>
+          {" "}— in {pct(topGap.share)} of these roles
+          {topGap.missing_in_your_matches ? `, and missing in ${topGap.missing_in_your_matches} of your matches` : ""}.
+        </p>
       )}
+
+      <dl className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8" style={{ opacity: loading ? 0.5 : 1 }}>
+        {numbers.map((n) => (
+          <div key={n.label}>
+            <dd className="font-serif-display text-4xl tabular-nums" style={{ color: "var(--text-primary)" }}>{n.value}</dd>
+            <dt className="mt-1.5 text-sm" style={{ color: "var(--text-secondary)" }}>{n.label}</dt>
+            {n.note && <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{n.note}</p>}
+          </div>
+        ))}
+      </dl>
+
+      {m.skills.length > 0 && (
+        <section className="pt-12 mt-12 border-t" style={{ borderColor: "var(--border)" }}>
+          <div className={LABEL} style={LABEL_STYLE}>What these roles ask for</div>
+          <ul className="space-y-3">
+            {m.skills.map((s) => (
+              <li key={s.name} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3.5rem] md:grid-cols-[12rem_minmax(0,1fr)_4rem_5rem_minmax(0,11rem)] items-center gap-x-4 gap-y-1 text-sm">
+                <span className="inline-flex items-center gap-2 truncate" style={{ color: "var(--text-primary)" }}>
+                  {s.you_show && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} style={{ color: "var(--success)" }} aria-label="you show it" />}
+                  {s.name}
+                </span>
+                <span className="h-[3px] rounded-full" style={{ background: "var(--border)" }} aria-hidden="true">
+                  <span className="block h-full rounded-full" style={{ width: `${Math.max(2, s.share * 100)}%`, background: s.you_show ? "var(--success)" : "var(--accent)" }} />
+                </span>
+                <span className="font-mono text-xs tabular-nums text-right" style={{ color: "var(--text-secondary)" }}>{pct(s.share)}</span>
+                <span className="hidden md:block font-mono text-xs tabular-nums" style={{ color: s.trend_pts == null ? "var(--text-muted)" : s.trend_pts > 0 ? "var(--success)" : s.trend_pts < 0 ? "var(--danger)" : "var(--text-muted)" }}>
+                  {s.trend_pts == null ? "" : `${s.trend_pts > 0 ? "+" : ""}${s.trend_pts} pts`}
+                </span>
+                <span className="hidden md:block text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                  {s.you_show ? "in your evidence" : s.missing_in_your_matches ? `missing in ${s.missing_in_your_matches} of your matches` : "not in your evidence"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 text-xs" style={{ color: "var(--text-muted)" }}>
+            Share of open roles matching yours that require the skill; pts = change in that share vs the previous {m.days} days.
+          </p>
+        </section>
+      )}
+
+      {m.busiest_companies.length > 0 && (
+        <section className="pt-12 mt-12 border-t" style={{ borderColor: "var(--border)" }}>
+          <div className={LABEL} style={LABEL_STYLE}>Adding the most roles · last {m.days} days</div>
+          <ul className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-10 gap-y-3">
+            {m.busiest_companies.map((c) => (
+              <li key={c.name} className="flex items-baseline justify-between gap-3 text-sm">
+                {c.key ? (
+                  <Link href={`/companies/${encodeURIComponent(c.key)}`} style={{ color: "var(--text-primary)" }}>{c.name} →</Link>
+                ) : (
+                  <span style={{ color: "var(--text-primary)" }}>{c.name}</span>
+                )}
+                <span className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>+{c.new}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="pt-12 mt-12 border-t" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-baseline justify-between gap-4">
+          <div className={LABEL} style={LABEL_STYLE}>In the news</div>
+          <button onClick={refreshNews} disabled={refreshing} className="inline-flex items-center gap-1.5 text-xs disabled:opacity-60"
+                  style={{ color: "var(--text-muted)" }}>
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Reading HN and TechCrunch…" : "Refresh"}
+          </button>
+        </div>
+        {data.news.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>No news in this period. It&apos;s read once a day.</p>
+        ) : (
+          <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+            {data.news.map((n) => (
+              <li key={n.id} className="py-3 grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-sm" style={{ borderColor: "var(--border)" }}>
+                <div className="min-w-0">
+                  {n.url ? (
+                    <a href={n.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1" style={{ color: "var(--text-primary)" }}>
+                      {n.title} <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                    </a>
+                  ) : (
+                    <span style={{ color: "var(--text-primary)" }}>{n.title}</span>
+                  )}
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                    {n.source === "hackernews" ? "Hacker News" : n.source === "techcrunch" ? "TechCrunch" : n.source} · {n.signal_type.replace(/_/g, " ")}
+                  </p>
+                </div>
+                <span className="text-xs whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                  {new Date(n.occurred_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

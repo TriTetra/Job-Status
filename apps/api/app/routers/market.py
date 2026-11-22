@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from careeros.market.repositories.market_signal_repo import MarketSignalRepository
+from careeros.market.own_market import market_snapshot
 from careeros.market.refresh import refresh_jobs, run_refresh, start_refresh
 from careeros.shared.background import JobNotFound
 
@@ -13,6 +14,16 @@ from ..dependencies import get_db_session, get_user_id
 from ..schemas.market import MarketSignalResponse, MarketSummaryResponse, SkillTrendResponse
 
 router = APIRouter()
+
+
+@router.get("/jobs", summary="The market in the user's own matching postings")
+def own_market(
+    days: int = Query(30, ge=7, le=90, description="Comparison period"),
+    user_id: str = Depends(get_user_id),
+    session: Session = Depends(get_db_session),
+):
+    """Open matches, arrival pace, pay, remote / visa share, skills asked — against the user's evidence."""
+    return market_snapshot(session, user_id, days)
 
 
 @router.get("/signals", response_model=List[MarketSignalResponse])

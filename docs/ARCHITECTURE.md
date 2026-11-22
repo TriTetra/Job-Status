@@ -49,8 +49,8 @@ Enforced by `tests/smoke/test_architecture.py`:
 | `evidence` | `evidence_items` from GitHub repos, the CV (PDF → LLM) and a portfolio site; skill matching; cross-source aggregation; source registry |
 | `jobs` | company boards (`sources/ats/`) + sync, ApplyPilot import, text extraction, scoring (`scoring/`), Decision Contract v1, incremental scan, scheduler, opportunities + reasoning |
 | `applications` | the application pipeline (`to_apply → applied → interview → offer`) |
-| `companies` | company profiles, hiring trends, interview memory |
-| `market` | HN "Who is hiring" + TechCrunch signals (`sources/`), skill registry, refresh job |
+| `companies` | `directory.py`: the board companies (infra/config/companies.yaml) with open roles, hiring pace (new this week vs last → spike/up/stable/down), the user's matches and the skills asked vs their evidence; seed profiles, interview memory |
+| `market` | `own_market.py`: the market in the user's matching postings (arrival pace, pay, remote / visa share, skill demand and its trend vs their evidence); HN "Who is hiring" + TechCrunch news (`sources/`), refreshed daily by the scheduler |
 | `resume` | target-aware resume generation (prompts, templates) from `evidence_items` |
 | `briefing` | `digest.py`: changes since the last visit (new matches, busy companies, closed jobs), the top APPLY pick, dismissable to-dos (no-reply follow-ups, stale shortlists, most-missing skill, proof sources), the week in numbers; the web composes the copy per "Briefing voice" |
 | `knowledge` | reference data: countries, visas, salaries, skill graph; **all seeding** (`seeds.py`) |

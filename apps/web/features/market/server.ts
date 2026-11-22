@@ -2,6 +2,6 @@ import "server-only";
 
 import { serverApiFetch } from "@/lib/api/server";
 
-import { DEFAULT_RANGE, loadMarketSnapshot } from "./snapshot";
+import { DEFAULT_PERIOD, loadMarket } from "./snapshot";
 
-export const getInitialMarket = () => loadMarketSnapshot(serverApiFetch, DEFAULT_RANGE);
+export const getInitialMarket = () => loadMarket(serverApiFetch, DEFAULT_PERIOD);

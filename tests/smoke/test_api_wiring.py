@@ -19,6 +19,7 @@ EXPECTED_PATHS = {
     "/api/auth/invites", "/api/auth/invites/check", "/api/auth/invites/accept", "/api/auth/invites/{invite_id}",
     "/api/applications/", "/api/applications/summary", "/api/applications/{url}",
     "/api/companies/", "/api/companies/hiring", "/api/companies/track",
+    "/api/companies/boards", "/api/companies/boards/{key}",
     "/api/companies/{name}", "/api/companies/{name}/memory",
     # legacy-table endpoints /api/evidence/, /summary, /{skill} removed in Refactor Step 4
     "/api/evidence/items", "/api/evidence/items/{item_id}",
@@ -31,7 +32,7 @@ EXPECTED_PATHS = {
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",
     "/api/jobs/boards", "/api/jobs/sync", "/api/jobs/sync/{job_id}/status",
     "/api/settings/llm-usage",
-    "/api/market/refresh", "/api/market/refresh/{job_id}/status", "/api/market/signals",
+    "/api/market/refresh", "/api/market/refresh/{job_id}/status", "/api/market/signals", "/api/market/jobs",
     "/api/market/summary", "/api/market/trend/{skill}",
     "/api/oauth/github", "/api/oauth/github/authorize", "/api/oauth/github/callback",
     "/api/oauth/github/status", "/api/oauth/github/sync",

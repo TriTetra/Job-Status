@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.company import CompanyMemoryResponse, CompanyResponse
+from careeros.companies.directory import company_detail, company_directory
 from careeros.companies.repositories.company_repo import CompanyMemoryRepository, CompanyRepository
 
 router = APIRouter()
@@ -31,6 +32,20 @@ def companies_hiring_now(
     """Companies actively hiring (hiring_trend = up/spike)."""
     repo = CompanyRepository(session)
     return [CompanyResponse.model_validate(c) for c in repo.get_hiring_now(limit=limit)]
+
+
+@router.get("/boards", summary="Companies from the job boards, with this user's view")
+def board_companies(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """Every company CareerOS reads a board for: open roles, hiring pace, your matches, skills asked."""
+    return {"companies": company_directory(session, user_id)}
+
+
+@router.get("/boards/{key}", summary="One board company with its open roles")
+def board_company(key: str, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    detail = company_detail(session, user_id, key)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return detail
 
 
 @router.get("/{name}/memory", response_model=CompanyMemoryResponse)

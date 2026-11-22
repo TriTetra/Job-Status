@@ -1,307 +1,107 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { NarrativeText } from "@/components/shared/narrative-text";
-import { StatusPill } from "@/components/ui/status-pill";
-import { MetricText } from "@/components/shared/metric-text";
-import { SkillTag } from "@/components/ui/skill-tag";
-import { Button } from "@/components/shared/button";
-import {
-  Search, Plus, Building2, MapPin,
-  TrendingUp, TrendingDown, Minus, Loader2,
-} from "lucide-react";
-import { companiesApi } from "@/features/companies/api";
-import type { Company } from "@/features/companies/types";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import type { BoardCompany } from "@/features/companies/board-types";
+import { TREND, fitLine, profileLine, weekLine } from "@/features/companies/format";
 
-type TierFilter = "ALL" | "big_tech" | "unicorn" | "large" | "startup";
-type HiringDir = "spike" | "up" | "stable" | "down";
+type View = "fits" | "hiring" | "all";
 
-const TIER_LABEL: Record<string, string> = {
-  big_tech: "Big Tech",
-  unicorn: "Unicorn",
-  large: "Large",
-  startup: "Startup",
-  unknown: "—",
-};
+/** The companies CareerOS reads a job board for — sorted by what they mean for you. */
+export function CompaniesView({ companies }: { companies: BoardCompany[] }) {
+  const fits = companies.filter((c) => c.your_matches > 0);
+  const [view, setView] = useState<View>(fits.length ? "fits" : "all");
+  const [query, setQuery] = useState("");
 
-const directionConfig: Record<
-  HiringDir,
-  { label: string; variant: "success" | "warning" | "neutral"; Icon: React.ElementType }
-> = {
-  spike:  { label: "SPIKE",  variant: "success", Icon: TrendingUp },
-  up:     { label: "UP",     variant: "success", Icon: TrendingUp },
-  stable: { label: "STABLE", variant: "neutral", Icon: Minus },
-  down:   { label: "DOWN",   variant: "warning", Icon: TrendingDown },
-};
+  const hiringFaster = companies.filter((c) => c.trend === "spike" || c.trend === "up").length;
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return companies
+      .filter((c) => (view === "fits" ? c.your_matches > 0 : view === "hiring" ? c.new_this_week > 0 : true))
+      .filter((c) => !q || c.name.toLowerCase().includes(q));
+  }, [companies, view, query]);
 
-export function CompaniesView({ initialCompanies }: { initialCompanies: Company[] }) {
-  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
-  const [loading, setLoading] = useState(false);
-  const [tierFilter, setTierFilter] = useState<TierFilter>("ALL");
-  const [search, setSearch] = useState("");
-  const [trackOpen, setTrackOpen] = useState(false);
-  const [trackName, setTrackName] = useState("");
-  const [tracking, setTracking] = useState(false);
-
-  // Initial list comes from the server; this refreshes it after tracking a company
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setCompanies(await companiesApi.list());
-    } catch (err) {
-      console.error("[companies] refresh failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleTrack = async () => {
-    if (!trackName.trim()) return;
-    setTracking(true);
-    try {
-      await companiesApi.track(trackName.trim());
-      setTrackOpen(false);
-      setTrackName("");
-      load();
-    } catch (err) {
-      console.error("[companies] track failed:", err);
-    } finally {
-      setTracking(false);
-    }
-  };
-
-  const filtered = companies.filter((c) => {
-    if (tierFilter !== "ALL" && c.tier !== tierFilter) return false;
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
-
-  const hiringNow = companies.filter(
-    (c) => c.hiring_trend === "up" || c.hiring_trend === "spike"
-  ).length;
+  const views: Array<{ id: View; label: string; n: number }> = [
+    { id: "fits", label: "Fit you", n: fits.length },
+    { id: "hiring", label: "Posted this week", n: companies.filter((c) => c.new_this_week > 0).length },
+    { id: "all", label: "All", n: companies.length },
+  ];
 
   return (
-    <div className="wide-container px-6 lg:px-8 py-10">
-      {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <NarrativeText size="2xl" weight="semibold" className="mb-1">
-            Companies
-          </NarrativeText>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            {companies.length} tracked · {hiringNow} hiring now
-          </p>
-        </div>
-        <Button variant="outline" size="md" onClick={() => setTrackOpen((v) => !v)}>
-          <Plus className="h-4 w-4" />
-          Track company
-        </Button>
-      </div>
+    <div className="wide-container px-6 lg:px-8 py-10 max-w-[1100px]">
+      <h1 className="font-serif-display text-4xl" style={{ color: "var(--text-primary)" }}>Companies</h1>
+      <p className="mt-3 text-base max-w-[720px]" style={{ color: "var(--text-secondary)" }}>
+        {fits.length} of the {companies.length} companies we read job boards for have roles that fit you
+        {hiringFaster ? `; ${hiringFaster} are posting faster than last week` : ""}.
+      </p>
 
-      {/* Track input */}
-      {trackOpen && (
-        <div className="mb-6 flex gap-2">
-          <input
-            type="text"
-            value={trackName}
-            onChange={(e) => setTrackName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleTrack()}
-            placeholder="Company name…"
-            autoFocus
-            className="flex-1 max-w-sm h-9 px-3 rounded-lg text-sm outline-none transition-colors"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              color: "var(--text-primary)",
-            }}
-          />
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleTrack}
-            disabled={tracking || !trackName.trim()}
-          >
-            {tracking ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            Add
-          </Button>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="mb-6 flex items-center gap-3 flex-wrap">
-        <div
-          className="flex items-center gap-1 p-1 rounded-lg"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          {(["ALL", "big_tech", "unicorn", "large", "startup"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTierFilter(t)}
-              className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                background: tierFilter === t ? "rgba(255,177,98,0.15)" : "transparent",
-                color: tierFilter === t ? "var(--accent)" : "var(--text-secondary)",
-              }}
-            >
-              {t === "ALL" ? "ALL" : TIER_LABEL[t]}
+      <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+        <nav className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Views">
+          {views.map((v) => (
+            <button key={v.id} onClick={() => setView(v.id)} aria-current={v.id === view ? "page" : undefined}
+                    className="text-sm" style={{ color: v.id === view ? "var(--text-primary)" : "var(--text-muted)", fontWeight: v.id === view ? 600 : 400 }}>
+              {v.label} <span className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>{v.n}</span>
             </button>
           ))}
-        </div>
-        <div className="flex-1 min-w-[200px] max-w-sm relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
-            strokeWidth={1.75}
-            style={{ color: "var(--text-muted)" }}
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search companies..."
-            className="w-full h-9 pl-9 pr-3 rounded-lg text-sm outline-none transition-colors"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              color: "var(--text-primary)",
-            }}
-          />
-        </div>
+        </nav>
+        <label className="ml-auto flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+          <Search className="h-4 w-4" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Company" aria-label="Search companies"
+                 className="w-40 bg-transparent border-0 border-b outline-none py-1 text-sm focus:border-[var(--accent)]"
+                 style={{ borderColor: "var(--border)", color: "var(--text-primary)" }} />
+        </label>
       </div>
 
-      {/* Grid */}
-      {loading ? (
-        <div className="surface p-12 text-center">
-          <Loader2
-            className="h-5 w-5 animate-spin mx-auto mb-3"
-            style={{ color: "var(--text-muted)" }}
-          />
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Loading companies…
-          </p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="surface p-12 text-center">
-          <NarrativeText size="lg" weight="medium" className="mb-2">
-            {companies.length === 0 ? "No companies yet." : "No companies match your filters."}
-          </NarrativeText>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {companies.length === 0
-              ? "Track your first company to start building intelligence."
-              : "Try adjusting your filters."}
-          </p>
-        </div>
+      {shown.length === 0 ? (
+        <p className="py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>No companies in this view.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((company) => {
-            const dir =
-              directionConfig[company.hiring_trend as HiringDir] ?? directionConfig.stable;
-            const DirectionIcon = dir.Icon;
-            const iconColor =
-              dir.variant === "success"
-                ? "var(--success)"
-                : dir.variant === "warning"
-                ? "var(--warning)"
-                : "var(--text-muted)";
-
+        <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+          {shown.map((c) => {
+            const fit = fitLine(c);
+            const profile = profileLine(c);
+            const trend = TREND[c.trend];
             return (
-              <div
-                key={company.name}
-                className="surface p-5 hover:bg-surface-hover transition-colors"
-              >
-                {/* Company header */}
-                <div className="flex items-start gap-3 mb-3">
-                  <div
-                    className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(255,177,98,0.12)" }}
-                  >
-                    <span
-                      className="font-semibold text-base"
-                      style={{ fontFamily: "var(--font-display)", color: "var(--accent)" }}
-                    >
-                      {company.name.charAt(0)}
-                    </span>
+              <li key={c.key} style={{ borderColor: "var(--border)" }}>
+                <Link href={`/companies/${encodeURIComponent(c.key)}`}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.3fr)_5.5rem_minmax(0,1fr)_minmax(0,1.3fr)] gap-x-6 gap-y-1 py-5 group">
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold group-hover:underline underline-offset-4" style={{ color: "var(--text-primary)" }}>{c.name}</p>
+                    {profile && <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{profile}</p>}
+                    {fit && <p className="text-sm mt-1" style={{ color: "var(--accent)" }}>{fit}</p>}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <NarrativeText size="base" weight="semibold" className="truncate">
-                      {company.name}
-                    </NarrativeText>
-                    <div className="mt-0.5">
-                      <StatusPill
-                        label={TIER_LABEL[company.tier] ?? company.tier}
-                        variant="neutral"
-                        size="sm"
-                      />
-                    </div>
+                  <div className="text-right md:text-left">
+                    <p className="font-serif-display text-3xl tabular-nums leading-none" style={{ color: "var(--text-primary)" }}>{c.open_roles}</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>open roles</p>
                   </div>
-                </div>
-
-                {/* Meta */}
-                <div
-                  className="space-y-1.5 mb-3 text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {company.industry && (
-                    <div className="flex items-center gap-1.5">
-                      <Building2 className="h-3 w-3" strokeWidth={1.75} />
-                      {company.industry}
-                    </div>
-                  )}
-                  {company.headquarters && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3 w-3" strokeWidth={1.75} />
-                      {company.headquarters}
-                    </div>
-                  )}
-                </div>
-
-                {/* Hiring trend + open positions */}
-                <div
-                  className="flex items-center gap-2 mb-3 pb-3 border-b"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  <DirectionIcon
-                    className="h-3.5 w-3.5"
-                    strokeWidth={2}
-                    style={{ color: iconColor }}
-                  />
-                  <StatusPill label={dir.label} variant={dir.variant} size="sm" />
-                  <div className="ml-auto flex items-center gap-1">
-                    <MetricText
-                      value={company.open_positions_count}
-                      size="sm"
-                      showTrendIcon={false}
-                    />
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      open
-                    </span>
+                  <div className="col-span-2 md:col-span-1 text-sm">
+                    <p style={{ color: trend.color }}>{trend.label}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{weekLine(c)}</p>
                   </div>
-                </div>
-
-                {/* Tech stack */}
-                <div className="flex flex-wrap gap-1.5">
-                  {company.tech_stack.slice(0, 4).map((tech) => (
-                    <SkillTag key={tech} name={tech} variant="default" />
-                  ))}
-                  {company.tech_stack.length > 4 && (
-                    <span
-                      className="inline-flex h-6 px-2 rounded-md text-[11px] items-center"
-                      style={{
-                        color: "var(--text-muted)",
-                        background: "var(--surface-hover)",
-                      }}
-                    >
-                      +{company.tech_stack.length - 4}
-                    </span>
-                  )}
-                </div>
-              </div>
+                  <div className="col-span-2 md:col-span-1 text-sm min-w-0">
+                    {c.top_skills.length > 0 ? (
+                      <>
+                        <p className="truncate" style={{ color: "var(--text-secondary)" }}>
+                          {c.top_skills.slice(0, 4).map((s, i) => (
+                            <span key={s.name} style={{ color: s.you_show ? "var(--success)" : "var(--text-secondary)" }}>
+                              {i > 0 && <span style={{ color: "var(--text-muted)" }}> · </span>}
+                              {s.name}
+                            </span>
+                          ))}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                          you show {c.skills_you_show} of the {c.top_skills.length} they ask for most
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>{c.sync_error ? "board couldn't be read lately" : "no open roles in your field"}</p>
+                    )}
+                  </div>
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );
