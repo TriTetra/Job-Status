@@ -4,9 +4,11 @@ import { apiFetch } from "@/lib/api/client";
 import type {
   CareerGraphData,
   EvidenceReview,
+  EvidenceSourceRow,
   ExtractionSummary,
   GithubStatus,
   JobStatus,
+  ProfileConnectResult,
 } from "./types";
 
 export const onboardingApi = {
@@ -166,20 +168,24 @@ export const onboardingApi = {
   },
 
   getEvidenceSources(): Promise<{
-    recommended: Array<{
-      id: string; label: string; icon: string; category: string;
-      status: string; connect_kind: string; oauth_provider: string | null;
-      connected: boolean; suggested: boolean;
-    }>;
-    all: Array<{
-      id: string; label: string; icon: string; category: string;
-      status: string; connect_kind: string; oauth_provider: string | null;
-      connected: boolean; suggested: boolean;
-    }>;
+    recommended: EvidenceSourceRow[];
+    all: EvidenceSourceRow[];
     connected: Record<string, boolean>;
     role_title: string | null;
   }> {
     return apiFetch("/api/evidence/sources");
+  },
+
+  /** Connect GitHub, GitLab, Stack Overflow, ORCID, Medium or Substack by username / link. */
+  connectProfile(sourceId: string, value: string): Promise<ProfileConnectResult> {
+    return apiFetch(`/api/evidence/profiles/${encodeURIComponent(sourceId)}`, {
+      method: "POST",
+      body: JSON.stringify({ value }),
+    });
+  },
+
+  async disconnectProfile(sourceId: string): Promise<void> {
+    await apiFetch(`/api/evidence/profiles/${encodeURIComponent(sourceId)}`, { method: "DELETE" });
   },
 
   getGoalCatalog(): Promise<{

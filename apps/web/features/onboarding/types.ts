@@ -119,3 +119,30 @@ export interface PortfolioStatus {
   url?: string;
   last_synced_at?: string | null;
 }
+
+/** One row of the evidence source registry, as /api/evidence/sources returns it. */
+export interface EvidenceSourceRow {
+  id: string;
+  label: string;
+  icon: string;
+  category: string;
+  /** available | coming_soon */
+  status: string;
+  /** profile = username / link · url = portfolio crawl · oauth = sign-in flow */
+  connect_kind: string;
+  oauth_provider: string | null;
+  connected: boolean;
+  /** username / id the user connected with */
+  handle?: string | null;
+  suggested: boolean;
+}
+
+export interface ProfileConnectResult {
+  status: string;
+  source: string;
+  handle: string;
+  url: string;
+  summary: string;
+  skills_found: number;
+  items_found: number;
+}

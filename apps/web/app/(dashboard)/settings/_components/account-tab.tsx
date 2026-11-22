@@ -1,61 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMe } from "@/features/auth/use-me";
-import { settingsApi, API_BASE } from "@/features/settings/api";
-import type { GithubStatus, PortfolioStatus } from "@/features/onboarding/types";
-import {
-  crawlErrorMessage, crawlSummary, githubNotice, type Notice,
-} from "@/features/onboarding/connect-messages";
+import { onboardingApi } from "@/features/onboarding/api";
+import { githubNotice, NOTICE_COLOR } from "@/features/onboarding/connect-messages";
+import { connectsByInput, SOURCE_INPUT, useSourceConnect } from "@/features/onboarding/use-source-connect";
+import type { EvidenceSourceRow } from "@/features/onboarding/types";
 import { Section, Row, UnderlineInput } from "./kit";
 import { InvitesSection, PasswordRow } from "./access-section";
 
+const textBtn = "text-xs underline underline-offset-4 transition-colors cursor-pointer disabled:opacity-40";
+
 export function AccountTab() {
   const me = useMe();
-  const [github, setGithub] = useState<GithubStatus | null>(null);
-  const [portfolio, setPortfolio] = useState<PortfolioStatus | null>(null);
-  const [urlOpen, setUrlOpen] = useState(false);
-  const [url, setUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [portfolioNotice, setPortfolioNotice] = useState<Notice | null>(null);
-  const ghNotice = githubNotice(useSearchParams().get("github"));
+  const [sources, setSources] = useState<EvidenceSourceRow[] | null>(null);
+  const oauthNotice = githubNotice(useSearchParams().get("github"));
 
-  const refresh = () => {
-    settingsApi
-      .getGithubStatus()
-      .then(setGithub)
-      .catch(() => setGithub({ connected: false }));
-    settingsApi
-      .getPortfolioStatus()
-      .then(setPortfolio)
-      .catch(() => setPortfolio({ connected: false }));
-  };
+  const refresh = useCallback(() => {
+    onboardingApi
+      .getEvidenceSources()
+      .then((d) => setSources(d.all.filter((s) => s.status === "available")))
+      .catch(() => setSources([]));
+  }, []);
 
-  useEffect(refresh, []);
+  useEffect(refresh, [refresh]);
 
-  const connectGithub = () => {
-    window.location.assign(`${API_BASE}/api/oauth/github/authorize?return_to=settings`);
-  };
-
-  const addPortfolio = async () => {
-    if (!url) return;
-    setBusy(true);
-    setPortfolioNotice(null);
-    try {
-      const result = await settingsApi.crawlPortfolio(url);
-      setUrlOpen(false);
-      setUrl("");
-      setPortfolioNotice({ tone: "ok", text: crawlSummary(result) });
-      refresh();
-    } catch (e) {
-      setPortfolioNotice({ tone: "error", text: crawlErrorMessage(e) });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const textBtn = "text-xs underline underline-offset-4 transition-colors cursor-pointer";
+  const c = useSourceConnect(refresh, "settings");
 
   return (
     <div>
@@ -76,83 +47,62 @@ export function AccountTab() {
       {me?.is_admin && <InvitesSection />}
 
       <Section title="Proof sources">
-        <Row label="GitHub" hint={ghNotice?.text ?? "Repository analysis raises skill confidence"}>
-          {github?.connected ? (
-            <span className="flex items-center gap-4">
-              <span className="text-sm" style={{ color: "var(--success)" }}>
-                @{github.username} · connected
-              </span>
-              <button
-                className={textBtn}
-                style={{ color: "var(--danger)" }}
-                onClick={async () => {
-                  await settingsApi.disconnectGithub();
-                  refresh();
-                }}
-              >
-                Disconnect
-              </button>
-            </span>
-          ) : github?.available === false ? (
-            <span className="text-xs" style={{ color: "var(--text-muted)" }} title="The site admin hasn't set up GitHub sign-in yet">
-              Not set up
-            </span>
-          ) : (
-            <button
-              className={textBtn}
-              style={{ color: "var(--accent)" }}
-              onClick={connectGithub}
-            >
-              Connect
-            </button>
-          )}
-        </Row>
-
-        <Row label="Portfolio" hint={portfolioNotice?.text ?? "Crawled for projects and technologies"}>
-          {portfolio?.connected ? (
-            <span className="flex items-center gap-4 min-w-0">
-              <span className="text-sm truncate" style={{ color: "var(--success)" }}>
-                {portfolio.url} · connected
-              </span>
-              <button
-                className={textBtn}
-                style={{ color: "var(--danger)" }}
-                onClick={async () => {
-                  await settingsApi.disconnectPortfolio();
-                  refresh();
-                }}
-              >
-                Disconnect
-              </button>
-            </span>
-          ) : urlOpen ? (
-            <span className="flex items-center gap-3">
-              <UnderlineInput
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://your-portfolio.com"
-                onKeyDown={(e) => e.key === "Enter" && addPortfolio()}
-              />
-              <button
-                className={textBtn}
-                style={{ color: "var(--accent)" }}
-                onClick={addPortfolio}
-                disabled={busy}
-              >
-                {busy ? "Reading…" : "Add"}
-              </button>
-            </span>
-          ) : (
-            <button
-              className={textBtn}
-              style={{ color: "var(--accent)" }}
-              onClick={() => setUrlOpen(true)}
-            >
-              Add URL
-            </button>
-          )}
-        </Row>
+        {oauthNotice && (
+          <p className="text-xs py-3" role="status" style={{ color: NOTICE_COLOR[oauthNotice.tone] }}>
+            {oauthNotice.text}
+          </p>
+        )}
+        {sources === null && (
+          <p className="text-xs py-3" style={{ color: "var(--text-muted)" }}>Loading…</p>
+        )}
+        {sources?.map((s) => {
+          const open = c.openId === s.id;
+          const busy = c.busyId === s.id;
+          const notice = c.notices[s.id];
+          return (
+            <Row key={s.id} label={s.label} hint={SOURCE_INPUT[s.id]?.hint}>
+              {s.connected ? (
+                <span className="flex items-center gap-4 min-w-0">
+                  <span className="text-sm truncate" style={{ color: "var(--success)" }}>
+                    {s.handle ? `${s.handle} · connected` : "connected"}
+                  </span>
+                  <button className={textBtn} style={{ color: "var(--danger)" }} disabled={busy} onClick={() => c.disconnect(s)}>
+                    Disconnect
+                  </button>
+                </span>
+              ) : open && connectsByInput(s) ? (
+                <span className="flex items-center gap-3 min-w-0">
+                  <UnderlineInput
+                    autoFocus
+                    value={c.value}
+                    onChange={(e) => c.setValue(e.target.value)}
+                    placeholder={SOURCE_INPUT[s.id]?.placeholder ?? "Username or profile link"}
+                    aria-label={`${s.label} username or link`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") c.submit(s);
+                      if (e.key === "Escape") c.cancel();
+                    }}
+                  />
+                  <button className={textBtn} style={{ color: "var(--accent)" }} onClick={() => c.submit(s)} disabled={busy || !c.value.trim()}>
+                    {busy ? "Reading…" : "Add"}
+                  </button>
+                  <button className={textBtn} style={{ color: "var(--text-muted)" }} onClick={c.cancel}>
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button className={textBtn} style={{ color: "var(--accent)" }} onClick={() => c.start(s)}>
+                  Connect
+                </button>
+              )}
+              {notice && (
+                <p className="text-xs mt-1.5" role={notice.tone === "error" ? "alert" : "status"} style={{ color: NOTICE_COLOR[notice.tone] }}>
+                  {notice.text}
+                </p>
+              )}
+            </Row>
+          );
+        })}
       </Section>
     </div>
   );

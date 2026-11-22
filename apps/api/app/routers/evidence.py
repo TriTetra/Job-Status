@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from careeros.evidence import items, portfolio
+from careeros.evidence import items, portfolio, profiles
 from careeros.evidence.aggregation import ranked_user_skills
 from careeros.evidence.sources import list_sources
 
@@ -17,6 +17,10 @@ router = APIRouter()
 
 class PortfolioCrawlRequest(BaseModel):
     url: str = Field(min_length=3, max_length=2000)
+
+
+class ProfileConnectRequest(BaseModel):
+    value: str = Field(min_length=1, max_length=300)  # username, id or profile link
 
 
 @router.get("/items")
@@ -73,3 +77,28 @@ def disconnect_portfolio(user_id: str = Depends(get_user_id), session: Session =
 def get_evidence_sources(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
     """Connection sources from the registry, recommended for the user's current role."""
     return list_sources(session, user_id)
+
+
+@router.post("/profiles/{source_id}")
+def connect_profile(
+    source_id: str,
+    request: ProfileConnectRequest,
+    user_id: str = Depends(get_user_id),
+    session: Session = Depends(get_db_session),
+):
+    """Connect a public profile (GitHub, GitLab, Stack Overflow, ORCID, Medium, Substack) by username/link."""
+    if source_id not in profiles.READERS:
+        raise HTTPException(status_code=404, detail="This source can't be connected yet.")
+    try:
+        return profiles.connect_profile(session, user_id, source_id, request.value)
+    except profiles.ProfileError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/profiles/{source_id}")
+def disconnect_profile(source_id: str, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """Forget a connected profile and remove its evidence."""
+    if source_id not in profiles.READERS:
+        raise HTTPException(status_code=404, detail="Unknown source")
+    profiles.disconnect_profile(session, user_id, source_id)
+    return {"status": "disconnected"}

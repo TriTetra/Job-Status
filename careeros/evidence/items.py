@@ -10,11 +10,19 @@ from careeros.evidence.models.evidence_item import EvidenceItem
 logger = logging.getLogger(__name__)
 
 # evidence_data.type → review bucket; anything else (incl. no type) is a skill
-_BUCKETS = {"project": "projects", "experience": "experiences", "education": "education", "certification": "certifications"}
+_BUCKETS = {
+    "project": "projects", "experience": "experiences", "education": "education",
+    "certification": "certifications", "article": "writing",
+    **{t: "achievements" for t in ("volunteering", "award", "publication", "patent", "sport", "opensource",
+                                   "exhibition", "grant", "press", "teaching", "license")},
+}
 
 
 def group_for_review(items: Iterable[EvidenceItem]) -> dict[str, list[dict]]:
-    groups: dict[str, list[dict]] = {"skills": [], "projects": [], "experiences": [], "education": [], "certifications": []}
+    groups: dict[str, list[dict]] = {
+        "skills": [], "projects": [], "experiences": [], "education": [], "certifications": [],
+        "achievements": [], "writing": [],
+    }
     for item in items:
         data = item.evidence_data or {}
         groups[_BUCKETS.get(data.get("type", "skill"), "skills")].append({

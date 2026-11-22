@@ -23,6 +23,7 @@ EXPECTED_PATHS = {
     # legacy-table endpoints /api/evidence/, /summary, /{skill} removed in Refactor Step 4
     "/api/evidence/items", "/api/evidence/items/{item_id}",
     "/api/evidence/portfolio", "/api/evidence/portfolio/crawl", "/api/evidence/portfolio/status",
+    "/api/evidence/profiles/{source_id}",
     "/api/evidence/skills/aggregated", "/api/evidence/sources",
     "/api/briefing",
     "/api/goals/catalog",

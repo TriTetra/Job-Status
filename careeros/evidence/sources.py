@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from careeros.identity.models.connected_account import ConnectedAccount
 from careeros.evidence.models.evidence_source import EvidenceSource
-from careeros.identity import github_account
 from careeros.identity.current_role import CurrentRole, get_current_role
 from careeros.knowledge.seeds import load_seed
 
@@ -31,8 +30,12 @@ def suggested_source_ids(role: Optional[CurrentRole]) -> list[str]:
     return DEFAULT_SOURCES
 
 
-def present_sources(sources: list, suggested: list[str], connected: set[str]) -> dict:
-    """Registry rows → {"all": [...], "recommended": [...] in suggestion order}."""
+def present_sources(sources: list, suggested: list[str], connected) -> dict:
+    """Registry rows → {"all": [...], "recommended": [...] in suggestion order}.
+
+    `connected` is a set of providers, or {provider: handle} to show who is connected.
+    """
+    handles = connected if isinstance(connected, dict) else {}
     all_sources = [
         {
             "id": src.id,
@@ -40,9 +43,10 @@ def present_sources(sources: list, suggested: list[str], connected: set[str]) ->
             "icon": src.icon,
             "category": src.category,
             "status": src.status,                 # available | coming_soon
-            "connect_kind": src.connect_kind,     # oauth | url | none
+            "connect_kind": src.connect_kind,     # profile | url | oauth | none
             "oauth_provider": src.oauth_provider,
             "connected": (src.oauth_provider or src.id) in connected,
+            "handle": handles.get(src.oauth_provider or src.id),
             "suggested": src.id in suggested,
         }
         for src in sources
@@ -58,16 +62,14 @@ def list_sources(session: Session, user_id: str) -> dict:
 
     sources = session.query(EvidenceSource).order_by(EvidenceSource.sort_order).all()
     connected = {
-        provider for (provider,) in session.query(ConnectedAccount.provider).filter(
+        provider: handle for (provider, handle) in session.query(
+            ConnectedAccount.provider, ConnectedAccount.provider_username,
+        ).filter(
             ConnectedAccount.user_id == user_id,
             ConnectedAccount.is_active.is_(True),
         ).all()
     }
     view = present_sources(sources, suggested, connected)
-    if not github_account.configured():
-        for row in view["all"]:
-            if row["oauth_provider"] == "github" and row["status"] == "available" and not row["connected"]:
-                row["status"] = "unavailable"  # "Not set up" instead of a dead Connect button
     return {
         "recommended": view["recommended"],
         "all": view["all"],

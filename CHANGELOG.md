@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Evidence — Public Profile Sources | GitHub, GitLab, Stack Overflow, ORCID, Medium and Substack connect by username / link from their public APIs and feeds — no OAuth app, no keys; verified live against all six; onboarding and Settings share one connect flow | ✅ Tamam | 2026-11-22 |
 | Evidence — CV, Portfolio, GitHub Fixes | CV skills cleaned to canonical names (catalog match 15/51 → 39/54 on a real CV), validated extraction with retry, re-upload replaces old evidence, education/certifications/highlights kept, pending papers not counted as verified; portfolio crawler public-only (SSRF closed), whole-word skills, real project blocks, readable errors; GitHub repos analysed after connecting, "Not set up" instead of a raw error | ✅ Tamam | 2026-11-22 |
 | Web Accounts — Clear Admin Setup Screen | The one-time first-account screen now says what it is: "Create the admin account", shown once because the site has no accounts yet; later people join by invite link. Design reference of every screen published | ✅ Tamam | 2026-11-22 |
 | LLM — Native Anthropic Provider | With ANTHROPIC_API_KEY the gateway calls Claude via the official SDK: claude-opus-5-5 for interactive tasks (effort medium, server-side refusal fallback), claude-haiku-5-5 for bulk (effort low); cost from list prices; OpenRouter stays as fallback provider | ✅ Tamam | 2026-11-22 |
@@ -100,6 +101,29 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Evidence — Profiles] — 2026-11-22 — Six sources connect by username, no setup ✅
+
+**Neden:** GitHub bağlantısı için sitenin bir OAuth uygulamasına (env'de client id/secret) ihtiyacı vardı; davet edilen herkesin kendi hesabını bağlayabilmesi için bu kurulum zorunlu olmamalı. Diğer kaynaklar da "Soon" olarak bekliyordu.
+
+- **Yeni:** `careeros/evidence/profiles.py` — kullanıcı adı / profil linki ile, herkese açık API veya RSS'ten okuyan altı okuyucu:
+  - **GitHub** (`github.com/kullanici`): kendi depoları (fork/arşiv hariç) → ana diller, bilinen topic'ler, en çok yıldızlı 10 proje. 2 istek.
+  - **GitLab**: herkese açık projeler + her birinin dil dağılımı.
+  - **Stack Overflow** (`stackoverflow.com/users/…`): en iyi tag'ler → bilinen beceriler (cevap skoruna göre güven), itibar.
+  - **ORCID** (`0000-…`): yayınlar (DOI linkli) ve fonlar → başarı olarak (doğrulanmış, 0.93), anahtar kelimeler.
+  - **Medium / Substack**: son yazılar → "article" kanıtı, konuları bilinen becerilere eşleniyor. Kendi alan adındaki Substack, portfolyo ile aynı güvenli adres kontrolünden geçiyor.
+- Sahiplik kanıtlanmadığı için güvenler OAuth'tan biraz düşük. Bağlanınca o kaynağın eski kanıtı değişiyor; okunamazsa hiçbir şey kaydedilmiyor; hatalar cümleyle ("No GitHub profile found with that name.", "… is limiting requests right now").
+- `GITHUB_TOKEN` isteğe bağlı (60 → 5 000 istek/saat); token geçersizse anonim okumaya düşüyor (yerel `.env`'deki token geçersiz çıktı, bu yüzden eklendi).
+- **API:** `POST/DELETE /api/evidence/profiles/{source}`; kaynak listesinde bağlı hesabın kullanıcı adı (`handle`).
+- **Kayıt (seed):** GitHub `connect_kind: profile`; GitLab, Stack Overflow, ORCID, Medium, Substack `available`. Rol önerileri güncellendi (Research/academic/medical → ORCID önce, Engineering → GitLab, varsayılan → GitHub, Medium).
+- **Arayüz:** onboarding 4. adım ve Settings → Account aynı bağlantı akışını kullanıyor (`use-source-connect.ts`): Connect → satırda kutucuk (kaynağa göre örnek), sonuç cümlesi ("Read 24 public repositories: 6 languages, 10 projects."), bağlıyken kullanıcı adı + Disconnect. Onboarding: "Recommended / Also available / Coming soon".
+- **İnceleme grupları:** başarılar (ödül, yayın, fon…) artık "skills" içinde değil, `achievements`; yazılar `writing`.
+- GitHub OAuth kodu duruyor (ileride özel depolar için), arayüz şu an kullanmıyor.
+- **Canlı doğrulama** (herkese açık test hesaplarıyla): GitHub octocat 6 depo, GitLab sytses 22 proje / 6 dil, Stack Overflow 22656 → C#, Java, .NET, ORCID test kaydı 6 yayın, Medium 8 yazı, Substack (kendi alan adına yönlenen) 20 yazı.
+- Doğrulama: 503 test (yeni `test_profiles.py`: girdi biçimleri, API yanıtı → kanıt, oran sınırı, geçersiz token, iç adrese yönlendirme reddi, kaydetme); ruff, tsc, eslint, `next build` temiz.
+- Hâlâ "Soon": Kaggle (herkese açık API yok), Google Scholar, LinkedIn, ResearchGate, Behance, Dribbble, Figma, ArtStation, PubMed, Doximity, Archinect, Houzz.
 
 ---
 

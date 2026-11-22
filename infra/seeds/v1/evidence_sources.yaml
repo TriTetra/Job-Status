@@ -1,14 +1,16 @@
 # Evidence source registry + which sources each role category is recommended.
 # Read by `career-os seed sources` (DB) and at runtime by careeros/evidence/sources.py.
+# connect_kind: profile = username / link, read from the public API (careeros/evidence/profiles.py);
+# url = portfolio crawl; oauth = sign-in flow (none in use).
 
 sources:
-- {id: github, label: GitHub, icon: github, category: code, status: available, oauth_provider: github, connect_kind: oauth,
+- {id: github, label: GitHub, icon: github, category: code, status: available, oauth_provider: github, connect_kind: profile,
   sort_order: 10}
 - {id: portfolio, label: Portfolio, icon: globe, category: generic, status: available, oauth_provider: portfolio, connect_kind: url,
   sort_order: 20}
-- {id: gitlab, label: GitLab, icon: gitlab, category: code, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+- {id: gitlab, label: GitLab, icon: gitlab, category: code, status: available, oauth_provider: null, connect_kind: profile,
   sort_order: 30}
-- {id: stackoverflow, label: Stack Overflow, icon: code, category: code, status: coming_soon, oauth_provider: null, connect_kind: oauth,
+- {id: stackoverflow, label: Stack Overflow, icon: code, category: code, status: available, oauth_provider: null, connect_kind: profile,
   sort_order: 40}
 - {id: dribbble, label: Dribbble, icon: dribbble, category: visual_art, status: coming_soon, oauth_provider: null, connect_kind: oauth,
   sort_order: 50}
@@ -24,7 +26,7 @@ sources:
   sort_order: 90}
 - {id: researchgate, label: ResearchGate, icon: flask, category: academic, status: coming_soon, oauth_provider: null, connect_kind: url,
   sort_order: 100}
-- {id: orcid, label: ORCID, icon: fingerprint, category: academic, status: coming_soon, oauth_provider: null, connect_kind: url,
+- {id: orcid, label: ORCID, icon: fingerprint, category: academic, status: available, oauth_provider: null, connect_kind: profile,
   sort_order: 110}
 - {id: pubmed, label: PubMed, icon: book, category: medical, status: coming_soon, oauth_provider: null, connect_kind: url,
   sort_order: 120}
@@ -34,28 +36,28 @@ sources:
   sort_order: 140}
 - {id: houzz, label: Houzz, icon: home, category: architecture, status: coming_soon, oauth_provider: null, connect_kind: url,
   sort_order: 150}
-- {id: medium, label: Medium, icon: pen, category: writing, status: coming_soon, oauth_provider: null, connect_kind: url,
+- {id: medium, label: Medium, icon: pen, category: writing, status: available, oauth_provider: null, connect_kind: profile,
   sort_order: 160}
-- {id: substack, label: Substack, icon: layers, category: writing, status: coming_soon, oauth_provider: null, connect_kind: url,
+- {id: substack, label: Substack, icon: layers, category: writing, status: available, oauth_provider: null, connect_kind: profile,
   sort_order: 170}
 - {id: linkedin, label: LinkedIn, icon: linkedin, category: generic, status: coming_soon, oauth_provider: null, connect_kind: oauth,
   sort_order: 180}
 category_sources:
-  Engineering: [github, portfolio, stackoverflow]
-  AI/ML: [github, kaggle, portfolio]
-  Data: [kaggle, github, portfolio]
+  Engineering: [github, portfolio, stackoverflow, gitlab]
+  AI/ML: [github, portfolio, stackoverflow, kaggle]
+  Data: [github, portfolio, stackoverflow, kaggle]
   Design: [dribbble, behance, portfolio]
-  Product: [linkedin, portfolio]
+  Product: [portfolio, medium, substack, linkedin]
   Management: [linkedin, portfolio]
-  DevOps: [github, portfolio]
-  Security: [github, portfolio]
-  Research: [scholar, researchgate, github]
-  QA: [github, portfolio]
-  medical: [pubmed, orcid, scholar, doximity]
-  academic: [scholar, researchgate, orcid, portfolio]
+  DevOps: [github, gitlab, portfolio]
+  Security: [github, gitlab, portfolio]
+  Research: [orcid, github, scholar, researchgate]
+  QA: [github, gitlab, portfolio]
+  medical: [orcid, pubmed, scholar, doximity]
+  academic: [orcid, scholar, researchgate, portfolio]
   architecture: [archinect, houzz, behance, portfolio]
   visual_art: [artstation, behance, dribbble, portfolio]
   writing: [medium, substack, portfolio]
-  education: [linkedin, scholar, portfolio]
+  education: [orcid, portfolio, medium, linkedin]
   legal: [linkedin, portfolio]
-default_sources: [portfolio, linkedin]
+default_sources: [portfolio, github, medium, linkedin]

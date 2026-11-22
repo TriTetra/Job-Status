@@ -32,7 +32,7 @@ def test_suggested_sources():
     canonical = CurrentRole("Backend Engineer", "Engineering", is_custom=False, suggested_source_ids=["github", "stackoverflow"])
     assert suggested_source_ids(canonical) == ["github", "stackoverflow"]
     custom = CurrentRole("Nurse", "medical", is_custom=True)
-    assert suggested_source_ids(custom) == ["pubmed", "orcid", "scholar", "doximity"]
+    assert suggested_source_ids(custom) == ["orcid", "pubmed", "scholar", "doximity"]
     assert suggested_source_ids(CurrentRole("Juggler", None, is_custom=True)) == DEFAULT_SOURCES
     assert suggested_source_ids(CurrentRole("X", "Engineering", is_custom=False)) == DEFAULT_SOURCES  # nothing seeded
     assert suggested_source_ids(None) == DEFAULT_SOURCES
@@ -50,6 +50,13 @@ def test_present_sources_orders_recommended_by_suggestion_and_marks_connected():
     assert [s["id"] for s in view["all"]] == ["portfolio", "github", "linkedin"]
     assert next(s for s in view["all"] if s["id"] == "github")["connected"] is True
     assert next(s for s in view["all"] if s["id"] == "linkedin")["suggested"] is False
+
+
+def test_present_sources_shows_the_connected_handle():
+    view = present_sources([_src("github", oauth="github"), _src("orcid")], suggested=[],
+                           connected={"github": "octocat"})
+    assert [(s["id"], s["connected"], s["handle"]) for s in view["all"]] == [
+        ("github", True, "octocat"), ("orcid", False, None)]
 
 
 def test_visible_goals_hide_other_professions_and_flag_priorities():
@@ -75,7 +82,8 @@ def test_group_for_review_buckets():
         ])
     ]
     g = group_for_review(items)
-    assert [len(g[k]) for k in ("skills", "projects", "experiences", "education", "certifications")] == [3, 1, 1, 1, 1]
+    buckets = ("skills", "projects", "experiences", "education", "certifications", "achievements")
+    assert [len(g[k]) for k in buckets] == [2, 1, 1, 1, 1, 1]   # a medal is an achievement, not a skill
     assert g["skills"][0]["id"] == "0" and g["skills"][0]["created_at"] == "2026-10-01T00:00:00"
 
 

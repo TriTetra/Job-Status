@@ -174,6 +174,11 @@ scorer, so they are reproducible, cheap and testable.
   React, "Redis (Asynq)" → Redis + Asynq) so they meet job postings on the same canonical key;
   matching to the taxonomy is exact / alias / spelling-insensitive, never fuzzy. A new CV
   replaces the previous CV's evidence; scanned PDFs (no text layer) are refused with a message.
+- **Public profiles** (`evidence/profiles.py`): GitHub, GitLab, Stack Overflow, ORCID, Medium,
+  Substack connect by username / link — one reader per source returns a `Profile` (skills,
+  projects / publications / articles), one writer replaces that source's evidence and records a
+  `connected_accounts` row (provider = source id). Fixed API hosts; a Substack on its own domain
+  goes through the portfolio URL check (public addresses only, redirects re-checked).
 - **Portfolio crawler**: home page + up to 3 linked project/about pages on the same host; only
   public addresses on ports 80/443 (every redirect re-checked), 2 MB per page. Technologies are
   whole-word taxonomy matches.

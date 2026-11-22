@@ -19,11 +19,11 @@ export function githubNotice(outcome: string | null): Notice | null {
   return outcome ? GITHUB_NOTICES[outcome] ?? null : null;
 }
 
-/** Why a portfolio couldn't be read — the API's own sentence when it sent one. */
+/** Why a portfolio / profile couldn't be read — the API's own sentence when it sent one. */
 export function crawlErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 422) return "Enter a website address like https://yourname.dev";
-    return apiDetail(err.body) ?? "The website could not be read. Try again.";
+    if (err.status === 422) return "Check what you entered and try again.";
+    return apiDetail(err.body) ?? "It could not be read. Try again.";
   }
   return "Couldn't reach the server. Try again.";
 }
