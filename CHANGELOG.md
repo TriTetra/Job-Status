@@ -112,6 +112,7 @@ Sıralama: en yeniden en eskiye.
 - **Maliyet:** Anthropic maliyet döndürmüyor → liste fiyatlarından hesaplanıyor (Opus 5.5 $4/$20, Haiku 5.5 $0.10/$0.50, Sonnet 5.5 $2/$10 / milyon token).
 - Doğrulama: 441 test (6 yeni: model/effort/fallback seçimi, temperature yok, fiyat, ret, SDK hataları, sağlayıcı/model varsayılanları); gerçek SDK sahte bir HTTP katmanına karşı çalıştırıldı → istekler beklenen başlık ve gövdeyle oluşuyor.
 - Compose: `ANTHROPIC_API_KEY`, `LLM_PROVIDER`; `DEFAULT_MODEL` varsayılanı boş (sağlayıcıya göre).
+- **Canlıda (2026-11-22, `f52440d`):** `ANTHROPIC_API_KEY` Coolify'da (sk-ant-, 106 karakter), deploy 1 dk 08 sn. Scheduler döngüsü: sync 74 board / 9.116 ilan / 0 hata, ardından Haiku 5.5 ile ilan okuma — `api.anthropic.com/v1/messages` çağrıları hepsi 200 OK, uyarı/ret/bütçe durması yok.
 
 ---
 
