@@ -123,6 +123,7 @@ Sıralama: en yeniden en eskiye.
 - GitHub OAuth kodu duruyor (ileride özel depolar için), arayüz şu an kullanmıyor.
 - **Canlı doğrulama** (herkese açık test hesaplarıyla): GitHub octocat 6 depo, GitLab sytses 22 proje / 6 dil, Stack Overflow 22656 → C#, Java, .NET, ORCID test kaydı 6 yayın, Medium 8 yazı, Substack (kendi alan adına yönlenen) 20 yazı.
 - Doğrulama: 503 test (yeni `test_profiles.py`: girdi biçimleri, API yanıtı → kanıt, oran sınırı, geçersiz token, iç adrese yönlendirme reddi, kaydetme); ruff, tsc, eslint, `next build` temiz.
+- **Canlıda** (2026-11-22 13:40, `b8ac30d`, 1 dk 3 sn): API sağlıklı; seed → 50 yeni beceri (137), 19 kaynak güncellendi, rollerin önerileri yenilendi; `POST /api/evidence/profiles/github` oturumsuz 401 (rota var ve korumalı), kurulum ekranı kapalı (`needed: false`), hata logu yok.
 - Hâlâ "Soon": Kaggle (herkese açık API yok), Google Scholar, LinkedIn, ResearchGate, Behance, Dribbble, Figma, ArtStation, PubMed, Doximity, Archinect, Houzz.
 
 ---
