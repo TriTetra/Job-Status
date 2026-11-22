@@ -129,6 +129,9 @@ Sıralama: en yeniden en eskiye.
 - Masthead (tarih, selam, tek cümle + "See them", şirket/kapanan değişiklikleri tek satır) | hafta rakamları sağda; altta iki sütun: **Top pick** (logo, skor halkası, gerekçe, kontroller, eylemler) | **To do** (kısa ekranlarda tek satır açıklama, gerekirse kendi içinde kayar); tek satır kapanış. Animasyon (fade) kaldırıldı — arka plandaki sekmelerde içeriği görünmez bırakabiliyordu.
 - İsim profil verisinde yoksa hesap adı kullanılıyor.
 
+### Canlıda
+- 2026-11-22, `9ca311b` (59 sn): site 200; `/api/companies/logo/{key}` ve `/api/jobs/posting` oturumsuz 401 (mevcut, korumalı). Logolar ilk istekte sunucudan bir kez alınır.
+
 ### Doğrulama
 - Ayrık önizlemede (atılabilir Postgres, örnek HTML ilan metinleri, 7 pano) tarayıcıda: 1366×768'de Briefing'de sayfa kaymıyor, footer 740 px'te; 1920×1080 ve 1280×720'de de kayma yok (720'de yalnız To do listesi kendi içinde 35 px kayıyor); Opportunities'te logolar 128 px, ilan 13 blok + 6 vurgulu beceri, geniş ekranda kenar notu; 375 px'te yatay taşma yok.
 - 554 test (yeni `test_posting.py`: HTML / kaçışlı HTML / düz metin → bloklar, işaretleme sızmıyor), ruff, tsc, eslint, `next build` temiz.
