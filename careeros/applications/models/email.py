@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKeyConstraint, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from careeros.db.base import Base, TimestampMixin
@@ -19,14 +19,13 @@ class Email(Base, TimestampMixin):
     """
 
     __tablename__ = "emails"
+    __table_args__ = (
+        ForeignKeyConstraint(["user_id", "url"], ["applications.user_id", "applications.url"], ondelete="CASCADE"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default", index=True)
-    url: Mapped[str] = mapped_column(
-        String(2048),
-        ForeignKey("applications.url", ondelete="CASCADE"),
-        nullable=False,
-    )
+    url: Mapped[str] = mapped_column(String(2048), nullable=False)
 
     # cold_email | follow_up_1 | follow_up_2 | thank_you
     template_type: Mapped[str] = mapped_column(String(50), nullable=False)

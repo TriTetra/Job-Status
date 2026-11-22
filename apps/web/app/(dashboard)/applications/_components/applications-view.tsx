@@ -1,597 +1,263 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { NarrativeText } from "@/components/shared/narrative-text";
-import { Button } from "@/components/shared/button";
-import { safeHttpUrl } from "@/lib/utils";
-import { Plus, Search, ExternalLink, Loader2, X, Check } from "lucide-react";
-import {
-  applicationsApi,
-  type Application,
-  type ApplicationStatus,
-} from "@/features/applications/api";
+import { Plus, Search } from "lucide-react";
+import { CompanyLogo } from "@/components/shared/company-logo";
+import { cn } from "@/lib/utils";
+import { applicationsApi, CLOSED_STATUSES, type Application, type ApplicationStatus } from "@/features/applications/api";
+import { ageLine, companyOf, REC_COLOR, STAGES, STATUS_LABEL, shortDate } from "@/features/applications/format";
+import { ApplicationDrawer } from "./application-drawer";
+import { AddApplicationDialog } from "./add-application-dialog";
 
-const COLUMNS: { id: ApplicationStatus; label: string; hint: string }[] = [
-  { id: "to_apply",  label: "To Apply",  hint: "Queued" },
-  { id: "applied",   label: "Applied",   hint: "In review" },
-  { id: "interview", label: "Interview", hint: "In progress" },
-  { id: "offer",     label: "Offer",     hint: "Decision time" },
-];
+type View = "board" | "closed";
 
-const TERMINAL: ApplicationStatus[] = ["rejected", "withdrawn"];
-
-function hostFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
+function plural(n: number, one: string, many = `${one}s`) {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  } catch {
-    return "—";
+/** The sentence at the top: where your search stands, in one breath. */
+function lead(apps: Application[]): string {
+  const by = (s: ApplicationStatus) => apps.filter((a) => a.status === s);
+  const [queued, waiting, talking, offers] = [by("to_apply"), by("applied"), by("interview"), by("offer")];
+  const stale = waiting.filter((a) => a.stale).length;
+  const live = waiting.length + talking.length + offers.length;
+  if (!apps.length) return "";
+  const parts: string[] = [];
+  if (live) {
+    const bits = [
+      offers.length ? plural(offers.length, "offer") : "",
+      talking.length ? plural(talking.length, "interview") : "",
+      waiting.length ? `${waiting.length} waiting to hear back${stale ? ` (${stale} for over two weeks)` : ""}` : "",
+    ].filter(Boolean);
+    parts.push(`You're in ${plural(live, "process", "processes")}: ${bits.join(", ")}.`);
+  } else {
+    parts.push("Nothing sent yet.");
   }
+  if (queued.length) parts.push(`${plural(queued.length, "role")} shortlisted to apply.`);
+  return parts.join(" ");
 }
 
 export function ApplicationsView({ initialApps }: { initialApps: Application[] }) {
   const [apps, setApps] = useState<Application[]>(initialApps);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [formUrl, setFormUrl] = useState("");
-  const [formTitle, setFormTitle] = useState("");
-  const [formCompany, setFormCompany] = useState("");
-  const [formStatus, setFormStatus] = useState<ApplicationStatus>("to_apply");
-  const [formNotes, setFormNotes] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<View>("board");
+  const [query, setQuery] = useState("");
+  const [openUrl, setOpenUrl] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<ApplicationStatus | null>(null);
 
-  // First render uses the server's list; this refreshes it after changes
-  const load = useCallback(async () => {
-    setLoading(true);
+  const reload = useCallback(async () => {
     try {
       setApps(await applicationsApi.list());
     } catch (err) {
       console.error("[applications] refresh failed:", err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  const handleCreate = async () => {
-    if (!formUrl || !formTitle) return;
-    setSaving(true);
+  const move = useCallback(async (url: string, status: ApplicationStatus) => {
+    setApps((prev) => prev.map((a) => (a.url === url ? { ...a, status, days_in_status: 0, stale: false } : a)));
     try {
-      await applicationsApi.create({
-        url: formUrl,
-        title: formTitle,
-        company: formCompany || undefined,
-        status: formStatus,
-        notes: formNotes.trim() || undefined,
-      });
-      setModalOpen(false);
-      setFormUrl("");
-      setFormTitle("");
-      setFormCompany("");
-      setFormNotes("");
-      setFormStatus("to_apply");
-      load();
-    } catch (err) {
-      console.error("[applications] create failed:", err);
+      await applicationsApi.move(url, status);
     } finally {
-      setSaving(false);
+      reload();
     }
-  };
+  }, [reload]);
 
-  const handleStatusChange = async (url: string, newStatus: ApplicationStatus) => {
-    // Optimistic update
-    setApps((prev) => prev.map((a) => (a.url === url ? { ...a, status: newStatus } : a)));
-    try {
-      await applicationsApi.update(url, { status: newStatus });
-    } catch (err) {
-      console.error("[applications] status change failed:", err);
-      load(); // Rollback on error
-    }
-  };
-
-  const filtered = useMemo(() => {
-    if (!search) return apps;
-    const q = search.toLowerCase();
-    return apps.filter(
-      (a) =>
-        a.title.toLowerCase().includes(q) ||
-        (a.company ?? "").toLowerCase().includes(q) ||
-        a.url.toLowerCase().includes(q)
-    );
-  }, [apps, search]);
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    apps.forEach((a) => {
-      c[a.status] = (c[a.status] ?? 0) + 1;
-    });
-    return c;
-  }, [apps]);
-
-  const activePipeline = apps.filter((a) => !TERMINAL.includes(a.status));
-  const archived = filtered.filter((a) => TERMINAL.includes(a.status));
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? apps.filter((a) => `${a.title} ${companyOf(a)}`.toLowerCase().includes(q)) : apps;
+  }, [apps, query]);
+  const closed = shown.filter((a) => CLOSED_STATUSES.includes(a.status));
+  const opened = apps.find((a) => a.url === openUrl) ?? null;
 
   return (
-    <div className="wide-container px-6 lg:px-8 py-10">
-      {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <NarrativeText size="2xl" weight="semibold" as="h1" className="mb-1">
-            Applications
-          </NarrativeText>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            {apps.length} tracked · {activePipeline.length} active ·{" "}
-            {counts.offer ?? 0} offer{counts.offer === 1 ? "" : "s"}
+    <div className="lg:h-full flex flex-col w-full max-w-[1680px] mx-auto px-6 lg:px-8 pt-7 pb-5">
+      <div className="shrink-0 flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-[860px]">
+          <h1 className="font-serif-display text-[34px] leading-none" style={{ color: "var(--text-primary)" }}>Applications</h1>
+          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            {apps.length ? lead(apps) : "Nothing tracked yet."}
           </p>
         </div>
-        <Button variant="primary" size="md" onClick={() => setModalOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add application
-        </Button>
+        <button onClick={() => setAdding(true)}
+                className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border text-sm transition-colors hover:bg-[var(--surface)]"
+                style={{ borderColor: "var(--border-strong)", color: "var(--text-primary)" }}>
+          <Plus className="h-4 w-4" /> Add application
+        </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-8 max-w-sm relative">
-        <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
-          strokeWidth={1.75}
-          style={{ color: "var(--text-muted)" }}
-        />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search applications..."
-          className="w-full h-9 pl-9 pr-3 rounded-lg text-sm outline-none transition-colors"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            color: "var(--text-primary)",
-          }}
-        />
+      <div className="mt-5 shrink-0 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+        <nav className="flex gap-5" aria-label="Views">
+          {([["board", "Pipeline", apps.length - closed.length], ["closed", "Closed", apps.filter((a) => CLOSED_STATUSES.includes(a.status)).length]] as const).map(([id, label, n]) => (
+            <button key={id} onClick={() => setView(id)} aria-current={view === id ? "page" : undefined} className="text-sm"
+                    style={{ color: view === id ? "var(--text-primary)" : "var(--text-muted)", fontWeight: view === id ? 600 : 400 }}>
+              {label} <span className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>{n}</span>
+            </button>
+          ))}
+        </nav>
+        <label className="ml-auto flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+          <Search className="h-4 w-4" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Company or title" aria-label="Search applications"
+                 className="w-44 bg-transparent border-0 border-b outline-none py-1 text-sm focus:border-[var(--accent)]"
+                 style={{ borderColor: "var(--border)", color: "var(--text-primary)" }} />
+        </label>
       </div>
 
-      {loading ? (
-        <div className="surface p-12 text-center">
-          <Loader2
-            className="h-5 w-5 animate-spin mx-auto mb-3"
-            style={{ color: "var(--text-muted)" }}
-          />
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Loading pipeline…
+      {apps.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
+          <p className="font-serif-display text-2xl" style={{ color: "var(--text-primary)" }}>Your pipeline starts in Opportunities</p>
+          <p className="mt-2 max-w-md text-sm" style={{ color: "var(--text-secondary)" }}>
+            Shortlist a role or mark it applied there and it shows up here. Found one somewhere else? Add it yourself.
           </p>
-        </div>
-      ) : apps.length === 0 ? (
-        <div className="surface p-12 text-center">
-          <NarrativeText size="lg" weight="medium" className="mb-2">
-            No applications yet
-          </NarrativeText>
-          <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-            Track your first application to start building your pipeline.
-          </p>
-          <Button variant="outline" onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add first application
-          </Button>
-        </div>
-      ) : (
-        <>
-          {/* Pipeline Board — 4 hairline-separated columns */}
-          <div
-            className="grid grid-cols-1 md:grid-cols-4 border-t border-b"
-            style={{ borderColor: "var(--border)" }}
-          >
-            {COLUMNS.map((col, i) => {
-              const colApps = filtered.filter((a) => a.status === col.id);
-              return (
-                <div
-                  key={col.id}
-                  className="py-6 px-4 border-b md:border-b-0"
-                  style={{
-                    borderRight: i < COLUMNS.length - 1 ? "1px solid var(--border)" : "none",
-                    borderBottomColor: "var(--border)",
-                  }}
-                >
-                  {/* Column header */}
-                  <div className="flex items-baseline justify-between mb-4">
-                    <div>
-                      <div
-                        className="text-[11px] font-semibold tracking-wider uppercase"
-                        style={{
-                          color: "var(--text-muted)",
-                          fontFamily: "var(--font-display)",
-                        }}
-                      >
-                        {col.label}
-                      </div>
-                      <div
-                        className="text-[10px] mt-0.5"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        {col.hint}
-                      </div>
-                    </div>
-                    <span
-                      className="text-sm font-semibold tabular-nums"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {colApps.length}
-                    </span>
-                  </div>
-
-                  {/* Cards */}
-                  <div className="space-y-2">
-                    {colApps.map((app) => (
-                      <ApplicationCard
-                        key={app.url}
-                        app={app}
-                        onStatusChange={handleStatusChange}
-                      />
-                    ))}
-                    {colApps.length === 0 && (
-                      <div
-                        className="py-8 text-center text-xs"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        —
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="mt-5 flex gap-4 text-sm">
+            <Link href="/inbox" style={{ color: "var(--accent)" }}>Go to Opportunities →</Link>
+            <button onClick={() => setAdding(true)} style={{ color: "var(--text-secondary)" }}>Add one</button>
           </div>
-
-          {/* Closed (rejected / withdrawn) */}
-          {archived.length > 0 && (
-            <div
-              className="mt-8 pt-6 border-t"
-              style={{ borderColor: "var(--border)" }}
-            >
-              <div className="flex items-baseline justify-between mb-4">
-                <div
-                  className="text-[11px] font-semibold tracking-wider uppercase"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Closed
-                </div>
-                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {archived.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {archived.map((app) => (
-                  <ApplicationCard
-                    key={app.url}
-                    app={app}
-                    onStatusChange={handleStatusChange}
-                    compact
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Add modal */}
-      {modalOpen && (
-        <AddApplicationModal
-          url={formUrl}
-          title={formTitle}
-          company={formCompany}
-          status={formStatus}
-          notes={formNotes}
-          setUrl={setFormUrl}
-          setTitle={setFormTitle}
-          setCompany={setFormCompany}
-          setStatus={setFormStatus}
-          setNotes={setFormNotes}
-          saving={saving}
-          onClose={() => setModalOpen(false)}
-          onSubmit={handleCreate}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ─── Application Card ──────────────────────────────────────────────────── */
-
-const STATUS_TRANSITIONS: Record<
-  ApplicationStatus,
-  { to: ApplicationStatus; label: string }[]
-> = {
-  to_apply:  [{ to: "applied", label: "Mark applied" }, { to: "withdrawn", label: "Withdraw" }],
-  applied:   [{ to: "interview", label: "Got interview" }, { to: "rejected", label: "Rejected" }, { to: "withdrawn", label: "Withdraw" }],
-  interview: [{ to: "offer", label: "Got offer" }, { to: "rejected", label: "Rejected" }, { to: "withdrawn", label: "Withdraw" }],
-  offer:     [{ to: "applied", label: "Declined" }],
-  rejected:  [{ to: "to_apply", label: "Reopen" }],
-  withdrawn: [{ to: "to_apply", label: "Reopen" }],
-};
-
-function ApplicationCard({
-  app,
-  onStatusChange,
-  compact = false,
-}: {
-  app: Application;
-  onStatusChange: (url: string, status: ApplicationStatus) => void;
-  compact?: boolean;
-}) {
-  const displayCompany = app.company || hostFromUrl(app.url);
-  const link = safeHttpUrl(app.url);
-  const transitions = STATUS_TRANSITIONS[app.status] ?? [];
-
-  return (
-    <div
-      className="rounded-lg border transition-colors group"
-      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-    >
-      <div className={compact ? "p-3" : "p-4"}>
-        {/* Title + link */}
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <div className="min-w-0 flex-1">
-            <div
-              className={`font-medium truncate ${compact ? "text-xs" : "text-sm"}`}
-              style={{ color: "var(--text-primary)" }}
-            >
-              {app.title}
-            </div>
-            <div
-              className="text-[11px] truncate mt-0.5"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {displayCompany} · {formatDate(app.applied_at)}
-            </div>
-          </div>
-          {link && (
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <ExternalLink
-                className="h-3.5 w-3.5"
-                strokeWidth={1.75}
-                style={{ color: "var(--text-muted)" }}
-              />
-            </a>
-          )}
         </div>
-
-        {/* Status transition buttons */}
-        {transitions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {transitions.map((t) => (
-              <button
-                key={t.to}
-                onClick={() => onStatusChange(app.url, t.to)}
-                className="text-[10px] px-2 py-0.5 rounded border transition-colors cursor-pointer"
-                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
-                  (e.currentTarget as HTMLElement).style.color = "var(--accent)";
+      ) : view === "board" ? (
+        <div className="mt-4 lg:flex-1 lg:min-h-0 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 lg:auto-rows-[minmax(0,1fr)] gap-4">
+          {STAGES.map((stage) => {
+            const cards = shown.filter((a) => a.status === stage.id);
+            const target = dropTarget === stage.id && dragging != null;
+            return (
+              <section
+                key={stage.id}
+                aria-label={stage.label}
+                onDragOver={(e) => {
+                  if (!dragging) return;
+                  e.preventDefault();
+                  setDropTarget(stage.id);
                 }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-                  (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+                onDragLeave={() => setDropTarget((t) => (t === stage.id ? null : t))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const url = e.dataTransfer.getData("text/plain");
+                  setDropTarget(null);
+                  setDragging(null);
+                  const app = apps.find((a) => a.url === url);
+                  if (app && app.status !== stage.id) move(url, stage.id);
+                }}
+                className="min-h-[200px] lg:min-h-0 flex flex-col rounded-2xl border transition-colors"
+                style={{
+                  background: target ? "rgba(255,177,98,0.06)" : "rgba(44,59,77,0.22)",
+                  borderColor: target ? "var(--accent)" : "var(--border)",
                 }}
               >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+                <header className="shrink-0 px-4 pt-4 pb-3 flex items-baseline justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{stage.label}</h2>
+                    <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{stage.hint}</p>
+                  </div>
+                  <span className="font-serif-display text-2xl tabular-nums" style={{ color: cards.length ? "var(--text-primary)" : "var(--text-muted)" }}>{cards.length}</span>
+                </header>
+                <ul className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2 pb-2 space-y-2">
+                  {cards.map((a) => (
+                    <li key={a.url}>
+                      <Card app={a} dragging={dragging === a.url}
+                            onOpen={() => setOpenUrl(a.url)}
+                            onNext={stage.next ? () => move(a.url, stage.next!.to) : undefined}
+                            nextLabel={stage.next ? STATUS_LABEL[stage.next.to] : undefined}
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", a.url);
+                              e.dataTransfer.effectAllowed = "move";
+                              setDragging(a.url);
+                            }}
+                            onDragEnd={() => {
+                              setDragging(null);
+                              setDropTarget(null);
+                            }} />
+                    </li>
+                  ))}
+                  {cards.length === 0 && (
+                    <li className="px-3 py-6 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                      {dragging ? "Drop here" : stage.id === "to_apply" ? "Shortlist roles in Opportunities" : "Nothing here yet"}
+                    </li>
+                  )}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-2 lg:flex-1 lg:min-h-0 overflow-y-auto custom-scrollbar">
+          {closed.length === 0 ? (
+            <p className="py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>Nothing closed. Rejections and withdrawals land here.</p>
+          ) : (
+            <ul className="max-w-[980px]">
+              {closed.map((a) => (
+                <li key={a.url}>
+                  <button onClick={() => setOpenUrl(a.url)}
+                          className="w-full text-left grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-4 py-3 border-b -mx-3 px-3 rounded-md hover:bg-[rgba(44,59,77,0.5)] transition-colors"
+                          style={{ borderColor: "var(--border)" }}>
+                    <CompanyLogo name={companyOf(a)} companyKey={a.company_key} size={36} />
+                    <span className="min-w-0">
+                      <span className="block text-sm truncate" style={{ color: "var(--text-primary)" }}>{a.title}</span>
+                      <span className="block text-xs truncate" style={{ color: "var(--text-muted)" }}>{companyOf(a)}</span>
+                    </span>
+                    <span className="text-xs text-right" style={{ color: a.status === "rejected" ? "var(--danger)" : "var(--text-muted)" }}>
+                      {STATUS_LABEL[a.status]} · {shortDate(a.updated_at)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {opened && (
+        <ApplicationDrawer key={opened.url} app={opened} onClose={() => setOpenUrl(null)} onMove={move}
+                           onChanged={reload} onRemoved={() => { setOpenUrl(null); reload(); }} />
+      )}
+      {adding && <AddApplicationDialog onClose={() => setAdding(false)} onAdded={() => { setAdding(false); reload(); }} />}
     </div>
   );
 }
 
-/* ─── Add Application Modal ─────────────────────────────────────────────── */
-
-function AddApplicationModal({
-  url, title, company, status, notes,
-  setUrl, setTitle, setCompany, setStatus, setNotes,
-  saving, onClose, onSubmit,
-}: {
-  url: string; title: string; company: string;
-  status: ApplicationStatus; notes: string;
-  setUrl: (v: string) => void;
-  setTitle: (v: string) => void;
-  setCompany: (v: string) => void;
-  setStatus: (v: ApplicationStatus) => void;
-  setNotes: (v: string) => void;
-  saving: boolean;
-  onClose: () => void;
-  onSubmit: () => void;
+function Card({ app, dragging, onOpen, onNext, nextLabel, onDragStart, onDragEnd }: {
+  app: Application;
+  dragging: boolean;
+  onOpen: () => void;
+  onNext?: () => void;
+  nextLabel?: string;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
 }) {
-  const isValid = url.trim().length > 0 && title.trim().length > 0;
-
+  const age = ageLine(app);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        style={{ background: "rgba(27,38,50,0.75)", backdropFilter: "blur(4px)" }}
-        onClick={onClose}
-      />
-      {/* Panel */}
-      <div
-        className="relative w-full max-w-md rounded-xl border p-6"
-        style={{
-          background: "var(--surface)",
-          borderColor: "var(--border-strong)",
-          boxShadow: "0 24px 48px rgba(0,0,0,0.4)",
-        }}
-      >
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <NarrativeText size="lg" weight="semibold">
-              Track an application
-            </NarrativeText>
-            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-              Add a role you&apos;ve applied to or are planning to apply.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-7 w-7 flex items-center justify-center rounded-md transition-colors hover:bg-surface-hover cursor-pointer"
-          >
-            <X className="h-4 w-4" style={{ color: "var(--text-muted)" }} />
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      className={cn("group rounded-xl border transition-all cursor-grab active:cursor-grabbing", dragging && "opacity-40")}
+      style={{ background: "var(--surface)", borderColor: app.stale ? "rgba(201,106,90,0.5)" : "var(--border)" }}
+    >
+      <button onClick={onOpen} className="w-full text-left p-3 pb-2 grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-3">
+        <CompanyLogo name={companyOf(app)} companyKey={app.company_key} size={32} className="mt-0.5" />
+        <span className="min-w-0">
+          <span className="block text-sm leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>{app.title}</span>
+          <span className="block text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
+            {companyOf(app)}{app.remote ? " · Remote" : app.location ? ` · ${app.location}` : ""}
+          </span>
+        </span>
+        {app.score != null && (
+          <span className="font-mono text-sm font-semibold tabular-nums" style={{ color: REC_COLOR[app.recommendation ?? ""] ?? "var(--text-muted)" }}>
+            {app.score}
+          </span>
+        )}
+      </button>
+      <div className="px-3 pb-3 flex items-center justify-between gap-2 text-[11px]">
+        <span className="truncate" style={{ color: app.stale ? "var(--danger)" : "var(--text-muted)" }}>
+          {app.stale ? `${age} · follow up?` : age}{app.posting_closed ? " · posting closed" : ""}
+        </span>
+        {onNext && nextLabel && (
+          <button onClick={onNext} title={`Move to ${nextLabel}`}
+                  className="shrink-0 px-2 py-0.5 rounded-md border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
+            → {nextLabel}
           </button>
-        </div>
-
-        <div className="space-y-4">
-          {/* URL */}
-          <div>
-            <label
-              className="block text-[11px] font-semibold tracking-wider uppercase mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Job URL *
-            </label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none"
-              style={{
-                background: "var(--background)",
-                borderColor: "var(--border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-
-          {/* Title */}
-          <div>
-            <label
-              className="block text-[11px] font-semibold tracking-wider uppercase mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Role title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Senior Backend Engineer"
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none"
-              style={{
-                background: "var(--background)",
-                borderColor: "var(--border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-
-          {/* Company */}
-          <div>
-            <label
-              className="block text-[11px] font-semibold tracking-wider uppercase mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Company
-            </label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="Stripe"
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none"
-              style={{
-                background: "var(--background)",
-                borderColor: "var(--border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <label
-              className="block text-[11px] font-semibold tracking-wider uppercase mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Status
-            </label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(["to_apply", "applied", "interview", "offer"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatus(s)}
-                  className="px-2 py-1.5 rounded-lg border text-[10px] font-semibold capitalize transition-all cursor-pointer"
-                  style={{
-                    borderColor: status === s ? "var(--accent)" : "var(--border)",
-                    background: status === s ? "rgba(255,177,98,0.06)" : "transparent",
-                    color: status === s ? "var(--accent)" : "var(--text-secondary)",
-                  }}
-                >
-                  {s.replace("_", " ")}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label
-              className="block text-[11px] font-semibold tracking-wider uppercase mb-1"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Notes
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              placeholder="Referral, interview date, etc."
-              className="w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none"
-              style={{
-                background: "var(--background)",
-                borderColor: "var(--border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-        </div>
-
-        <div
-          className="flex items-center justify-end gap-2 mt-6 pt-5 border-t"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSubmit}
-            disabled={!isValid || saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-          >
-            {saving ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" />Saving…</>
-            ) : (
-              <><Check className="h-3.5 w-3.5" />Add</>
-            )}
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );

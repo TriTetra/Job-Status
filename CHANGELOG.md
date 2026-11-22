@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Manage: Applications Board + Analytics | Applications is a fixed board with logos, drag and drop, a drawer (stage, notes, history) and stale flags; new Analytics page (funnel, weekly pace, response rate, score vs interviews); Timeline dropped; applications are per user | ✅ Tamam | 2026-11-23 |
 | Settings Dialog + Account Menu | Settings is a dialog over any page (Profile, Preferences, Scoring, Connections, Account); one account menu replaces the sidebar user block and the top-right avatar; profile save no longer wipes briefing state | ✅ Tamam | 2026-11-23 |
 | Companies + Market One-Screen | Companies is a fixed list | company frame with logos, an 8-week hiring chart and open roles by your fit; Market fits one screen: numbers, skills asked, companies adding roles (with logos), news | ✅ Tamam | 2026-11-22 |
 | One-Screen Briefing + Opportunities Reader | Briefing fits one screen (masthead + week, top pick | to do, closing); Opportunities is a fixed frame with company logos and a reader showing the full posting with your skills underlined in the text and your fit in the margin | ✅ Tamam | 2026-11-22 |
@@ -108,6 +109,39 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Manage: Applications Board + Analytics] — 2026-11-23 — Your pipeline, what happened, and what's working ✅
+
+**Neden:** Kullanıcı: Manage menüsündeki sayfalar tek tek toparlanmalı. Durum: Applications eski kutulu bir panodu; **Analytics** menüde vardı ama sayfası yoktu (404); **Timeline** "Soon" olarak duruyordu.
+
+### Applications: sabit pano
+- Sayfa kaymıyor: başlık + tek cümle ("3 süreçtesin: 1 teklif, 2 mülakat, 4 cevap bekleniyor (2'si iki haftadan uzun). 2 rol başvurulmayı bekliyor.") + Pipeline / Closed + arama; dört sütun (To apply · Applied · Interview · Offer) kendi içinde kayıyor.
+- **Kart:** şirket logosu, rol, şirket · yer, skorun, aşamada ne kadar süredir durduğu ("waiting 16 days"); iki haftadır cevap yoksa kırmızı kenar + "follow up?"; tek tıkla sonraki aşama (→ Applied / → Interview / → Offer). **Sürükle-bırak** ile sütunlar arası taşıma.
+- **Çekmece** (karta tıklayınca sağdan): büyük logo + serif başlık, aşama çubuğu (tıklayarak taşı), sonraki adım / Rejected / Withdraw (teklifte "Declined"), kapalıysa Reopen; Open posting, Opportunities'teki skoruna bağlantı; **notlar** (tıklayıp çıkınca kaydedilir); **geçmiş** (her aşama değişikliği tarihiyle); "Stop tracking" (onaylı).
+- Closed görünümü: reddedilen / geri çekilenler logolu liste. "Add application" yeni pencere tasarımında (link, rol, şirket, aşama, not).
+- Opportunities'te "Not for me" dediklerin panoda görünmüyor (Analytics'te "passed on" olarak sayılıyor).
+
+### Analytics (yeni sayfa)
+- Tek ekran: cümle + dört rakam (bu hafta başvuru, mülakata dönüşme oranı, 2+ hafta önce gönderilenlerden cevap alan oran, şu anki tipik bekleme).
+- **From match to offer:** açık eşleşmeler → takip → başvuru → mülakat → teklif, her adımın dönüşüm oranıyla (mülakattan sonra gelen ret yine mülakat sayılıyor).
+- **Applications per week** (8 hafta) ve **Does your score predict interviews?** (70+ / 55–69 / 55 altı: başvuru, mülakat, oran).
+- Veriden çıkan tek öneri: bekleyen başvuru varsa takip; 70+ eşleşmeler belirgin şekilde daha iyi dönüşüyorsa oraya odaklan; bu hafta hiç başvuru yoksa uygun rol sayısı.
+
+### Timeline kaldırıldı
+- Ayrı bir sayfa olarak yalnızca başvuru olaylarını tekrar edecekti; "ne zaman ne oldu" artık her başvurunun çekmecesindeki **History**'de. Menüdeki "Soon" satırı kaldırıldı.
+
+### Arka uç
+- **Hata düzeltmesi:** `applications` tablosunun anahtarı yalnız iş URL'siydi; ikinci bir kullanıcı aynı ilanı takip etmeye çalışınca hata alırdı (davetlerle artık birden çok kullanıcı var). Anahtar **(user_id, url)** oldu; `emails` yabancı anahtarı da buna taşındı (migration `applications_017`).
+- Yeni `history` sütunu (her durum değişikliği + tarih); mevcut kayıtlar created / applied / güncel durumdan dolduruluyor.
+- Panoda "Applied"a taşımak artık `applied_at`'i dolduruyor (önceden tarih "—" kalıyordu); "Declined" teklifi artık "applied"a değil "withdrawn"a götürüyor.
+- `careeros/applications/pipeline.py`: `pipeline()` (logo anahtarı, yer, skor, aşamada geçen gün, bayat bayrağı) ve `analytics()`. API: `GET /api/applications/` zenginleşti, yeni `GET /api/applications/analytics`, `PUT` artık yalnız not da güncelleyebiliyor, yeni `DELETE /api/applications/{url}`; durum değerleri doğrulanıyor.
+
+### Doğrulama
+- Migration atılabilir Postgres'te upgrade → downgrade → upgrade temiz; anahtar `(user_id, url)`, emails FK bileşik.
+- Ayrık önizlemede (14 örnek başvuru, her aşamadan) tarayıcıda: 1366×768'de Applications ve Analytics sayfası kaymıyor, 9 logo yüklendi; çekmeceden "Got an interview" kartı Interview'a taşıdı ve geçmişe ekledi, not kaydedildi; sürükle-bırak To apply → Applied taşıdı ve kaydetti; 375 px'te yatay taşma yok, çekmece tam ekran.
+- 562 test (yeni `test_applications_pipeline.py`: aşama çıkarımı, analytics rakamları, geçmiş + applied_at), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

@@ -15,7 +15,8 @@ class ApplicationCreate(BaseModel):
 
 
 class ApplicationUpdate(BaseModel):
-    status: str
+    """Move to `status`, change `notes`, or both."""
+    status: Optional[str] = None
     notes: Optional[str] = None
 
 

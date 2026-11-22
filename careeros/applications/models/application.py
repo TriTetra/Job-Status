@@ -24,8 +24,9 @@ class Application(Base, TimestampMixin):
 
     __tablename__ = "applications"
 
+    # One row per (user, job): two people can track the same posting
+    user_id: Mapped[str] = mapped_column(String(100), primary_key=True, default="default", index=True)
     url: Mapped[str] = mapped_column(String(2048), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="default", index=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     company: Mapped[str | None] = mapped_column(String(200))
 
@@ -44,6 +45,9 @@ class Application(Base, TimestampMixin):
 
     # [{"round": 1, "type": "phone_screen", "date": "2026-07-15", "notes": "..."}]
     interview_rounds: Mapped[list] = mapped_column(JSONB, default=list)
+
+    # Every status change, oldest first: [{"status": "applied", "at": "2026-11-20T09:12:00+00:00"}]
+    history: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
 
     emails: Mapped[list["Email"]] = relationship(
         back_populates="application",
