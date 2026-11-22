@@ -137,6 +137,7 @@ Sıralama: en yeniden en eskiye.
 ### Doğrulama
 - Ayrık önizlemede tarayıcıda: eski bağlantı `/settings?tab=account` → `/briefing?settings=connections`; bölüm geçişi URL'yi güncelliyor; Esc kapatıp `/inbox`'a dönüyor; menüden Settings pencereyi açıyor ve odak pencerede; 1366×768'de pencere 1040×720; 375 px'te tam ekran, yatay taşma yok, sağ üst menü ekrana sığıyor.
 - 557 test, ruff, tsc, eslint, `next build` temiz.
+- **Yayında:** `15b1433` push edildi, Coolify'da yeniden dağıtıldı (Finished). career.abdullokh.xyz: sign-in 200; `/settings?tab=account` oturumsuz sign-in'e `next` ile yönleniyor; `/api/onboarding/identity` ve `/api/settings/weights` oturumsuz 401.
 
 ---
 
