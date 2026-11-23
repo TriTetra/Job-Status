@@ -22,13 +22,15 @@ class BoardConfigError(ValueError):
 @dataclass(frozen=True)
 class TitleFilter:
     """A title is kept when it contains every word of some include term (any order)
-    and no exclude phrase: "Backend Engineer" keeps "Software Engineer, Backend"."""
+    and no exclude phrase: "Backend Engineer" keeps "Software Engineer, Backend".
+    A quoted include term is an exact phrase instead: '"technical lead"' keeps "Technical Lead, API"
+    but not "Lead Technical Writer". Role nouns also match their plural ("Senior Engineers")."""
 
     include: tuple[str, ...]
     exclude: tuple[str, ...]
 
     def __post_init__(self):
-        object.__setattr__(self, "_inc", [[word_pattern(w) for w in _words(t)] for t in self.include if _words(t)])
+        object.__setattr__(self, "_inc", [_include(t) for t in self.include if _words(t.strip('"'))])
         object.__setattr__(self, "_exc", _phrases_regex(self.exclude))
 
     def with_terms(self, extra: Iterable[str]) -> "TitleFilter":
@@ -38,6 +40,24 @@ class TitleFilter:
         if self._exc and self._exc.search(title):
             return False
         return any(all(rx.search(title) for rx in words) for words in self._inc)
+
+
+_ROLE_NOUN = re.compile(r"(?:er|ist|ect|or)$", re.IGNORECASE)  # engineer, scientist, architect, administrator
+
+
+def _include(term: str) -> list[re.Pattern]:
+    """Patterns that must all match: one per word, or one for a quoted phrase."""
+    t = term.strip()
+    if len(t) > 2 and t[0] == t[-1] == '"':
+        return [_phrases_regex([t[1:-1]])]
+    return [_include_pattern(w) for w in _words(t)]
+
+
+def _include_pattern(word: str) -> re.Pattern:
+    """Whole word; role nouns match their plural too (engineers, architects). Short words stay exact."""
+    if len(word) <= 2 or not _ROLE_NOUN.search(word):
+        return word_pattern(word)
+    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(word) + r"s?(?![A-Za-z0-9])", re.IGNORECASE)
 
 
 def _words(term: str) -> list[str]:

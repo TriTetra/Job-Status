@@ -177,6 +177,27 @@ def test_title_filter():
     assert f.with_terms(["Product Manager"]).keeps("Senior Product Manager")
 
 
+
+def test_title_filter_plurals_and_phrases():
+    f = TitleFilter(("engineer", "platform", '"technical lead"'), ())
+    assert f.keeps("Staff Engineers (Elixir)")                   # role nouns match their plural
+    assert not f.keeps("Sales Manager, Enterprise Platforms")    # other words stay exact
+    assert f.keeps("Technical Lead, API") and f.keeps("Senior Staff Technical-Lead Manager")
+    assert not f.keeps("Lead Technical Writer")                   # a quoted term is an exact phrase
+
+
+def test_configured_titles_cover_specialities_and_eu_languages():
+    f = load_boards().titles
+    keep = ["Member of Technical Staff", "Senior Applied Researcher", "Lead DataOps / MLOps", "Director of Computer Vision",
+            "Linux System Administrator", "Tech Lead Manager, Cards", "Head of Cybersecurity",
+            "Teamerweiterung: IT-Entwickler C#/.NET/C++ (m/w/d)", "IT-Systemadministrator (m/w/d)", "Expert ICT-Architekt (m/w/d)",
+            "Développeur(se) Senior Python & PostgreSQL", "Ingénieur Systèmes Senior", "Desarrollador Backend",
+            "Sviluppatore Java", "Ontwikkelaar .NET", "Programista Python", "Kıdemli Yazılımcı"]
+    drop = ["Technical Recruiter, Software", "Enterprise Account Executive", "Lead Technical Writer, Maritime",
+            "Consultant Online-Marketing & KI (m/w/d)", "Sales Manager, Europe, Enterprise Platforms"]
+    assert [t for t in keep if not f.keeps(t)] == []
+    assert [t for t in drop if f.keeps(t)] == []
+
 # ── sync_board (DB calls faked) ───────────────────────────────────────────
 
 GH = Board("acme", "Acme", "greenhouse", board="acme")

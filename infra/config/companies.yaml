@@ -46,6 +46,63 @@ titles:
     - Android
     - cloud
     - analytics
+    # Specialities whose titles carry none of the words above. A quoted term
+    # is an exact phrase; otherwise its words may come in any order.
+    - researcher
+    - applied science
+    - deep learning
+    - computer vision
+    - NLP
+    - LLM
+    - MLOps
+    - DataOps
+    - business intelligence
+    - BI
+    - insights analyst
+    - statistician
+    - database
+    - DBA
+    - system administrator
+    - systems administrator
+    - sysadmin
+    - '"tech lead"'
+    - '"technical lead"'
+    - CTO
+    - chief technology
+    - SDET
+    - test automation
+    - '"member of technical staff"'
+    - cybersecurity
+    # German, French, Spanish, Italian, Dutch, Polish titles (Adzuna and EU boards)
+    - Entwickler
+    - Entwicklerin
+    - Softwareentwickler
+    - Softwareentwicklerin
+    - Softwareingenieur
+    - Informatiker
+    - Informatikerin
+    - Architekt
+    - Architektin
+    - Systemadministrator
+    - Applikationsentwickler
+    - Anwendungsentwickler
+    - IT Spezialist
+    - Datenwissenschaftler
+    - Développeur
+    - Développeuse
+    - Ingénieur
+    - Ingénieure
+    - Desarrollador
+    - Desarrolladora
+    - Ingeniero
+    - Ingeniera
+    - Programador
+    - Sviluppatore
+    - Sviluppatrice
+    - Ingegnere
+    - Ontwikkelaar
+    - Programista
+    - Inżynier
     # Turkish titles (whole words: suffixed forms are listed too)
     - Yazılım
     - Mühendis
@@ -57,6 +114,8 @@ titles:
     - Makine Öğrenmesi
     - Analist
     - Analisti
+    - Yazılımcı
+    - Mühendisliği
   exclude:
     - recruiter
     - recruiting

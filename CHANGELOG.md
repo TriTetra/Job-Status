@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.2 Unvan Filtresini Genişletme | Ölçüm: 18.975 başlıktan 8.904'ü eleniyordu; ilgili olup kaçanlar (Member of Technical Staff, Researcher, MLOps, Computer Vision, Tech Lead, Cybersecurity, Almanca / Fransızca / İspanyolca / İtalyanca / Hollandaca / Lehçe unvanlar) eklendi: 183 başlık artık içeride, önceden alınan hiçbir başlık kaybolmadı. Meslek adlarında çoğul, tırnaklı terimde tam ifade | ✅ Tamam | 2026-11-23 |
 | 1.1 Adzuna: kota ve anahtar güvenliği | Adzuna kotası doldu ya da anahtar etkin değil (401/403/429) yanıtında okuma duruyor, o ana kadar gelen ilanlar korunuyor; hata mesajları ve loglar artık anahtarı içeren URL'yi yazmıyor; okuma başına istek sayısı `ADZUNA_MAX_CALLS` ile ayarlanabiliyor (varsayılan 40) | ✅ Tamam | 2026-11-23 |
 | 1.1 Resmi İlan API'leri: Adzuna | Yeni kaynak Adzuna (GB, DE, NL, PL, ES, CH, FR, IT…): kullanıcıların hedef ülkeleri ve rolleri için arama, çalıştırma başına en fazla 40 istek; her Adzuna ilanında şartların istediği "Jobs by Adzuna" etiketi; anahtar girilene kadar kapalı. Reed şartları okunamadı (bekliyor), Almanya İş Ajansı resmi API değil (eklenmedi) | ✅ Tamam | 2026-11-23 |
 | Plan: Kapsam ve İş Akışı Açıkları | Piyasaya göre eksiklerin hepsi iki faza bölündü (docs/v1/GAPS_ROADMAP.md): Faz 1 kapsam ve sonuç döngüsü (resmi ilan API'leri, unvan filtresi, ilan ekleme, maaş ve şirket verisi, tazelik, e-posta ile sonuç, takip mesajı), Faz 2 iş akışı (tarayıcı eklentisi, CV, Evidence, Learning, öğrenen sıralama, mülakat hazırlığı, tanıdıklar, mobil); kod değişmedi | ✅ Tamam | 2026-11-23 |
@@ -128,6 +129,28 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.2 Unvan Filtresini Genişletme] — 2026-11-23 — Kapsam ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.2: ilanlar sisteme girerken başlık filtresinden geçiyor; dar liste ilgili ilanları baştan eliyordu. Adzuna'nın Avrupa siteleri yerel dilde başlık getireceği için bu önce yapıldı.
+
+### Önce ölçüldü (yalnız okuma, DB'ye yazmadan)
+- `companies.yaml`'daki tüm panolar ve feed'ler (Adzuna hariç) okundu: **18.975 başlık, 8.904'ü eleniyor**. Elenenlerin büyük çoğunluğu doğru (satış, hukuk, İK, finans, üretim).
+- Kaçan ilgililer: **"Member of Technical Staff"** (yapay zekâ laboratuvarlarının standart unvanı), **"Researcher"** ("research" kelimesi "Researcher"ı tutmuyordu: Anthropic'in alignment / safety araştırmacıları, Quantitative Researcher), **çoğullar** ("Senior Engineers", "Solution Architects"), **MLOps / DataOps, Computer Vision, Deep Learning, Applied Science, LLM**, **Tech Lead / Technical Lead Manager**, **System Administrator**, **Cybersecurity** ("security" kelimesi tutmuyordu), **Business Intelligence**, ve Almanca / Fransızca başlıklar ("IT-Entwickler", "IT-Systemadministrator", "ICT-Architekt", "Applikationsentwickler", "Développeur Python", "Ingénieur Systèmes").
+
+### Değişenler
+- **`infra/config/companies.yaml`**: yukarıdaki uzmanlıklar; Almanca (Entwickler, Softwareentwickler, Informatiker, Architekt, Systemadministrator, Anwendungs- / Applikationsentwickler…), Fransızca (Développeur, Ingénieur), İspanyolca (Desarrollador, Ingeniero, Programador), İtalyanca (Sviluppatore, Ingegnere), Hollandaca (Ontwikkelaar), Lehçe (Programista, Inżynier) ve Türkçe (Yazılımcı, Mühendisliği).
+- **`careeros/jobs/boards.py` `TitleFilter`**:
+  - **Meslek adları çoğulu da tutuyor** (engineer → engineers, architect → architects); diğer kelimeler tam ("platform" artık "Enterprise Platforms" satış ilanlarını almaz).
+  - **Tırnaklı terim tam ifade**: `'"technical lead"'` "Technical Lead, API"yi tutar, "Lead Technical Writer"ı tutmaz. Tırnaksız terimlerde kelimeler eskisi gibi her sırada.
+- Gürültü kontrolü: ilk denemede "KI" (Almanca yapay zekâ) pazarlama ve grafik ilanlarını, her sıradaki "technical lead" teknik yazar ilanlarını alıyordu; ikisi düzeltildi.
+
+### Sonuç ve doğrulama
+- Aynı başlıklarla: **183 başlık artık içeride, önceden alınan hiçbir başlık kaybolmadı**. Kalan gürültü küçük (UX / pazar araştırmacısı, siber güvenlik satış ilanları); bunları kişiye göre puanlama ayıklıyor.
+- Panolar bir sonraki okumada bu ilanları kendiliğinden ekler.
+- 772 test (yeni: çoğul ve tam ifade kuralları; yapılandırmanın uzmanlık ve AB dilleri başlıklarını tutup satış / yazar / pazarlama başlıklarını eleyişi), ruff temiz.
 
 ---
 
