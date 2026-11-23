@@ -49,6 +49,7 @@ services:
       CAREER_OS_EMAIL: ${CAREER_OS_EMAIL:-}                          # CLI default account (jobs scan / eval)
       ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}                              # developer.adzuna.com; empty = Adzuna off
       ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
+      ADZUNA_MAX_CALLS: ${ADZUNA_MAX_CALLS:-40}                       # requests per read (~2 reads a day)
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - uploads:/app/personal                                        # uploaded CVs

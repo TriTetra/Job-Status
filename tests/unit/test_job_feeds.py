@@ -302,11 +302,62 @@ def test_adzuna_is_off_without_keys_and_stays_in_budget(monkeypatch):
                                       for _ in range(adzuna.PER_PAGE)]})
 
     monkeypatch.setattr(adzuna, "_keys", lambda: ("id", "key"))
-    monkeypatch.setattr(adzuna, "MAX_CALLS", 5)
+    monkeypatch.setattr(adzuna, "_budget", lambda: 5)
     out = adzuna.fetch(Http(), ["xx", "de"], ["ml engineer", "data scientist", "ai engineer"])
     assert calls[0][0].endswith("/xx/search/1")            # a country Adzuna doesn't offer is skipped
     assert len(calls) == 5 and len(out) == 4               # never more calls than the budget
     assert all("api_key" not in u for u, _ in calls)
+
+
+def test_adzuna_stops_when_refused_and_never_leaks_the_key(monkeypatch):
+    import pytest
+
+    from careeros.jobs.sources.feeds import adzuna
+
+    monkeypatch.setattr(adzuna, "_keys", lambda: ("id", "s3cret"))
+    monkeypatch.setattr(adzuna, "_budget", lambda: 40)
+
+    def http(statuses):
+        calls = []
+
+        class Http:
+            def get(self, url, params=None, timeout=None):
+                calls.append(url)
+                st = statuses[min(len(calls), len(statuses)) - 1]
+                if isinstance(st, Exception):
+                    raise st
+                n = len(calls)
+                r = _Resp({"exception": "AUTH_FAIL"} if st >= 400 else {"results": [
+                    {**ADZ_JOB, "id": f"{n}-{i}", "redirect_url": f"https://www.adzuna.de/land/ad/{n}-{i}"}
+                    for i in range(adzuna.PER_PAGE)]})
+                r.status_code = st
+                return r
+        return Http(), calls
+
+    # quota spent after the first page: stop at once, keep the 50 already read
+    h, calls = http([200, 429])
+    out = adzuna.fetch(h, ["de", "gb"], ["ml engineer", "data scientist"])
+    assert len(out) == adzuna.PER_PAGE and len(calls) == 2
+
+    # refused on the first call: nothing, no error, no further calls
+    h, calls = http([401])
+    assert adzuna.fetch(h, ["de", "gb"], ["ml engineer"]) == [] and len(calls) == 1
+
+    # other failures name the status and Adzuna's code, never the URL with the key
+    h, _ = http([500])
+    with pytest.raises(adzuna.AdzunaError) as e:
+        adzuna.fetch(h, ["de"], ["ml engineer"])
+    assert "500" in str(e.value) and "s3cret" not in str(e.value) and "api.adzuna" not in str(e.value)
+
+    h, _ = http([ConnectionError("Max retries exceeded with url: /search/1?app_key=s3cret")])
+    with pytest.raises(adzuna.AdzunaError) as e:
+        adzuna.fetch(h, ["de"], ["ml engineer"])
+    assert "s3cret" not in str(e.value) and e.value.__cause__ is None and e.value.__suppress_context__
+
+    # budget 0 = off without a single call
+    monkeypatch.setattr(adzuna, "_budget", lambda: 0)
+    h, calls = http([200])
+    assert adzuna.fetch(h, ["de"], ["ml engineer"]) == [] and calls == []
 
 
 def test_adzuna_attribution_site_per_country():

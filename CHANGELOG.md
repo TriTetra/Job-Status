@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.1 Adzuna: kota ve anahtar güvenliği | Adzuna kotası doldu ya da anahtar etkin değil (401/403/429) yanıtında okuma duruyor, o ana kadar gelen ilanlar korunuyor; hata mesajları ve loglar artık anahtarı içeren URL'yi yazmıyor; okuma başına istek sayısı `ADZUNA_MAX_CALLS` ile ayarlanabiliyor (varsayılan 40) | ✅ Tamam | 2026-11-23 |
 | 1.1 Resmi İlan API'leri: Adzuna | Yeni kaynak Adzuna (GB, DE, NL, PL, ES, CH, FR, IT…): kullanıcıların hedef ülkeleri ve rolleri için arama, çalıştırma başına en fazla 40 istek; her Adzuna ilanında şartların istediği "Jobs by Adzuna" etiketi; anahtar girilene kadar kapalı. Reed şartları okunamadı (bekliyor), Almanya İş Ajansı resmi API değil (eklenmedi) | ✅ Tamam | 2026-11-23 |
 | Plan: Kapsam ve İş Akışı Açıkları | Piyasaya göre eksiklerin hepsi iki faza bölündü (docs/v1/GAPS_ROADMAP.md): Faz 1 kapsam ve sonuç döngüsü (resmi ilan API'leri, unvan filtresi, ilan ekleme, maaş ve şirket verisi, tazelik, e-posta ile sonuç, takip mesajı), Faz 2 iş akışı (tarayıcı eklentisi, CV, Evidence, Learning, öğrenen sıralama, mülakat hazırlığı, tanıdıklar, mobil); kod değişmedi | ✅ Tamam | 2026-11-23 |
 | Türkiye İşverenleri Rehberi | Companies → "Türkiye employers": yazılım / veri / yapay zekâ alanında 97 işveren, her biri kendi kariyer sayfasına bağlantıyla, sektöre göre; 30'unun işlerini Aplio okuyor; 10 yeni Türkiye panosu (Çiçeksepeti, Spyke, Good Job Games, Wingie Enuygun, Vertigo, Akinon, Paraşüt, Ruby Game Studio, P&G Türkiye, Ericsson Türkiye) | ✅ Tamam | 2026-11-23 |
@@ -127,6 +128,20 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.1 Adzuna: Kota ve Anahtar Güvenliği] — 2026-11-23 — Sağlamlık ✅
+
+**Neden:** Adzuna kaydı sonrası mesaj: hesap etkinleşene kadar toplam **25 deneme çağrısı**; ücretli API Access planında **günde 500, ayda 5.000**. Önceki sürüm okuma başına 40 istek yapıyordu ve kota dolunca tüm okuma hata verip o ana kadar gelen ilanları kaybediyordu. Ayrıca `raise_for_status()` hata mesajına isteğin tam URL'sini, yani `app_key`'i koyuyordu; bu mesaj loga ve DB'deki feed sonucuna yazılıyordu.
+
+### Değişenler (`careeros/jobs/sources/feeds/adzuna.py`)
+- **401 / 403 / 429** (anahtar yanlış ya da etkin değil, plan izin vermiyor, kota doldu): okuma hemen duruyor, gelen ilanlar korunuyor, logda yalnız durum kodu ve Adzuna'nın kısa hata kodu (ör. `AUTH_FAIL`).
+- Diğer HTTP hataları ve bağlantı hataları: **URL'siz** `AdzunaError` (durum kodu + Adzuna kodu ya da yalnız hata türü). Bağlantı hatasının asıl mesajı da URL içerdiği için zincirlenmiyor (`from None`). Daha önce ilan geldiyse onlar korunuyor.
+- **`ADZUNA_MAX_CALLS`** (varsayılan 40; `.env.example`, `docker-compose.prod.yml`): okuma başına en fazla istek. Feed'ler günde yaklaşık 2 kez okunuyor: 40 → ayda ~2.400 (5.000 sınırının altında). Etkinleşmeden önce 25 deneme çağrısı için **5** önerilir. 0 = kapalı.
+
+### Doğrulama
+- 770 test (yeni: 429'da durup ilk sayfayı koruma, 401'de tek çağrı, 500 ve bağlantı hatasında anahtarın mesajda olmaması, bütçe 0'da hiç çağrı yapılmaması), ruff temiz.
 
 ---
 

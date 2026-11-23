@@ -4,8 +4,11 @@ ES, CH, FR, IT…). Searched for the roles and countries Aplio's users target.
 Terms (developer.adzuna.com/docs/terms_of_service): permitted for personal job search and for
 publishing Adzuna listings; every displayed listing carries an "Adzuna" label (≥116×23 px)
 linked to Adzuna's local site, and the job links to Adzuna's redirect URL. Commercial use
-needs Adzuna's written agreement. Limits are per account and not published, so a run makes
-at most MAX_CALLS requests. Needs ADZUNA_APP_ID and ADZUNA_APP_KEY; without them it is off.
+needs Adzuna's written agreement. Calls are capped per account (API Access plan: 500 a day,
+5,000 a month; before activation 25 test calls in all), so a read makes at most ADZUNA_MAX_CALLS
+requests and stops, keeping what it has, when Adzuna refuses (quota spent, key not active).
+Needs ADZUNA_APP_ID and ADZUNA_APP_KEY; without them it is off. The key travels as a query
+parameter, so request URLs never go into logs or error messages.
 
 https://developer.adzuna.com/docs/search
 """
@@ -21,7 +24,8 @@ logger = logging.getLogger(__name__)
 API = "https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
 PER_PAGE = 50
 PAGES = 2
-MAX_CALLS = 40          # per run; feeds run about twice a day
+MAX_CALLS = 40          # default per read (ADZUNA_MAX_CALLS); feeds run about twice a day
+REFUSED = (401, 403, 429)  # bad or inactive key, plan not allowing it, quota spent: stop, keep what we have
 MAX_QUERIES = 4
 MAX_DAYS_OLD = 30
 
@@ -43,6 +47,25 @@ DEFAULT_QUERIES = ("machine learning engineer", "AI engineer", "data scientist",
 def site_for(country_code: Optional[str]) -> str:
     """Adzuna's local site for an ISO country code (the attribution link)."""
     return COUNTRIES.get((country_code or "").lower(), ("", "https://www.adzuna.co.uk"))[1]
+
+
+class AdzunaError(RuntimeError):
+    """An Adzuna failure, described without the request URL (it carries the key)."""
+
+
+def _reason(resp) -> str:
+    """Adzuna's short error code (e.g. AUTH_FAIL) if the body has one; never the URL."""
+    try:
+        body = resp.json() or {}
+        return str(body.get("exception") or body.get("display") or "")[:120]
+    except Exception:
+        return ""
+
+
+def _budget() -> int:
+    from careeros.shared.config import get_settings
+
+    return getattr(get_settings(), "adzuna_max_calls", MAX_CALLS)
 
 
 def _keys() -> Optional[tuple[str, str]]:
@@ -86,23 +109,37 @@ def fetch(http, countries: Optional[list[str]] = None, queries: Optional[list[st
         c, q = targets()
         countries, queries = countries or c, queries or q
     seen: dict[str, FeedPosting] = {}
-    calls = 0
+    calls, budget = 0, _budget()
     for country in countries:
         offered = True
         for q in queries:
             if not offered:
                 break
             for page in range(1, PAGES + 1):
-                if calls >= MAX_CALLS:
+                if calls >= budget:
                     return list(seen.values())
                 calls += 1
-                resp = http.get(API.format(country=country, page=page), timeout=TIMEOUT, params={
-                    "app_id": keys[0], "app_key": keys[1], "what": q, "results_per_page": PER_PAGE,
-                    "max_days_old": MAX_DAYS_OLD, "sort_by": "date", "content-type": "application/json"})
+                try:
+                    resp = http.get(API.format(country=country, page=page), timeout=TIMEOUT, params={
+                        "app_id": keys[0], "app_key": keys[1], "what": q, "results_per_page": PER_PAGE,
+                        "max_days_old": MAX_DAYS_OLD, "sort_by": "date", "content-type": "application/json"})
+                except Exception as e:  # connection errors quote the URL, key included: name the error only
+                    if seen:
+                        logger.warning("Adzuna request failed (%s): keeping %d job(s)", type(e).__name__, len(seen))
+                        return list(seen.values())
+                    raise AdzunaError(f"request failed: {type(e).__name__}") from None
                 if resp.status_code == 404:  # country not offered: skip it entirely
                     offered = False
                     break
-                resp.raise_for_status()
+                if resp.status_code in REFUSED:
+                    logger.warning("Adzuna refused (HTTP %s %s) after %d call(s): keeping %d job(s)",
+                                   resp.status_code, _reason(resp), calls, len(seen))
+                    return list(seen.values())
+                if resp.status_code >= 400:  # not raise_for_status(): its message holds the URL and key
+                    if seen:
+                        logger.warning("Adzuna HTTP %s %s: keeping %d job(s)", resp.status_code, _reason(resp), len(seen))
+                        return list(seen.values())
+                    raise AdzunaError(f"HTTP {resp.status_code} {_reason(resp)}".strip())
                 results = resp.json().get("results") or []
                 for j in results:
                     p = _posting(j, country)
