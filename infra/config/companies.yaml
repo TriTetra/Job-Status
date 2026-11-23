@@ -184,3 +184,15 @@ companies:
   - {key: astrazeneca-tr, name: AstraZeneca Türkiye, domain: astrazeneca.com, ats: workday, host: astrazeneca.wd3.myworkdayjobs.com, tenant: astrazeneca, site: Careers, search: [Istanbul]}
   - {key: bosch-tr, name: Bosch Türkiye, domain: bosch.com.tr, ats: smartrecruiters, board: BoschGroup, search: [tr]}
   - {key: deliveryhero-tr, name: Delivery Hero Türkiye, domain: deliveryhero.com, ats: smartrecruiters, board: DeliveryHero, search: [tr]}
+  # More Turkey employers with a readable job system (from the Türkiye employers directory, checked 2026-11-23);
+  # the global ones only for their Turkey jobs (Workday "Istanbul", Eightfold location; robots.txt allows /api/pcsx)
+  - {key: ciceksepeti, name: Çiçeksepeti, domain: ciceksepeti.com, ats: lever, board: ciceksepeti}
+  - {key: spykegames, name: Spyke Games, domain: spyke.games, ats: lever, board: spyke-games}
+  - {key: goodjobgames, name: Good Job Games, domain: goodjobgames.com, ats: ashby, board: good-job-games}
+  - {key: wingieenuygun, name: Wingie Enuygun Group, domain: enuygun.com, ats: workable, board: wingieenuygun}
+  - {key: vertigogames, name: Vertigo Games, ats: workable, board: vertigogames}
+  - {key: akinon, name: Akinon, domain: akinon.com, ats: workable, board: akinon}
+  - {key: parasut, name: Paraşüt, domain: parasut.com, ats: recruitee, board: parasut}
+  - {key: rubygamestudio, name: Ruby Game Studio, ats: recruitee, board: rubygamestudio}
+  - {key: pg-tr, name: P&G Türkiye, domain: pg.com.tr, ats: workday, host: pg.wd5.myworkdayjobs.com, tenant: pg, site: '1000', search: [Istanbul]}
+  - {key: ericsson-tr, name: Ericsson Türkiye, domain: ericsson.com, ats: eightfold, host: jobs.ericsson.com, board: ericsson.com, search: [Turkey]}

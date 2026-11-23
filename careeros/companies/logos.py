@@ -59,6 +59,16 @@ def _favicon(domain: str, http=requests) -> Optional[tuple[bytes, str]]:
     return _cached(f"d:{domain}", lambda: _get_image(http, SOURCE, {"domain": domain, "sz": SIZE}))
 
 
+def logo_for_domain(domain: str, http=requests) -> Optional[tuple[bytes, str]]:
+    """An employer directory entry's logo: only domains listed in a directory (never any domain asked for)."""
+    from careeros.companies.employers import domains
+
+    d = (domain or "").strip().lower().removeprefix("www.")
+    if d not in domains("tr"):
+        return None
+    return _favicon(d, http)
+
+
 def domain_for(key: str, session=None) -> Optional[str]:
     """A board company's website: from its config, else the one its postings point to most."""
     board = next((b for b in all_boards(session) if b.key == key), None)

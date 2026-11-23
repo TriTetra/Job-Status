@@ -1,0 +1,585 @@
+# Türkiye employers directory: main employers of software, data and AI people in Türkiye, each with a
+# link to its OWN careers page (compiled and link-checked 2026-11-23). Links only; `board_key` marks the
+# ones whose jobs Aplio reads (companies.yaml). Many post only on their own portal, Kariyer.net or
+# LinkedIn, whose terms don't allow automated collection. Loaded by careeros/companies/employers.py.
+employers:
+- name: Trendyol
+  domain: trendyol.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://careers.trendyol.com/
+  ats: lever
+  board_key: trendyol
+- name: Hepsiburada
+  domain: hepsiburada.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://kurumsal.hepsiburada.com/tr/hakkimizda/kariyer
+  ats: kariyer.net-only
+- name: n11
+  domain: n11.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://www.n11.com/kariyer
+- name: Getir
+  domain: getir.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://getir.careers-page.com/
+- name: Yemeksepeti (Delivery Hero)
+  domain: yemeksepeti.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://careers.deliveryhero.com/yemeksepeti
+  ats: smartrecruiters
+- name: Sahibinden.com
+  domain: sahibinden.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://insankaynaklari.sahibinden.com/bize-katil/acik-pozisyonlar
+- name: Çiçeksepeti
+  domain: ciceksepeti.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://www.ciceksepeti.com/s/kariyer
+  ats: lever
+  board_key: ciceksepeti
+- name: Modanisa
+  domain: modanisa.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://www.modanisa.com/kariyer/
+- name: Armut
+  domain: armut.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://armut.com/careers
+- name: Obilet
+  domain: obilet.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://careers.obilet.com/
+  ats: recruitee
+  board_key: obilet
+- name: Wingie Enuygun Group
+  domain: enuygun.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://www.enuygun.com/kariyer/
+  ats: workable
+  board_key: wingieenuygun
+- name: Migros (Migros One)
+  domain: migros.com.tr
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://www.migroskurumsal.com/kariyer/simdi-basvurun
+- name: LC Waikiki
+  domain: lcwaikiki.com
+  sector: ecommerce
+  city: Istanbul
+  careers_url: https://corporate.lcwaikiki.com/lc-waikikide-kariyer
+  ats: kariyer.net-only
+- name: iyzico
+  domain: iyzico.com
+  sector: fintech
+  city: Istanbul
+  careers_url: https://www.iyzico.com/hakkimizda/kariyer
+  ats: lever
+  board_key: iyzico
+- name: Param
+  domain: param.com.tr
+  sector: fintech
+  city: Istanbul
+  careers_url: https://hr.param.com.tr/tr/kariyer-yolculugu
+- name: Paycell
+  domain: paycell.com.tr
+  sector: fintech
+  city: Istanbul
+  careers_url: https://www.turkcell.com.tr/hakkimizda/insankaynaklari/kariyer-firsatlari/detay
+  ats: own
+- name: Colendi
+  domain: colendi.com
+  sector: fintech
+  city: Istanbul
+  careers_url: https://www.colendi.com/career
+- name: Sipay
+  domain: sipay.com.tr
+  sector: fintech
+  city: Istanbul
+  careers_url: https://sipay.com.tr/kariyer/
+- name: Midas
+  domain: getmidas.com
+  sector: fintech
+  city: Istanbul
+  careers_url: https://jobs.lever.co/getmidas
+  ats: lever
+  board_key: midas
+- name: Paribu
+  domain: paribu.com
+  sector: fintech
+  city: Istanbul
+  careers_url: https://kariyer.paribu.com/tr
+- name: Moka United
+  domain: mokaunited.com
+  sector: fintech
+  city: Istanbul
+  careers_url: https://www.mokaunited.com/tr/hakkimizda/kariyer
+  ats: kariyer.net-only
+- name: Garanti BBVA Teknoloji
+  domain: garantibbvateknoloji.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://www.garantibbvateknoloji.com.tr/bizde-kariyer
+- name: Akbank
+  domain: akbank.com
+  sector: banking
+  city: Istanbul
+  careers_url: https://kariyer.akbank.com/
+  ats: own
+- name: Yapı Kredi Teknoloji
+  domain: ykteknoloji.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://www.ykteknoloji.com.tr/kariyer
+- name: İş Bankası
+  domain: isbank.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://www.isbank.com.tr/bankamizi-taniyin/iste-kariyer
+  ats: own
+- name: Softtech
+  domain: softtech.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://softtech.com.tr/kariyer/
+  ats: successfactors
+- name: QNB Türkiye
+  domain: qnb.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://www.qnbkariyer.com/
+  ats: own
+- name: Ziraat Teknoloji
+  domain: ziraatteknoloji.com
+  sector: banking
+  city: Istanbul
+  careers_url: https://ziraatteknoloji.hrpeak.com/
+- name: VakifBank
+  domain: vakifbank.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://www.vakifbank.com.tr/tr/hakkimizda/insan-kaynaklari
+- name: Halkbank
+  domain: halkbank.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://kariyer.halkbank.com.tr/
+  ats: own
+- name: Intertech (DenizBank)
+  domain: intertech.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://career.intertech.com.tr/
+  ats: own
+- name: Architecht (Kuveyt Turk)
+  domain: architecht.com
+  sector: banking
+  city: Istanbul
+  careers_url: https://join.architecht.com/jobs
+- name: TEB
+  domain: teb.com.tr
+  sector: banking
+  city: Istanbul
+  careers_url: https://www.tebkariyer.com/tr
+  ats: own
+- name: Insider One
+  domain: insiderone.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://insiderone.com/careers/
+  ats: lever
+  board_key: insiderone
+- name: Jotform
+  domain: jotform.com
+  sector: saas
+  city: Ankara
+  careers_url: https://www.jotform.com/jobs/
+  ats: own
+- name: Akinon
+  domain: akinon.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://apply.workable.com/akinon/
+  ats: workable
+  board_key: akinon
+- name: Logo Yazilim
+  domain: logo.com.tr
+  sector: saas
+  city: Istanbul
+  careers_url: https://live.peoplise.com/logo/career
+- name: Netas
+  domain: netas.com.tr
+  sector: telecom
+  city: Istanbul
+  careers_url: https://kariyer.netas.com.tr/
+  ats: successfactors
+- name: Commencis
+  domain: commencis.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://www.commencis.com/careers/
+  ats: lever
+  board_key: commencis
+- name: Hitit
+  domain: hitit.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://hitit.com/careers
+- name: Univera
+  domain: univera.com.tr
+  sector: saas
+  city: Istanbul
+  careers_url: https://univera.com.tr/kariyer-kultur/
+  ats: kariyer.net-only
+- name: Picus Security
+  domain: picussecurity.com
+  sector: saas
+  city: Ankara
+  careers_url: https://www.picussecurity.com/careers-at-picus
+  ats: lever
+  board_key: picus
+- name: Etiya
+  domain: etiya.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://www.etiya.com/en/our-company/career
+- name: OBSS
+  domain: obss.tech
+  sector: saas
+  city: Istanbul
+  careers_url: https://obss.tech/en/career-development/
+- name: Innova
+  domain: innova.com.tr
+  sector: saas
+  city: Istanbul
+  careers_url: https://www.innova.com.tr/kariyer
+- name: Paraşüt
+  domain: parasut.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://parasut.com/careers
+  ats: recruitee
+  board_key: parasut
+- name: Kolay IK
+  domain: kolayik.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://jobs.kolayik.com/
+  ats: own
+- name: Sestek
+  domain: sestek.com
+  sector: saas
+  city: Istanbul
+  careers_url: https://www.sestek.com/careers
+  ats: own
+- name: Dream Games
+  domain: dreamgames.com
+  sector: games
+  city: Istanbul
+  careers_url: https://www.dreamgames.com/careers
+  ats: lever
+  board_key: dreamgames
+- name: Peak
+  domain: peak.com
+  sector: games
+  city: Istanbul
+  careers_url: https://peak.com/jobs
+  ats: lever
+  board_key: peakgames
+- name: Rollic
+  domain: rollicgames.com
+  sector: games
+  city: Istanbul
+  careers_url: https://www.rollicgames.com/jobs
+- name: Codeway
+  domain: codeway.co
+  sector: games
+  city: Istanbul
+  careers_url: https://jobs.ashbyhq.com/codeway
+  ats: ashby
+  board_key: codeway
+- name: Spyke Games
+  domain: spyke.games
+  sector: games
+  city: Istanbul
+  careers_url: https://jobs.lever.co/spyke-games
+  ats: lever
+  board_key: spykegames
+- name: Bigger Games
+  domain: biggergames.com
+  sector: games
+  city: Istanbul
+  careers_url: https://www.biggergames.com/careers
+  ats: ashby
+  board_key: biggergames
+- name: Good Job Games
+  domain: goodjobgames.com
+  sector: games
+  city: Istanbul
+  careers_url: https://www.goodjobgames.com/careers
+  ats: ashby
+  board_key: goodjobgames
+- name: Ace Games
+  domain: null
+  sector: games
+  city: Istanbul
+  careers_url: https://apply.workable.com/ace-games/
+  ats: workable
+  board_key: acegames
+- name: Agave Games
+  domain: agave.games
+  sector: games
+  city: Istanbul
+  careers_url: https://jobs.ashbyhq.com/agavegames
+  ats: ashby
+  board_key: agavegames
+- name: Loop Games
+  domain: loopgames.net
+  sector: games
+  city: Ankara
+  careers_url: https://loopgames.net/career-listing
+  ats: lever
+  board_key: loopgames
+- name: Fomo Games
+  domain: fomo.gs
+  sector: games
+  city: Istanbul
+  careers_url: https://fomo.gs/
+  ats: own
+- name: Cypher Games
+  domain: cyphergames.com
+  sector: games
+  city: Istanbul
+  careers_url: https://www.cyphergames.com/careers
+  ats: lever
+  board_key: cyphergames
+- name: Vertigo Games
+  domain: null
+  sector: games
+  city: Istanbul
+  careers_url: https://apply.workable.com/vertigogames/
+  ats: workable
+  board_key: vertigogames
+- name: Fugo Games
+  domain: fugo.com.tr
+  sector: games
+  city: Istanbul
+  careers_url: https://fugo-games.breezy.hr/
+- name: Ruby Game Studio
+  domain: null
+  sector: games
+  city: Izmir
+  careers_url: https://rubygamestudio.recruitee.com/
+  ats: recruitee
+  board_key: rubygamestudio
+- name: Turkcell
+  domain: turkcell.com.tr
+  sector: telecom
+  city: Istanbul
+  careers_url: https://www.turkcell.com.tr/hakkimizda/insankaynaklari/kariyer-firsatlari/detay
+  ats: own
+- name: Türk Telekom
+  domain: turktelekom.com.tr
+  sector: telecom
+  city: Ankara
+  careers_url: https://www.turktelekomkariyer.com.tr/
+  ats: own
+- name: Vodafone Türkiye
+  domain: vodafone.com.tr
+  sector: telecom
+  city: Istanbul
+  careers_url: https://jobs.vodafone.com/careers?location=turkey&domain=vodafone.com
+  ats: eightfold
+  board_key: vodafone-tr
+- name: Turksat
+  domain: turksat.com.tr
+  sector: telecom
+  city: Ankara
+  careers_url: https://www.turksat.com.tr/yetenek-yonetimi
+- name: Aselsan
+  domain: aselsan.com
+  sector: defence
+  city: Ankara
+  careers_url: https://www.aselsan.com/tr/kariyer
+  ats: own
+- name: Havelsan
+  domain: havelsan.com.tr
+  sector: defence
+  city: Ankara
+  careers_url: https://kariyer.havelsan.com.tr/
+  ats: own
+- name: Baykar
+  domain: baykartech.com
+  sector: defence
+  city: Istanbul
+  careers_url: https://kariyer.baykartech.com/en/
+  ats: own
+- name: TUSAS (Turkish Aerospace)
+  domain: tusas.com
+  sector: defence
+  city: Ankara
+  careers_url: https://kariyer.tusas.com/
+  ats: own
+- name: TUBITAK BILGEM
+  domain: bilgem.tubitak.gov.tr
+  sector: other
+  city: other
+  careers_url: https://kariyer.tubitak.gov.tr/
+  ats: own
+- name: Togg
+  domain: togg.com.tr
+  sector: mobility
+  city: other
+  careers_url: https://careers.togg.com.tr/viewalljobs/
+- name: BiTaksi
+  domain: bitaksi.com
+  sector: mobility
+  city: Istanbul
+  careers_url: https://career.bitaksi.com/
+- name: Ford Otosan
+  domain: fordotosan.com.tr
+  sector: mobility
+  city: Istanbul
+  careers_url: https://www.fordotosan.com.tr/tr/kariyer/neden-ford-otosan/neden-ford-otosan
+- name: Pegasus Airlines
+  domain: flypgs.com
+  sector: other
+  city: Istanbul
+  careers_url: https://www.flypgs.com/en/pegasus-airlines-recruitment-announcements
+- name: KocSistem
+  domain: kocsistem.com.tr
+  sector: consulting
+  city: Istanbul
+  careers_url: https://www.kocsistem.com.tr/kurumsal/kariyer
+  ats: own
+- name: Sabancı Dx
+  domain: sabancidx.com
+  sector: consulting
+  city: Istanbul
+  careers_url: https://www.sabancidx.com/hakkimizda/kariyer
+- name: Dogus Teknoloji
+  domain: d-teknoloji.com.tr
+  sector: consulting
+  city: Istanbul
+  careers_url: https://www.d-teknoloji.com.tr/tr/kariyer
+- name: Turkish Airlines (THY Technology)
+  domain: turkishairlines.com
+  sector: other
+  city: Istanbul
+  careers_url: https://careers.turkishairlines.com/
+  ats: own
+- name: Vestel
+  domain: vestel.com.tr
+  sector: other
+  city: other
+  careers_url: https://www.vestelkariyer.com/
+  ats: own
+- name: ING Hubs Türkiye
+  domain: ing.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://careers.ing.com/en/
+  ats: workday
+  board_key: ing-tr
+- name: Microsoft Türkiye
+  domain: microsoft.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://apply.careers.microsoft.com/careers?lc=Istanbul%2C%20Istanbul%2C%20Turkey
+  ats: eightfold
+- name: Huawei Türkiye R&D
+  domain: huawei.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://www.huawei.com/tr/careers
+- name: Ericsson Türkiye
+  domain: ericsson.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://jobs.ericsson.com/careers?location=Istanbul
+  ats: eightfold
+  board_key: ericsson-tr
+- name: Siemens Türkiye
+  domain: siemens.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://jobs.siemens.com/
+- name: Bosch Türkiye
+  domain: bosch.com.tr
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://www.bosch.com.tr/kariyer/
+  ats: smartrecruiters
+  board_key: bosch-tr
+- name: Mercedes-Benz Türk
+  domain: mercedes-benz.com.tr
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://www.mercedes-benz.com.tr/passengercars/brand/career.html
+- name: Procter & Gamble Türkiye
+  domain: pg.com.tr
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://www.pgcareers.com/global/en/search-results?keywords=istanbul
+  ats: workday
+  board_key: pg-tr
+- name: Udemy (Ankara)
+  domain: udemy.com
+  sector: global-hub
+  city: Ankara
+  careers_url: https://about.udemy.com/careers/
+  ats: greenhouse
+- name: Amazon Türkiye
+  domain: amazon.com.tr
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://www.amazon.jobs/en/search?country=TUR
+  ats: own
+- name: Mastercard Türkiye
+  domain: mastercard.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://careers.mastercard.com/us/en/search-results?keywords=Istanbul
+  ats: workday
+  board_key: mastercard
+- name: IBM Türkiye
+  domain: ibm.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://www.ibm.com/careers/search?field_keyword_05[0]=Turkey
+  ats: own
+- name: Oracle Türkiye
+  domain: oracle.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://careers.oracle.com/en/sites/jobsearch/jobs?location=Turkey
+  ats: oracle
+- name: SAP Türkiye
+  domain: sap.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://jobs.sap.com/
+  ats: successfactors
+- name: AstraZeneca Türkiye
+  domain: astrazeneca.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://careers.astrazeneca.com/
+  ats: workday
+  board_key: astrazeneca-tr
+- name: AVL Türkiye
+  domain: avl.com
+  sector: global-hub
+  city: Istanbul
+  careers_url: https://jobs.avl.com/
+  ats: successfactors

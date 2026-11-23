@@ -9,6 +9,7 @@ from ..dependencies import get_db_session, get_user_id
 from ..schemas.company import CompanyMemoryResponse, CompanyResponse
 from careeros.companies import logos
 from careeros.companies.directory import company_detail, company_directory
+from careeros.companies.employers import directory as employers_directory
 from careeros.companies.repositories.company_repo import CompanyMemoryRepository, CompanyRepository
 
 router = APIRouter()
@@ -53,6 +54,19 @@ def job_logo(url: str = Query(..., max_length=2048), user_id: str = Depends(get_
              session: Session = Depends(get_db_session)):
     """Small companies too: board logo, else the employer's website icon, else the feed's logo."""
     return _image(logos.logo_for_job(session, url))
+
+
+@router.get("/logo-domain", summary="An employers-directory company's logo (cached)")
+def domain_logo(domain: str = Query(..., max_length=255), user_id: str = Depends(get_user_id)):
+    """Only domains listed in an employers directory; others 404 (the web shows a monogram)."""
+    return _image(logos.logo_for_domain(domain))
+
+
+@router.get("/employers", summary="Main employers in a country with links to their careers pages")
+def employers(country: str = Query("tr", min_length=2, max_length=2), user_id: str = Depends(get_user_id),
+              session: Session = Depends(get_db_session)):
+    """Links to each employer's own careers page, and which ones Aplio reads jobs for."""
+    return employers_directory(session, country.lower())
 
 
 @router.get("/boards", summary="Companies from the job boards, with this user's view")

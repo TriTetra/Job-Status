@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
 import { CompanyPanel } from "@/components/companies/company-panel";
+import { EmployersDirectoryView } from "@/components/companies/employers-directory";
 import { cn } from "@/lib/utils";
 import { fetchBoardCompany } from "@/features/companies/client";
 import type { BoardCompany, BoardCompanyDetail } from "@/features/companies/board-types";
 import { TREND, fitLine } from "@/features/companies/format";
 
-type View = "fits" | "hiring" | "all";
+type View = "fits" | "hiring" | "all" | "tr";
 
 /** The companies whose boards we read: a list on the left, the chosen one in full on the right. */
 export function CompaniesView({ companies }: { companies: BoardCompany[] }) {
@@ -55,6 +56,11 @@ export function CompaniesView({ companies }: { companies: BoardCompany[] }) {
     { id: "hiring", label: "Posted this week", n: companies.filter((c) => c.new_this_week > 0).length },
     { id: "all", label: "All", n: companies.length },
   ];
+  const openBoard = (key: string) => {
+    setView("all");
+    setQuery("");
+    pick(key);
+  };
 
   return (
     <div className="lg:h-full flex flex-col w-full max-w-[1680px] mx-auto px-6 lg:px-8 pt-7 pb-5">
@@ -74,6 +80,12 @@ export function CompaniesView({ companies }: { companies: BoardCompany[] }) {
               {v.label} <span className="font-mono text-xs" style={{ color: "var(--text-muted)" }}>{v.n}</span>
             </button>
           ))}
+          <button onClick={() => { setView("tr"); setSelectedKey(null); }} aria-current={view === "tr" ? "page" : undefined}
+                  className="text-sm inline-flex items-center gap-1.5"
+                  style={{ color: view === "tr" ? "var(--text-primary)" : "var(--text-muted)", fontWeight: view === "tr" ? 600 : 400 }}>
+            <span className="fi fi-tr rounded-[2px]" style={{ width: "1.1em", height: "0.82em", backgroundSize: "cover" }} aria-hidden />
+            Türkiye employers
+          </button>
         </nav>
         <label className="ml-auto flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
           <Search className="h-4 w-4" />
@@ -83,7 +95,9 @@ export function CompaniesView({ companies }: { companies: BoardCompany[] }) {
         </label>
       </div>
 
-      {shown.length === 0 ? (
+      {view === "tr" ? (
+        <EmployersDirectoryView query={query} onOpenBoard={openBoard} />
+      ) : shown.length === 0 ? (
         <p className="flex-1 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>No companies in this view.</p>
       ) : (
         <div className="mt-4 lg:flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] gap-6">

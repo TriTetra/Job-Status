@@ -9,6 +9,8 @@ interface CompanyLogoProps {
   companyKey?: string | null;
   /** A stored job's URL: finds the logo of small companies too (website icon or the feed's logo) */
   jobUrl?: string | null;
+  /** An employers-directory company's website domain */
+  domain?: string | null;
   size?: number;
   className?: string;
 }
@@ -22,10 +24,11 @@ function initials(name: string): string {
  * The company's logo on a light tile (dark marks stay visible on the dark UI). Tries the
  * board logo, then the job's company logo, then shows a monogram.
  */
-export function CompanyLogo({ name, companyKey, jobUrl, size = 36, className }: CompanyLogoProps) {
+export function CompanyLogo({ name, companyKey, jobUrl, domain, size = 36, className }: CompanyLogoProps) {
   const sources = [
     companyKey ? `/api/companies/logo/${encodeURIComponent(companyKey)}` : null,
     jobUrl ? `/api/companies/logo-job?url=${encodeURIComponent(jobUrl)}` : null,
+    domain ? `/api/companies/logo-domain?domain=${encodeURIComponent(domain)}` : null,
   ].filter((s): s is string => Boolean(s));
   const [attempt, setAttempt] = useState(0);
   const radius = Math.round(size * 0.24);

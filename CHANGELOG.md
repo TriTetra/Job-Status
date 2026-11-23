@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Türkiye İşverenleri Rehberi | Companies → "Türkiye employers": yazılım / veri / yapay zekâ alanında 97 işveren, her biri kendi kariyer sayfasına bağlantıyla, sektöre göre; 30'unun işlerini Aplio okuyor; 10 yeni Türkiye panosu (Çiçeksepeti, Spyke, Good Job Games, Wingie Enuygun, Vertigo, Akinon, Paraşüt, Ruby Game Studio, P&G Türkiye, Ericsson Türkiye) | ✅ Tamam | 2026-11-23 |
 | Yer Rozeti (Bayrak) + Türkiye Kaynakları | Her işte bayrak · şehir · On-site / Hybrid / Remote / Global; Türkiye'ye açık remote işler 🇹🇷 ile; yeni Türkiye kaynakları: ING Hubs Türkiye, AstraZeneca Türkiye (Workday "Istanbul"), Bosch Türkiye (SmartRecruiters country=tr) | ✅ Tamam | 2026-11-23 |
 | Search: Türkiye ve Yer Aramaları | Ülke filtresinde o ülkedeki işler önce okunuyor (remote ilanlar artık dışarı itemiyor); kutuya yazılan yer (İstanbul, Türkiye, Berlin) ülke filtresi oluyor; kelimeler konumda da aranıyor; noktalı İ yazımları | ✅ Tamam | 2026-11-23 |
 | Taslaklar: Kanıta Bağlı ve Denetlenen | Başvuru taslakları her iddiada dayandığı kanıtı gösteriyor; bir aracı yanlış işe bağlayan ya da kanıtta olmayan beceriyi iddia eden cümleler yakalanıyor, bir düzeltme turu, kalanlar "Check:" notu | ✅ Tamam | 2026-11-23 |
@@ -124,6 +125,32 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Türkiye İşverenleri Rehberi] — 2026-11-23 — Kariyer sayfaları tek yerde ✅
+
+**Neden:** Kullanıcı: Türkiye'nin yazılım alanındaki ilk 100 şirketinin kariyer bağlantılarını doğrudan buraya ekle.
+
+### Liste (`infra/config/employers_tr.yaml`)
+- Araştırmayla 108 işveren derlendi: Türk teknoloji ve ürün şirketleri (e-ticaret, fintek, SaaS, oyun, mobilite), büyük grupların ve bankaların teknoloji şirketleri, Türkiye'de mühendislik merkezi olan küresel şirketler. Her biri için **şirketin kendi** kariyer sayfası (Kariyer.net / LinkedIn / Glassdoor değil), sektör, şehir, kullandığı iş sistemi.
+- Bağlantılar tek tek denetlendi: 90'ı açılıyor; 7'si otomatik denetimi engelliyor (403: Hepsiburada, Sahibinden, Armut, Param, Paraşüt, BiTaksi, Mercedes-Benz Türk) ama resmi sayfa olduğu aramayla doğrulandı; Togg / Ford Otosan sertifika hatası buradan, sayfalar resmi. Doğrulanamayan 11'i çıkarıldı (Papara, BtcTurk, ikas, Kafein, Mobillium, Gleam, Masomo, Roketsan, STM, Martı, Arçelik: kariyer sayfası yok, 404 ya da yalnız LinkedIn). **Rehberde 97 işveren.**
+- Benzer adlı başka şirketler ayıklandı (Greenhouse "peak" ABD'li bir şirket, "insider" Business Insider).
+
+### Rehber (Companies → "🇹🇷 Türkiye employers")
+- Sektöre göre gruplar (E-ticaret, Fintek, Bankalar, Yazılım / SaaS, Oyun, Telekom, Savunma, Mobilite, Danışmanlık, Küresel şirketlerin merkezleri), arama, "yalnız Aplio'nun okudukları".
+- Her satır: logo, ad, şehir, **Careers ↗** (şirketin kendi sayfası); işlerini Aplio okuyorsa yeşil "Aplio reads its jobs (N open)", tıklayınca şirketin Aplio sayfası.
+- Logolar: `/api/companies/logo-domain`, yalnız rehberdeki alan adları için (açık bir vekil değil).
+- API: `GET /api/companies/employers?country=tr` (`careeros/companies/employers.py`); yalnız http(s) bağlantılar ("javascript:" vb. reddedilir).
+
+### Yeni kaynaklar (`infra/config/companies.yaml`, kuru çalıştırma: 23 yeni ilgili iş)
+- Lever: **Çiçeksepeti**, **Spyke Games**; Ashby: **Good Job Games**; Workable: **Wingie Enuygun Group**, **Vertigo Games**, **Akinon**; Recruitee: **Paraşüt**, **Ruby Game Studio**; Workday ("Istanbul"): **P&G Türkiye**; Eightfold (konum Turkey; robots.txt `/api/pcsx`'e izin veriyor): **Ericsson Türkiye**.
+- Microsoft Türkiye eklenmedi: denemede sitesi "çok istek" (429) döndü ve Türkiye ilanları çoğunlukla satış / danışmanlık; rehberde bağlantı olarak duruyor.
+- Rehberde işlerini Aplio'nun okuduğu 30 işveren: Trendyol, Çiçeksepeti, Obilet, Wingie Enuygun, iyzico, Midas, Insider One, Akinon, Commencis, Picus, Paraşüt, Dream Games, Peak, Codeway, Spyke, Bigger Games, Good Job Games, Ace Games, Agave, Loop, Cypher, Vertigo, Ruby Game Studio, Vodafone Türkiye, ING Hubs Türkiye, Ericsson Türkiye, Bosch Türkiye, P&G Türkiye, Mastercard, AstraZeneca Türkiye.
+
+### Doğrulama
+- Tarayıcıda (atılabilir DB): rehber, logolar, sektörler, Careers bağlantıları, "Aplio reads its jobs" → şirket sayfası; API'de hata yok.
+- 765 test (yeni `test_employers_directory.py`: temizleme, Türkiye listesinin geçerliliği, logo koruması), ruff, tsc, eslint, `next build` temiz.
 
 ---
 
