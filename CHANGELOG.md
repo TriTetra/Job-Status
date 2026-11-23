@@ -146,6 +146,7 @@ Sıralama: en yeniden en eskiye.
 ### Doğrulama
 - Atılabilir Postgres'te: migration 020; akışlardan 852 açık ilanın 401'inde şirket sitesi, 355'inde logo; v7 ile 323 eşleşme yeniden puanlandı: 67 verified, 36 caution (8 ajans); konum kriteri 141 hedefte / 89 dışında. Tarayıcıda: "Only reliable employers (8 hidden)", kartta "Direct", ajans ilanında "About this employer", küçük şirket logoları (Reducto keşfedilen siteden, Northflank Jobicy logosundan).
 - 649 test (yeni `test_scoring_v7.py`: konum eşleşmesi, güven seviyeleri ve dolandırıcılık işaretleri, kur çevirisi, puan faktörleri, şirket büyüklüğü, talep, logo güvenliği), ruff, tsc, eslint, `next build` temiz.
+- **Yayında:** `322890e` push edildi, Coolify'da dağıtıldı (Finished). API kaydında `telegram_links_019 -> job_company_domain_020` hatasız; zamanlayıcı 07:21'de açıldı, ilk döngüde herkes v7 ile yeniden puanlanır. Mevcut akış ilanlarının şirket sitesi / logosu bir sonraki akış okumasında (~12 saatte bir) dolar. Canlıda `/api/companies/logo-job` oturumsuz 401.
 
 ---
 
