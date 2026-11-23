@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Deploy: eklenen ilan listede kalır | 9c70841 canlıda (Coolify 27 sn), API yanıt veriyor (toplam 603 eşleşme). Adzuna: kullanıcı ücretli plan seçmedi, hesap 25 deneme çağrısında; anahtar girilirse ADZUNA_MAX_CALLS=5 önerildi | ✅ Canlı | 2026-11-23 |
 | 1.3 düzeltme: eklenen ilan listede kalır | Opportunities en iyi 500 ilanı gösteriyordu (canlıda toplam 597); kişinin kendi eklediği düşük puanlı bir ilan listeye girmiyordu. Artık eklenen ilanlar her zaman listenin sonunda | ✅ Tamam | 2026-11-23 |
 | Deploy: 1.1 Adzuna + kota düzeltmesi, 1.2 unvan filtresi, 1.3 ilan ekleme | fcf6e58 canlıda (Coolify 1 dk 7 sn); migration apply_kits_022 → jobs_added_by_023 uygulandı, API hatasız açıldı; "Add a job" canlıda, sunucu okuma yolu denendi (yazma olmadan). Adzuna anahtar girilene kadar kapalı | ✅ Canlı | 2026-11-23 |
 | 1.3 Herhangi Bir İlanı Ekleme | Opportunities'te "Add a job": bağlantı ya da yapıştırılan metin; bilinen iş sistemlerinde resmi API, diğer sitelerde robots.txt'e uyarak sayfa okuma, LinkedIn / Kariyer.net / Indeed / Glassdoor / kununu / XING hiç okunmaz (metin yapıştırılır); ilan puanlanır, yalnız ekleyen görür, kuyruk ve kit için hazır. Migration 023 | ✅ Tamam | 2026-11-23 |
@@ -132,6 +133,13 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Deploy: Eklenen İlan Listede Kalır] — 2026-11-23 — Canlı ✅
+
+- **Deploy:** `9c70841` canlıda (Coolify 27 sn). Opportunities API yanıt veriyor; toplam 603 eşleşme, kişinin eklediği ilanlar artık 500 sınırının ötesinde de listede.
+- **Adzuna:** API Access ücretli (ayda 5.000, günde 500 çağrı). Kullanıcı plan seçmedi; hesapta toplam **25 deneme çağrısı** var. Anahtar Coolify'a girilirse `ADZUNA_MAX_CALLS=5` ile yaklaşık 5 okumada biter; sonra Adzuna sessizce durur, diğer kaynaklar etkilenmez. Anahtar paylaşıldığı için yenilenmesi önerildi.
 
 ---
 
