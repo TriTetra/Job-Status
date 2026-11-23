@@ -52,8 +52,16 @@ def language_codes(langs: Iterable) -> set[str]:
     return out
 
 
+# Every pattern for a language needs one of these words in the text: a cheap check first
+# (the patterns backtrack, and most postings name no other language)
+_LANG_WORDS = {code: (name.lower(),) for code, name in _LANG_NAMES.items()}
+_LANG_WORDS["de"] = ("german", "deutsch")
+
+
 def languages_required(text: str, title: str) -> list[str]:
-    found = [code for code, rx in _NEEDS_LANG.items() if rx.search(text or "")]
+    lower = (text or "").lower()
+    found = [code for code, rx in _NEEDS_LANG.items()
+             if any(w in lower for w in _LANG_WORDS[code]) and rx.search(text or "")]
     # A posting written in German needs German
     words = re.findall(r"\w+", (text or "")[:2500])
     if "de" not in found and words and len(_GERMAN_WORDS.findall((text or "")[:2500])) / len(words) > 0.06:

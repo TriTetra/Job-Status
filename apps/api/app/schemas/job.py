@@ -28,3 +28,14 @@ class JobWithScore(BaseModel):
 class JobListResponse(BaseModel):
     total: int
     jobs: List[JobWithScore]
+
+
+class JobSearchItem(JobWithScore):
+    # False: scored just now for this search (not one of your Opportunities, not saved)
+    in_opportunities: bool = False
+
+
+class JobSearchResponse(BaseModel):
+    total: int
+    capped: bool = False  # more postings matched than one search reads: narrow it
+    jobs: List[JobSearchItem]

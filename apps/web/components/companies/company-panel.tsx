@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Check, X } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
+import { WhatPeopleSay } from "@/components/ui/what-people-say";
 import { safeHttpUrl } from "@/lib/utils";
 import type { BoardCompanyDetail } from "@/features/companies/board-types";
 import { TREND, profileLine, weekLine } from "@/features/companies/format";
@@ -113,8 +114,9 @@ export function CompanyPanel({ c }: { c: BoardCompanyDetail }) {
           )}
         </section>
 
-        {c.top_skills.length > 0 && (
-          <aside className="order-1 xl:order-2">
+        <aside className="order-1 xl:order-2 space-y-8">
+          {c.top_skills.length > 0 && (
+          <div>
             <p className={LABEL} style={LABEL_STYLE}>What they ask for</p>
             <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>you show {c.skills_you_show} of {c.top_skills.length}</p>
             <ul className="mt-3 grid grid-cols-2 xl:grid-cols-1 gap-x-6 gap-y-2.5">
@@ -129,8 +131,10 @@ export function CompanyPanel({ c }: { c: BoardCompanyDetail }) {
                 </li>
               ))}
             </ul>
-          </aside>
-        )}
+          </div>
+          )}
+          <WhatPeopleSay company={c.name} location={c.roles.map((r) => r.location ?? "").join(" ")} />
+        </aside>
       </div>
     </div>
   );

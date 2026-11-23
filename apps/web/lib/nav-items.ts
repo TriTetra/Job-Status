@@ -8,6 +8,7 @@ import {
   ClipboardList,
   BarChart3,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { type LucideIcon } from "lucide-react";
 
@@ -36,6 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "DISCOVER",
     items: [
       { label: "Opportunities", href: "/inbox", icon: Compass },
+      { label: "Search", href: "/search", icon: Search },
       { label: "Companies", href: "/companies", icon: Building2 },
       { label: "Market", href: "/market", icon: TrendingUp },
     ],

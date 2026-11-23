@@ -53,6 +53,7 @@ export interface OpportunityExplanation {
   company?: string;
   title?: string;
   location?: string;
+  remote_regions?: string[];
   remote?: boolean;
   remote_region?: string;
   source?: string;

@@ -14,6 +14,7 @@ import {
 import { getPosting, type Posting } from "@/features/opportunities/posting";
 import type { Criterion, Opportunity } from "@/features/opportunities/types";
 import { WhyModal } from "./why-modal";
+import { WhatPeopleSay } from "./what-people-say";
 
 interface OpportunityDetailPanelProps {
   opp: Opportunity;
@@ -21,6 +22,8 @@ interface OpportunityDetailPanelProps {
   onShortlist: () => void;
   onSkip: () => void;
   busy?: boolean;
+  /** Scored just now for a search, not saved: no deeper read (it needs a saved score). */
+  scoredNow?: boolean;
 }
 
 const LABEL = "text-[11px] uppercase tracking-[0.08em]";
@@ -66,7 +69,7 @@ function makeHighlighter(have: string[], missing: string[]) {
  * The reader: the posting as an article on the left, your fit in the margin on the right —
  * score, chance, priorities, skills and the actions. Each side scrolls on its own.
  */
-export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy }: OpportunityDetailPanelProps) {
+export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy, scoredNow }: OpportunityDetailPanelProps) {
   const [decision, setDecision] = useState(opp.decision);
   const [whyOpen, setWhyOpen] = useState(false);
   const [explaining, setExplaining] = useState(false);
@@ -262,9 +265,15 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
             ) : (
               <>
                 {quickWhy && <p className="text-sm leading-relaxed mt-2" style={{ color: "var(--text-secondary)" }}>{quickWhy}</p>}
+                {scoredNow ? (
+                  <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
+                    Scored for this search, not one of your Opportunities. Shortlist it to keep it in Applications.
+                  </p>
+                ) : (
                 <button onClick={explain} disabled={explaining} className="inline-flex items-center gap-1.5 text-xs mt-2" style={{ color: "var(--accent)" }}>
                   {explaining ? <><Loader2 className="h-3 w-3 animate-spin" /> Reading it against your evidence…</> : "Ask for a deeper read →"}
                 </button>
+                )}
               </>
             )}
             {explainError && <p className="mt-1 text-xs" role="alert" style={{ color: "var(--danger)" }}>Couldn&apos;t explain it right now.</p>}
@@ -313,6 +322,8 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
               </ul>
             </section>
           )}
+
+          <WhatPeopleSay company={company} location={`${ex.location ?? ""} ${(ex.remote_regions ?? []).join(" ")}`} />
 
           {criteria.length > 0 && (
             <section>

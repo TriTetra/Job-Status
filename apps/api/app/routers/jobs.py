@@ -10,12 +10,13 @@ from careeros.jobs.models.career_score import CareerScore
 from careeros.applications.repositories.application_repo import ApplicationRepository
 from careeros.jobs import opportunities
 from careeros.jobs import ingest
+from careeros.jobs import search as job_search
 from careeros.jobs.posting import get_posting
 from careeros.jobs.scan import ALL_TIME_HOURS, run_scan, scan_jobs
 from careeros.shared.background import JobForbidden, JobNotFound
 
 from ..dependencies import get_db_session, get_user_id
-from ..schemas.job import JobListResponse, JobWithScore
+from ..schemas.job import JobListResponse, JobSearchItem, JobSearchResponse, JobWithScore
 
 router = APIRouter()
 
@@ -143,6 +144,48 @@ def sync_status(job_id: str):
     except JobNotFound:
         raise HTTPException(404, "Job not found")
     return job.to_dict()
+
+
+def _csv(value: Optional[str], allowed: set[str]) -> list[str]:
+    return [v for v in (x.strip().lower() for x in (value or "").split(",")) if v in allowed]
+
+
+@router.get("/search", response_model=JobSearchResponse, summary="Search every open job, with filters")
+def search_jobs(
+    q: str = Query("", max_length=120, description="Words in the title or company"),
+    country: Optional[str] = Query(None, min_length=2, max_length=2, description="ISO code: located there or remote open to it"),
+    work: Optional[str] = Query(None, max_length=40, description="remote,hybrid,onsite"),
+    size: Optional[str] = Query(None, max_length=40, description="startup,midsize,large"),
+    reliable: bool = Query(False, description="Hide agencies and postings with scam signs"),
+    reachable: bool = Query(True, description="Hide roles you can't take from where you live"),
+    visa: bool = Query(False, description="Only postings that say they sponsor a visa"),
+    min_salary: Optional[int] = Query(None, ge=0, le=2_000_000, description="Yearly, USD"),
+    source: Optional[Literal["company", "feed"]] = Query(None),
+    days: Optional[int] = Query(None, ge=1, le=365, description="Posted within"),
+    sort: Literal["score", "newest"] = Query("score"),
+    limit: int = Query(50, ge=1, le=job_search.PAGE_MAX),
+    offset: int = Query(0, ge=0, le=5000),
+    user_id: str = Depends(get_user_id),
+    session: Session = Depends(get_db_session),
+):
+    """Open jobs beyond your matches. Already-scored ones keep their score; the rest are scored for you
+    on the fly and not saved."""
+    f = job_search.SearchFilters(
+        q=q, country=country.upper() if country else None, work=_csv(work, job_search.WORK),
+        sizes=_csv(size, job_search.SIZES), reliable=reliable, reachable=reachable, visa=visa,
+        min_salary_usd=min_salary or None, source=source, days=days, sort=sort, limit=limit, offset=offset)
+    result = job_search.search(session, user_id, f)
+    decisions = opportunities.user_decisions(session, user_id)
+    jobs = []
+    for it in result.items:
+        rec = (it.get("recommendation") or "").split(" - ")[0].strip().upper() or None
+        explanation = it.get("explanation") or {}
+        jobs.append(JobSearchItem(
+            **{**it, "recommendation": rec if rec in ("APPLY", "CONSIDER", "SKIP") else None},
+            decision=explanation.get("decision"),
+            user_decision=decisions.get(it["url"]) or opportunities.UNREVIEWED,
+        ))
+    return JobSearchResponse(total=result.total, capped=result.capped, jobs=jobs)
 
 
 @router.get("/{url:path}", response_model=JobWithScore)

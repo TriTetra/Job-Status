@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Search + What People Say | Yeni Search sayfası (tüm açık ilanlar; ülke, çalışma şekli, şirket büyüklüğü, tarih, maaş, kaynak, vize, güvenilirlik filtreleri; sonuçlar arama sırasında v8 ile puanlanır, kaydedilmez); okuyucuda ve Companies'te "What people say" bağlantıları (Glassdoor, Reddit, Blind, kununu, Ekşi Sözlük); dil kontrolü hızlandırıldı | ✅ Tamam | 2026-11-23 |
 | Scoring v8: Research-Based Model | Researched hiring evidence (5 areas, report in reports/); new model: hard gates, calibrated chance of an interview × value of the job, ranked by expected surplus (Bied et al. 2026); explained in "How it's calculated"; Scoring settings become value weights + effort | ✅ Tamam | 2026-11-23 |
 | Scoring v7: Trust, Location, Size, Currency + Small-Company Logos | Score now uses your target countries, company size from the whole board, salaries in any currency, skill demand from real postings; employer trust check (agency / ghost / scam) with "Only reliable employers" on by default; logos for small companies | ✅ Tamam | 2026-11-23 |
 | Telegram Notifications | Connect Telegram in Settings → Connections (one tap in the bot); new strong matches and follow-up reminders after each refresh, each job once | ✅ Tamam | 2026-11-23 |
@@ -115,6 +116,33 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Search + What People Say] — 2026-11-23 — Search every open job, read what people say ✅
+
+**Neden:** Kullanıcı: Opportunities dışında, istediğimiz ülke ve farklı filtrelerle ayrıca arama yapabileceğimiz güzel bir sayfa; iş yeriyle ilgili Reddit ya da iş yeri puanları gibi "nasıl bir yer" gösteren bir bölüm.
+
+### Search sayfası (`/search`, menüde DISCOVER → Search)
+- Opportunities yalnız hedef rollerine uyan ve taramanın puanladığı ilanlar; Search **bütün açık ilanları** (şirket iş sistemleri + feed'ler) okur.
+- Büyük tek satır sorgu (unvan, şirket, departman) ve filtreler: **ülke** (orada olan ya da o ülkeye açık remote), çalışma şekli (Remote / Hybrid / On-site), şirket büyüklüğü (Startup / Mid-size / Large), yayın tarihi, en az maaş (yıllık, USD'ye çevrilmiş), kaynak (şirket siteleri / feed'ler), "vize sponsorluğu yazıyor", "yalnız güvenilir işverenler", **"yalnız alabileceğim roller"** (vize / dil engeli olanları ve başka ülke sakinlerine remote ilanları gizler, varsayılan açık); sıralama: "Best for you" ya da "Newest".
+- Filtreler URL'de: arama paylaşılabilir, yer imine eklenebilir, yenilemede kalır. Yazarken 350 ms sonra arar; eski cevaplar yeni sorgunun üstüne yazılmaz; "Show more" ile 50'şer.
+- Puan: tarama zaten puanladıysa o puan (v8); değilse **aynı v8 modeliyle o an** puanlanır ve **kaydedilmez** — arama Opportunities'i değiştirmez. Okuyucu aynı (Shortlist / I applied / Not for me çalışır, Applications'a düşer); anlık puanlananlarda "derin okuma" yerine kısa not.
+- Bir arama en yeni 600 ilanı okur; fazlası varsa sayfa "bir kelime ya da filtre ekle" der.
+
+### "What people say"
+- Okuyucunun kenarında ve Companies panelinde: **Glassdoor** (yorumlar, maaşlar, mülakatlar), **Reddit** (çalışanların konuları), **Blind** (doğrulanmış çalışanlar); Almanya / Avusturya / İsviçre'deki işverenlerde **kununu**, Türkiye'dekilerde **Ekşi Sözlük**.
+- Yalnız bağlantı: siteler kendi sayfalarında açılır, Aplio yorum toplamaz (bu sitelerin kuralları kazımayı yasaklıyor). Reddit özetleri, kullanıcı bir Reddit uygulaması kaydedip anahtarını eklerse sonra eklenebilir.
+
+### Hız
+- Zorunlu dil kontrolü (v8 girdisi) ilan başına ~12 ms'den ~1 ms'ye: her dil kalıbı ancak o dilin adı metinde geçiyorsa çalışıyor (sonuç aynı). Bu, normal taramayı da hızlandırıyor.
+- Search, ilan başına okunan bilgileri (güven, sinyaller) ve anlık puanları bellekte tutuyor; aynı gün aynı ilan yeniden okunmuyor. Atılabilir DB'de ilk tam arama ~3 sn, sonrakiler 0,1–1 sn.
+- `ScoringService.record()` / `preview()`: bir puanın kayıt biçimi tek yerde; tarama kaydeder, arama kaydetmeden kullanır.
+
+### Doğrulama
+- Atılabilir Postgres'te (1.380 açık ilan) tarayıcıda: sorgu + ülke filtresi (URL'ye yazılıyor), "machine learning" + Almanya → 9 rol, Münih'teki işverende kununu bağlantısı, Search'ten Shortlist ("Saved ✓"), Companies panelinde Glassdoor bağlantısı, telefon genişliğinde yatay kaydırma yok; API'de hata yok.
+- 682 test (yeni `test_job_search.py`: sorgu kelimeleri, ülke coğrafyası, filtreler, ulaşılabilirlik, maaş referansı, dil kontrolünün hızlı yolu), ruff, tsc, eslint, `next build` temiz.
+- Not: atılabilir DB'de Türkiye'de ofisli ilan olmadığı için Ekşi Sözlük bağlantısı tarayıcıda görülemedi; eşleşme kuralı (İstanbul / Türkiye / Ankara…) ayrıca denendi.
 
 ---
 

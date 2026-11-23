@@ -134,6 +134,86 @@ class ScoringService:
             "breakdown": breakdown,
         }
 
+    def record(self, opp: OpportunityScore, gaps: List[str], profile: Optional[UserProfile],
+               job_meta: Dict, prefs: Dict) -> Dict:
+        """One scored job as stored on career_scores (and shown in the reader): numbers,
+        explanation, Decision Contract. Search previews use it without saving."""
+        rec_normalized = opp.recommendation
+        if isinstance(rec_normalized, str) and " - " in rec_normalized:
+            rec_normalized = rec_normalized.split(" - ")[0].strip()
+
+        explanation = {
+            "fit_score": opp.fit_score,
+            "acceptance_probability": opp.acceptance_probability,
+            "career_value": opp.career_value,
+            "market_demand": opp.market_demand,
+        }
+        if profile:
+            explanation.update(self._build_explanation(opp, profile))
+        if getattr(opp, "model", None):
+            explanation["model"] = opp.model
+
+        # ── Decision Contract v1 ──
+        explanation["decision"] = build_decision(
+            recommendation=rec_normalized,
+            career_score=opp.career_score or 0,
+            career_value=opp.career_value or 0,
+            market_demand=opp.market_demand or 0,
+            job=job_meta,
+            prefs=prefs,
+            matched_skills=explanation.get("matched_skills", []),
+            gap_skills=gaps,
+        )
+
+        # Root-level fields the UI reads directly
+        for key in ("source", "remote_region", "application_url", "company_key", "posted_at",
+                    "summary", "extracted_by", "preferred_skills",
+                    "salary_min", "salary_max", "salary_currency",
+                    "trust", "company_size", "company_domain", "remote_regions"):
+            if job_meta.get(key) and job_meta[key] != "unknown":
+                explanation[key] = job_meta[key]
+
+        return dict(
+            career_score=opp.career_score,
+            fit_score=opp.fit_score,
+            acceptance_probability=opp.acceptance_probability,
+            career_value=opp.career_value,
+            market_demand=opp.market_demand,
+            expected_value=opp.expected_value,
+            recommendation=rec_normalized,
+            skill_gaps=json_safe(gaps),
+            explanation=json_safe(explanation),
+        )
+
+    @staticmethod
+    def job_dicts(jobs: List[Job], job_meta: Optional[Dict[str, Dict]] = None) -> Dict[str, Dict]:
+        """What the Decision Contract reads about each job: the Job fields + scan metadata."""
+        return {
+            j.url: {
+                "title": j.title,
+                "company": j.company,
+                "location": j.location,
+                "remote": j.remote,
+                "remote_region": (job_meta or {}).get(j.url, {}).get("remote_region") if job_meta else None,
+                "sponsors_visa": j.sponsors_visa,
+                "salary_min": j.salary_min,
+                "salary_max": j.salary_max,
+                "required_skills": j.required_skills or [],
+                **((job_meta or {}).get(j.url) or {}),
+            }
+            for j in jobs
+        }
+
+    def preview(self, jobs: List[Job], profile: UserProfile, weights: Optional[Dict[str, float]] = None,
+                job_meta: Optional[Dict[str, Dict]] = None, prefs: Optional[Dict] = None) -> Dict[str, Dict]:
+        """Score without saving: {url: record}. For searches outside the user's own matches."""
+        scores = self.score_jobs(jobs, profile, weights)
+        gaps = skill_gaps(jobs, profile)
+        dicts = self.job_dicts(jobs, job_meta)
+        prefs = self.load_prefs() if prefs is None else prefs
+        return {o.job.url: self.record(o, gaps.get(o.job.url, []), profile, dicts.get(o.job.url, {}), prefs)
+                for o in scores}
+
     def save_scores(
         self,
         scores: List[OpportunityScore],
@@ -153,58 +233,10 @@ class ScoringService:
             repo = CareerScoreRepository(session)
             for opp in scores:
                 try:
-                    gaps = skill_gaps_map.get(opp.job.url, [])
-                    rec_normalized = opp.recommendation
-                    if isinstance(rec_normalized, str) and " - " in rec_normalized:
-                        rec_normalized = rec_normalized.split(" - ")[0].strip()
-
-                    explanation = {
-                        "fit_score": opp.fit_score,
-                        "acceptance_probability": opp.acceptance_probability,
-                        "career_value": opp.career_value,
-                        "market_demand": opp.market_demand,
-                    }
-                    if profile:
-                        explanation.update(self._build_explanation(opp, profile))
-                    if getattr(opp, "model", None):
-                        explanation["model"] = opp.model
-
-                    # ── Decision Contract v1 ──
-                    job_meta_data = (job_dicts or {}).get(opp.job.url, {})
-                    explanation["decision"] = build_decision(
-                        recommendation=rec_normalized,
-                        career_score=opp.career_score or 0,
-                        career_value=opp.career_value or 0,
-                        market_demand=opp.market_demand or 0,
-                        job=job_meta_data,
-                        prefs=prefs or {},
-                        matched_skills=explanation.get("matched_skills", []),
-                        gap_skills=gaps,
-                    )
-
-                    # Root-level fields the UI reads directly
-                    for key in ("source", "remote_region", "application_url", "company_key", "posted_at",
-                                "summary", "extracted_by", "preferred_skills",
-                                "salary_min", "salary_max", "salary_currency",
-                                "trust", "company_size", "company_domain", "remote_regions"):
-                        if job_meta_data.get(key) and job_meta_data[key] != "unknown":
-                            explanation[key] = job_meta_data[key]
-
-                    repo.upsert_score(
-                        user_id=self.user_id,
-                        url=opp.job.url,
-                        scanned_at=scanned_at,
-                        career_score=opp.career_score,
-                        fit_score=opp.fit_score,
-                        acceptance_probability=opp.acceptance_probability,
-                        career_value=opp.career_value,
-                        market_demand=opp.market_demand,
-                        expected_value=opp.expected_value,
-                        recommendation=rec_normalized,
-                        skill_gaps=json_safe(gaps),
-                        explanation=json_safe(explanation),
-                        input_hash=(input_hashes or {}).get(opp.job.url),
-                    )
+                    rec = self.record(opp, skill_gaps_map.get(opp.job.url, []), profile,
+                                      (job_dicts or {}).get(opp.job.url, {}), prefs or {})
+                    repo.upsert_score(user_id=self.user_id, url=opp.job.url, scanned_at=scanned_at,
+                                      input_hash=(input_hashes or {}).get(opp.job.url), **rec)
                     saved += 1
                 except Exception as e:
                     logger.warning("Saving score failed for %s: %s", opp.job.url, e)
@@ -240,21 +272,7 @@ class ScoringService:
     ) -> Dict:
         """Score + save + return summary dict."""
         prefs = self.load_prefs()
-        job_dicts = {
-            j.url: {
-                "title": j.title,
-                "company": j.company,
-                "location": j.location,
-                "remote": j.remote,
-                "remote_region": (job_meta or {}).get(j.url, {}).get("remote_region") if job_meta else None,
-                "sponsors_visa": j.sponsors_visa,
-                "salary_min": j.salary_min,
-                "salary_max": j.salary_max,
-                "required_skills": j.required_skills or [],
-                **((job_meta or {}).get(j.url) or {}),
-            }
-            for j in jobs
-        }
+        job_dicts = self.job_dicts(jobs, job_meta)
         scores = (
             self.score_jobs_semantic(jobs, profile, weights)
             if semantic
