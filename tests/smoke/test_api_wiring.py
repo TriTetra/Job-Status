@@ -44,6 +44,7 @@ EXPECTED_PATHS = {
     "/api/resume/generate",
     "/api/roles", "/api/roles/categories", "/api/roles/search", "/api/roles/{slug}",
     "/api/settings/", "/api/settings/weights",
+    "/api/telegram", "/api/telegram/link", "/api/telegram/prefs", "/api/telegram/test", "/api/telegram/webhook",
 }
 
 

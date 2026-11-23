@@ -30,6 +30,7 @@ PUBLIC_ROUTES = {
     ("POST", "/api/auth/invites/check"),   # invite page; the token is the credential
     ("POST", "/api/auth/invites/accept"),  # sign-up with a valid invite token
     ("GET", "/api/oauth/github/callback"),  # single-use OAuth state instead
+    ("POST", "/api/telegram/webhook"),      # Telegram's secret token header instead
 }
 
 

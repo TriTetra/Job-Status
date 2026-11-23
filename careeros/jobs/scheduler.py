@@ -45,6 +45,9 @@ def run_cycle() -> Optional[dict]:
         if job.status == "completed":
             r = job.result or {}
             logger.info("Rescored %s: %s scored, %s unchanged", user_id, r.get("scored"), r.get("unchanged"))
+    from careeros.notifications.notify import notify_all
+
+    notify_all(user_ids)
     refresh_market_news()
     return summary.totals
 

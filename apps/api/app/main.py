@@ -16,7 +16,7 @@ from careeros.shared.logging import configure_logging
 from .dependencies import get_user_id
 from .routers import (
     applications, auth, briefing, companies, evidence, goals, jobs, market, oauth,
-    onboarding, preferences, resume, roles, settings,
+    onboarding, preferences, resume, roles, settings, telegram,
 )
 
 configure_logging()
@@ -25,7 +25,15 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     scheduler = None
-    hours = get_settings().job_sync_interval_hours
+    settings_ = get_settings()
+    if settings_.telegram_bot_token:
+        import threading
+
+        from careeros.notifications.telegram import ensure_webhook
+
+        # In the background: Telegram being slow must not delay startup
+        threading.Thread(target=ensure_webhook, args=(settings_.web_app_url,), daemon=True).start()
+    hours = settings_.job_sync_interval_hours
     if hours > 0:
         from careeros.jobs.scheduler import JobScheduler
 
@@ -51,11 +59,14 @@ app = FastAPI(
 # CORS preflight this API never grants — so only our own pages can write.
 CSRF_HEADER = "x-careeros-csrf"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+# Called by Telegram, not a browser: authenticated by Telegram's secret token header instead
+CSRF_EXEMPT = {"/api/telegram/webhook"}
 
 
 @app.middleware("http")
 async def require_csrf_header(request: Request, call_next):
-    if request.method not in SAFE_METHODS and request.headers.get(CSRF_HEADER) != "1":
+    if (request.method not in SAFE_METHODS and request.url.path not in CSRF_EXEMPT
+            and request.headers.get(CSRF_HEADER) != "1"):
         return JSONResponse({"detail": "Missing CSRF header"}, status_code=403)
     return await call_next(request)
 
@@ -66,6 +77,8 @@ async def require_csrf_header(request: Request, call_next):
 #   auth  — /login must work signed-out; /me checks the session itself
 #   oauth — per-endpoint auth; /github/callback is a GitHub redirect
 #           authenticated by its single-use state token
+#   telegram — per-endpoint auth; /webhook is Telegram, authenticated by the
+#              secret token it echoes back
 authenticated = [Depends(get_user_id)]
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -82,6 +95,7 @@ app.include_router(roles.router, dependencies=authenticated)
 app.include_router(preferences.router, dependencies=authenticated)
 app.include_router(goals.router, dependencies=authenticated)
 app.include_router(oauth.router)
+app.include_router(telegram.router)
 
 
 @app.get("/")

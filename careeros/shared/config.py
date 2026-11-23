@@ -116,6 +116,9 @@ class Settings:
     github_client_secret: Optional[str]
     github_redirect_uri: Optional[str]
 
+    # Telegram notifications (a bot from @BotFather; unset = feature off)
+    telegram_bot_token: Optional[str]
+
     # Auth
     session_cookie_secure: bool
     token_encryption_key: Optional[str]
@@ -170,6 +173,7 @@ def get_settings() -> Settings:
         # Default: the site's own callback (the web app proxies /api to the API)
         github_redirect_uri=os.getenv("GITHUB_REDIRECT_URI")
         or os.getenv("WEB_APP_URL", "http://localhost:3000").rstrip("/") + "/api/oauth/github/callback",
+        telegram_bot_token=(os.getenv("TELEGRAM_BOT_TOKEN") or "").strip() or None,
         # Secure cookies also work on http://localhost in current browsers; set false only for odd dev setups
         session_cookie_secure=_bool("SESSION_COOKIE_SECURE", True),
         token_encryption_key=os.getenv("TOKEN_ENCRYPTION_KEY") or None,

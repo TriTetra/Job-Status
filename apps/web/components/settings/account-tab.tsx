@@ -9,6 +9,7 @@ import { connectsByInput, SOURCE_INPUT, useSourceConnect } from "@/features/onbo
 import type { EvidenceSourceRow } from "@/features/onboarding/types";
 import { Section, Row, UnderlineInput } from "./kit";
 import { InvitesSection, PasswordRow } from "./access-section";
+import { TelegramSection } from "./telegram-section";
 
 const textBtn = "text-xs underline underline-offset-4 transition-colors cursor-pointer disabled:opacity-40";
 
@@ -52,6 +53,7 @@ export function ConnectionsTab() {
 
   return (
     <div>
+      <TelegramSection />
       <Section title="Proof sources">
         <p className="text-xs pb-2" style={{ color: "var(--text-muted)" }}>
           Every source you add becomes evidence Aplio can point to when it scores a role.

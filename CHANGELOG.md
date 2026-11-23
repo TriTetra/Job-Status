@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Telegram Notifications | Connect Telegram in Settings → Connections (one tap in the bot); new strong matches and follow-up reminders after each refresh, each job once | ✅ Tamam | 2026-11-23 |
 | Eightfold Reader + Vodafone Türkiye | Big-company career sites on Eightfold, read through the search their robots.txt allows; Vodafone Türkiye added (Turkey jobs only); other big TR portals checked and why they can't be read | ✅ Tamam | 2026-11-23 |
 | Türkiye Sources | 15 Turkish tech / fintech / games boards (Trendyol, Insider One, Dream Games, Midas, Peak, Codeway…), Turkish title terms, Himalayas search for jobs open to Turkey, full remote country lists kept | ✅ Tamam | 2026-11-23 |
 | Job Feeds + Board Discovery | Startups and EU/remote roles: Hacker News Who is hiring, Arbeitnow, Remotive, Himalayas, Jobicy; company boards they link to are found and read from then on; new Personio, Recruitee, Workable, SmartRecruiters and Lever EU readers | ✅ Tamam | 2026-11-23 |
@@ -112,6 +113,26 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Telegram Notifications] — 2026-11-23 — New strong matches and reminders in Telegram ✅
+
+**Neden:** Kullanıcı: bildirimler Telegram botundan gelsin.
+
+### Nasıl çalışıyor
+- Admin bir kez @BotFather'dan bot açıp token'ını Coolify'da **`TELEGRAM_BOT_TOKEN`** olarak ekliyor (docker-compose.prod.yml'e geçirildi; `.env.example`'da açıklaması var). Site https ise webhook açılışta kendiliğinden kuruluyor.
+- Kullanıcı **Settings → Connections → Connect Telegram**: tek kullanımlık (30 dk) bir t.me linki açılıyor, botta **Start**'a basınca hesap bağlanıyor; sayfa kendiliğinden güncelleniyor. Bir Telegram sohbeti tek bir Aplio hesabına bağlı olabiliyor. Botta `/stop` bağlantıyı kesiyor.
+- **Ne geliyor:** her otomatik yenilemeden (~6 saatte bir) sonra (1) **yeni güçlü eşleşmeler** (APPLY; en fazla 5, başlık · şirket · skor · yer, "Open in Aplio" linki), (2) **takip hatırlatmaları** (iki haftadır cevap gelmeyen başvurular). Her iş bir kez bildiriliyor; yeni bir şey yoksa mesaj yok. Bağlanırken mevcut eşleşmeler "gönderildi" sayılıyor, sohbet eski işlerle dolmuyor. İkisi de ayrı ayrı kapatılabiliyor; "Send a test" ve "Disconnect" var. Bot engellenirse gönderim duruyor.
+
+### Güvenlik
+- Webhook (`POST /api/telegram/webhook`) oturumsuz tek rota: Telegram'ın geri gönderdiği gizli başlıkla (bot token'ından türetilmiş, sabit zamanlı karşılaştırma) doğrulanıyor; yoksa / yanlışsa 403. CSRF başlığı Telegram gönderemediği için yalnız bu yol muaf. Token log'lara yazılmıyor (hata mesajlarında URL yok).
+- Yeni tablo `telegram_links` (migration `telegram_links_019`): sohbet kimliği, tercihler, bildirilenler; bağlantı token'ının yalnız hash'i saklanıyor.
+
+### Doğrulama
+- Ayrık önizlemede (sahte bot token'ı, gerçek Telegram'a gitmeden): web proxy üzerinden webhook gizli başlık yokken / yanlışken 403, doğruyken 200; `/start <token>` hesabı bağladı (@kullanıcı adı, token temizlendi, mevcut 5 eşleşme / hatırlatma "gönderildi" işaretlendi). Connections'ta bağlı durum, tercih değiştirme ve Disconnect → "Connect Telegram" çalışıyor.
+- 620 test (yeni `test_telegram.py`: bağlanma, süresi geçmiş link, /stop, grup sohbeti yok sayılıyor, gizli başlık, HTML kaçışı ve linkler, her işin bir kez gönderilmesi; rota envanteri, oturum ve CSRF testleri güncel), ruff, tsc, eslint, `next build` temiz.
+- **Kurulum gerekiyor:** gerçek bot token'ı Coolify'a eklenene kadar özellik kapalı ("Not set up on this server yet").
 
 ---
 
