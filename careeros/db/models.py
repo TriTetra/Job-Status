@@ -39,6 +39,7 @@ from careeros.onboarding.models.goal import Goal
 from careeros.market.models.market_skill import MarketSkill
 from careeros.memory.models import JobImpression, PersonEvent
 from careeros.applications.models.apply_kit import ApplyKit
+from careeros.applications.models.mail_signal import MailSignal
 
 __all__ = [
     "Base",
@@ -54,6 +55,7 @@ __all__ = [
     "CareerScore",
     "Application",
     "Email",
+    "MailSignal",
     "ScanHistory",
     "Evidence",
     "Job",

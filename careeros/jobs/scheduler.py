@@ -48,6 +48,9 @@ def run_cycle() -> Optional[dict]:
     from careeros.applications.queue import prepare_all
     from careeros.notifications.notify import notify_all
 
+    from careeros.applications.mail.sync import check_all as check_mailboxes
+
+    check_mailboxes(user_ids)  # employers' answers move applications before the report is written
     prepare_all(user_ids)  # today's ready-to-apply kits (LLM drafts, a few per user a day)
     notify_all(user_ids)
     refresh_market_news()

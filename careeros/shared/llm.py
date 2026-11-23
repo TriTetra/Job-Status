@@ -45,6 +45,7 @@ _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$")
 TASKS = {
     "job_extract": "bulk",
     "hn_extract": "bulk",
+    "mail_classify": "bulk",
     "cv_extract": "interactive",
     "reasoning": "interactive",
     "apply_kit": "interactive",

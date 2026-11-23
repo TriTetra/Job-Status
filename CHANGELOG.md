@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.7 Sonucu E-postadan Görme | Settings → Connections → Mailbox: uygulama şifresiyle IMAP (salt okunur, şifre şifreli). Yalnız başvurulan şirketlerin e-postaları okunur; LLM red / mülakat / teklif / bilgi isteği / alındı diye sınıflandırır; eminse başvuruyu ilerletir (OutcomeObserved, agent:mail), değilse Applications'ta sorar. "Disconnect and forget" her şeyi siler. Migration 024 | ✅ Tamam | 2026-11-23 |
 | Deploy: eklenen ilan listede kalır | 9c70841 canlıda (Coolify 27 sn), API yanıt veriyor (toplam 603 eşleşme). Adzuna: kullanıcı ücretli plan seçmedi, hesap 25 deneme çağrısında; anahtar girilirse ADZUNA_MAX_CALLS=5 önerildi | ✅ Canlı | 2026-11-23 |
 | 1.3 düzeltme: eklenen ilan listede kalır | Opportunities en iyi 500 ilanı gösteriyordu (canlıda toplam 597); kişinin kendi eklediği düşük puanlı bir ilan listeye girmiyordu. Artık eklenen ilanlar her zaman listenin sonunda | ✅ Tamam | 2026-11-23 |
 | Deploy: 1.1 Adzuna + kota düzeltmesi, 1.2 unvan filtresi, 1.3 ilan ekleme | fcf6e58 canlıda (Coolify 1 dk 7 sn); migration apply_kits_022 → jobs_added_by_023 uygulandı, API hatasız açıldı; "Add a job" canlıda, sunucu okuma yolu denendi (yazma olmadan). Adzuna anahtar girilene kadar kapalı | ✅ Canlı | 2026-11-23 |
@@ -133,6 +134,41 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.7 Sonucu E-postadan Görme] — 2026-11-23 — İş akışı ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.7. Başvurunun sonucu (red, mülakat daveti, teklif) e-postayla geliyor ama Aplio bunu kişi elle girmedikçe bilmiyordu. Bu yüzden şans modeli öğrenemiyordu, günlük rapor da eski durumu gösteriyordu.
+
+### Bağlantı (`careeros/applications/mail/account.py`)
+- **IMAP + uygulama şifresi**, yalnız SSL (993). Gmail, Yahoo, iCloud, Outlook, Yandex, mail.ru, GMX, web.de, Zoho, Fastmail ve AOL sunucuları biliniyor; diğerlerinde kişi IMAP sunucusunu giriyor. Proton (Bridge gerekir) desteklenmiyor ve bunu açıkça söylüyor.
+- Giriş **saklanmadan önce denenir**. Şifre `TOKEN_ENCRYPTION_KEY` ile şifrelenip `connected_accounts` tablosunda tutulur (provider `imap`). Gmail'in boşluklu gösterdiği uygulama şifresi temizlenir.
+- **Yalnız herkese açık sunuculara bağlanılır** (sayfa okumadaki kural: iç ağ ve localhost yok).
+- **"Disconnect and forget"**: bağlantı ve e-postada bulunan her kayıt silinir. Başvurularda yapılmış durum değişiklikleri kişinin geçmişi olarak kalır.
+
+### Okuma (`reader.py`, `match.py`)
+- Gelen kutusu **salt okunur** açılır (EXAMINE), her şey `BODY.PEEK` ile alınır. Hiçbir e-posta okundu işaretlenmez, taşınmaz ya da silinmez.
+- **Önce yalnız başlıklar** okunur (gönderen, konu, tarih, Message-ID). İlk kontrolde son 60 gün, sonra son kontrolden 2 gün öncesi, en fazla 600 e-posta.
+- **Yalnız başvurulan şirketlerle ilgili e-postanın içeriği okunur.** Eşleşme şu yollarla olur: gönderen şirketin kendi alan adıysa; ya da e-posta bir işe alım sisteminden (Greenhouse, Lever, Ashby, Workday, LinkedIn, Kariyer.net…) geliyorsa ve gönderen adında veya konuda şirket adı geçiyorsa. Aynı şirkette birden çok başvuru varsa konudaki unvan kelimeleri belirler; belirlenemezse kayıt "belirsiz" olur ve sorulur.
+- Bülten, iş alarmı ve başka şirketlerin e-postaları okunmaz, saklanmaz.
+
+### Sınıflandırma ve karar (`classify.py`, `sync.py`)
+- LLM (`mail_classify`, toplu bütçe): **rejection / interview** (görüşme, değerlendirme, ev ödevi, sonraki tur) **/ offer / info_request / acknowledgment / other**, bir güven değeri ve kanıt olarak e-postadan tek bir cümle. "Bu başvuruyla ilgili değil" diyebiliyor. LLM yoksa ifade kuralları (Türkçe dahil) düşük güvenle tahmin eder; bunlar her zaman onaya gider.
+- **Yalnız ileri adım:** applied → interview / offer / rejected; interview → offer / rejected; kısa listedeki bir iş için "başvurunuz alındı" e-postası → applied. Geriye gidilmez (teklif sonrası gelen bir "red" uygulanmaz).
+- **Emin olunca kendisi uygular:** LLM güveni en az 0.85, tek bir başvuru ve ileri adım. Durum e-postanın tarihiyle değişir; `response_days` dolar; hafızaya `OutcomeObserved` ya da `ApplicationStageChanged` yazılır (actor `agent:mail`, kaynak olarak e-posta kaydı).
+- **Emin değilse sorar:** Applications sayfasının üstünde "From your mail · N to confirm" bölümü çıkar: "Looks like interview invite. Move it to Interview?" → "Yes, move it" / "No, leave it". Bilgi isteklerinde "check the e-mail and answer them" yazar.
+- Saklanan: tarih, gönderenin alan adı, konu, tür, güven ve tek cümlelik alıntı (`mail_signals`, migration `mail_signals_024`). **E-postanın içeriği saklanmaz.**
+- **Zamanlayıcı:** her yenilemede (yaklaşık 6 saatte bir) bağlı her posta kutusu kontrol edilir. Bu, günlük rapordan ve kitlerden önce yapılır, böylece rapor güncel durumu gösterir. Settings'te "Check now" da var.
+
+### Arayüz
+- **Settings → Connections → Mailbox:** neyin okunup neyin saklandığını anlatan kısa açıklama ve Google App passwords bağlantısı. E-posta, uygulama şifresi ve gerekirse IMAP sunucusu alanları; bağlanınca adres, son kontrol zamanı, "Check now", "Disconnect and forget" ve "Found in your mail" listesi (yapılan değişiklikler ve bekleyenler).
+- `MailSignals` bileşeni hem Settings'te hem Applications'ta kullanılıyor.
+
+### Doğrulama
+- 800 test (yeni 8: sağlayıcılar ve şifre, başlık ve içerik okuma (alıntılanan eski yazışma kesilir), şirket adı ve alan adı, yalnız başvuru e-postalarının eşleşmesi ve belirsizlik, ileri adım kuralları, ifade kuralları, eminse uygula / değilse sor, sahte bir IMAP kutusuyla uçtan uca kontrol: bülten içeriği hiç alınmadı, her alma PEEK, kutu salt okunur, çıkışta logout, giriş hatası kaydediliyor), ruff, tsc, eslint, `next build` temiz.
+- Önizleme (atılabilir DB, migration 024): bekleyen bir "interview" kaydı Applications'ta çıktı; "Yes, move it" ile Mobileye başvurusu Interview'a geçti, olay `OutcomeObserved` olarak e-posta tarihiyle yazıldı. Settings'te bağlı görünüm ve liste; "Disconnect and forget" kayıt ve bağlantıyı sildi (0 / 0); bilinmeyen sağlayıcıda IMAP sunucusu alanı açıldı ve sunucunun mesajı göründü. Form düzeni düzeltildi (alanlar alt alta).
+- Bekleyen: gerçek bir posta kutusuyla canlıda bir red ve bir davetin işlenmesi (planın "bitti" ölçütü). Kullanıcının uygulama şifresi gerekiyor.
 
 ---
 

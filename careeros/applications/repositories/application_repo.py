@@ -79,7 +79,8 @@ class ApplicationRepository(BaseRepository[Application]):
         self.delete(obj)
         return True
 
-    def _move(self, obj: Application, status: str, at: datetime | None = None) -> Application:
+    def _move(self, obj: Application, status: str, at: datetime | None = None, actor: str = "user",
+              source: dict | None = None) -> Application:
         """Change status, log it in history, stamp applied_at the first time it is applied."""
         if status == obj.status:
             return obj
@@ -95,7 +96,7 @@ class ApplicationRepository(BaseRepository[Application]):
                 kwargs["resume_version"] = cv["ref"]  # the CV that was current when it was sent
         app = self.update(obj, **kwargs)
         if user_id:
-            self._remember(app, before, status, cv, at)
+            self._remember(app, before, status, cv, at, actor, source)
         return app
 
     def _cv(self, user_id: str) -> dict | None:
@@ -107,7 +108,7 @@ class ApplicationRepository(BaseRepository[Application]):
             return None
 
     def _remember(self, app: Application, before: str | None, status: str, cv: dict | None,
-                  at: datetime | None = None) -> None:
+                  at: datetime | None = None, actor: str = "user", source: dict | None = None) -> None:
         """One event per move: the employer's answer as OutcomeObserved, anything else as a stage change."""
         from careeros.memory.events import job_stream, remember
 
@@ -116,10 +117,10 @@ class ApplicationRepository(BaseRepository[Application]):
             payload["cv"] = cv
         if status in OUTCOMES:
             remember(self.session, app.user_id, "OutcomeObserved", {**payload, "kind": OUTCOMES[status]},
-                     stream=job_stream(app.url), valid_from=at)
+                     stream=job_stream(app.url), valid_from=at, actor=actor, source_ref=source)
         else:
             remember(self.session, app.user_id, "ApplicationStageChanged", payload, stream=job_stream(app.url),
-                     valid_from=at)
+                     valid_from=at, actor=actor, source_ref=source)
 
     def get_by_status(self, status: str, user_id: str = "default") -> List[Application]:
         stmt = (

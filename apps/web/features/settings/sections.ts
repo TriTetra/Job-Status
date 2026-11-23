@@ -5,7 +5,7 @@ export const SECTIONS = [
   { id: "profile", label: "Profile", icon: UserRound, blurb: "Who you are. It shapes every score, suggestion and resume." },
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal, blurb: "Where and how you want to work, and how your briefing talks to you." },
   { id: "scoring", label: "Scoring", icon: Gauge, blurb: "What matters most when Aplio ranks a role for you." },
-  { id: "connections", label: "Connections", icon: Plug, blurb: "Telegram notifications, and where your proof comes from: code, writing, talks, papers." },
+  { id: "connections", label: "Connections", icon: Plug, blurb: "Telegram notifications, your mailbox for employers' answers, and where your proof comes from: code, writing, talks, papers." },
   { id: "account", label: "Account", icon: KeyRound, blurb: "How you sign in, and who you invite." },
 ] as const satisfies ReadonlyArray<{ id: string; label: string; icon: LucideIcon; blurb: string }>;
 

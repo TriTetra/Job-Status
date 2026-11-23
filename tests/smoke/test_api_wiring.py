@@ -32,6 +32,7 @@ EXPECTED_PATHS = {
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",
     "/api/jobs/boards", "/api/jobs/sync", "/api/jobs/sync/{job_id}/status", "/api/jobs/search",
     "/api/apply/queue", "/api/apply/kit", "/api/apply/report",
+    "/api/mail", "/api/mail/connect", "/api/mail/check", "/api/mail/signals/{signal_id}",
     "/api/companies/employers", "/api/companies/logo-domain",
     "/api/settings/llm-usage",
     "/api/market/refresh", "/api/market/refresh/{job_id}/status", "/api/market/signals", "/api/market/jobs",

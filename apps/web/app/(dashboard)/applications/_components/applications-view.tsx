@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { applicationsApi, CLOSED_STATUSES, type Application, type ApplicationSta
 import { ageLine, companyOf, REC_COLOR, STAGES, STATUS_LABEL, shortDate } from "@/features/applications/format";
 import { ApplicationDrawer } from "./application-drawer";
 import { AddApplicationDialog } from "./add-application-dialog";
+import { MailSignals } from "@/components/applications/mail-signals";
+import { mailApi, type MailSignal } from "@/features/settings/mail";
 
 type View = "board" | "closed";
 
@@ -55,6 +57,20 @@ export function ApplicationsView({ initialApps }: { initialApps: Application[] }
     }
   }, []);
 
+  // Answers found in the mailbox that wait for the person (Settings → Connections → Mailbox)
+  const [mail, setMail] = useState<MailSignal[]>([]);
+  const loadMail = useCallback(async () => {
+    try {
+      const st = await mailApi.status();
+      setMail(st.connected ? st.signals.filter((s) => s.state === "pending") : []);
+    } catch {
+      setMail([]);
+    }
+  }, []);
+  useEffect(() => {
+    mailApi.status().then((st) => setMail(st.connected ? st.signals.filter((s) => s.state === "pending") : [])).catch(() => setMail([]));
+  }, []);
+
   const move = useCallback(async (url: string, status: ApplicationStatus) => {
     setApps((prev) => prev.map((a) => (a.url === url ? { ...a, status, days_in_status: 0, stale: false } : a)));
     try {
@@ -86,6 +102,13 @@ export function ApplicationsView({ initialApps }: { initialApps: Application[] }
           <Plus className="h-4 w-4" /> Add application
         </button>
       </div>
+
+      {mail.length > 0 && (
+        <div className="mt-5 shrink-0 max-w-[860px]">
+          <p className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>From your mail · {mail.length} to confirm</p>
+          <MailSignals signals={mail} limit={4} onChange={() => { void loadMail(); void reload(); }} />
+        </div>
+      )}
 
       <div className="mt-5 shrink-0 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
         <nav className="flex gap-5" aria-label="Views">
