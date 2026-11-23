@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.1 Resmi İlan API'leri: Adzuna | Yeni kaynak Adzuna (GB, DE, NL, PL, ES, CH, FR, IT…): kullanıcıların hedef ülkeleri ve rolleri için arama, çalıştırma başına en fazla 40 istek; her Adzuna ilanında şartların istediği "Jobs by Adzuna" etiketi; anahtar girilene kadar kapalı. Reed şartları okunamadı (bekliyor), Almanya İş Ajansı resmi API değil (eklenmedi) | ✅ Tamam | 2026-11-23 |
 | Plan: Kapsam ve İş Akışı Açıkları | Piyasaya göre eksiklerin hepsi iki faza bölündü (docs/v1/GAPS_ROADMAP.md): Faz 1 kapsam ve sonuç döngüsü (resmi ilan API'leri, unvan filtresi, ilan ekleme, maaş ve şirket verisi, tazelik, e-posta ile sonuç, takip mesajı), Faz 2 iş akışı (tarayıcı eklentisi, CV, Evidence, Learning, öğrenen sıralama, mülakat hazırlığı, tanıdıklar, mobil); kod değişmedi | ✅ Tamam | 2026-11-23 |
 | Türkiye İşverenleri Rehberi | Companies → "Türkiye employers": yazılım / veri / yapay zekâ alanında 97 işveren, her biri kendi kariyer sayfasına bağlantıyla, sektöre göre; 30'unun işlerini Aplio okuyor; 10 yeni Türkiye panosu (Çiçeksepeti, Spyke, Good Job Games, Wingie Enuygun, Vertigo, Akinon, Paraşüt, Ruby Game Studio, P&G Türkiye, Ericsson Türkiye) | ✅ Tamam | 2026-11-23 |
 | Yer Rozeti (Bayrak) + Türkiye Kaynakları | Her işte bayrak · şehir · On-site / Hybrid / Remote / Global; Türkiye'ye açık remote işler 🇹🇷 ile; yeni Türkiye kaynakları: ING Hubs Türkiye, AstraZeneca Türkiye (Workday "Istanbul"), Bosch Türkiye (SmartRecruiters country=tr) | ✅ Tamam | 2026-11-23 |
@@ -126,6 +127,32 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.1 Resmi İlan API'leri: Adzuna] — 2026-11-23 — Kapsam, kurallara uygun ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.1; kullanıcı başlattı ("Yes, start 1.1").
+
+### Önce şartlar okundu
+- **Adzuna** (developer.adzuna.com/docs/terms_of_service): kişisel iş arama ve Adzuna ilanlarını yayımlama izinli; ticari kullanım yazılı anlaşma ister. Her gösterilen ilan en az **116×23 px "Adzuna"** etiketi taşımalı, Adzuna'nın yerel sitesine bağlı. Kota hesapta gösteriliyor, yayımlanmamış. API açıklamanın yalnız bir parçasını veriyor.
+- **Reed:** geliştirici sayfaları şartlara bağlantı vermiyor; şartlar okunamadı. Anahtar alınırken şartlar okunup ondan sonra eklenecek.
+- **Almanya Federal İş Ajansı "Jobsuche":** resmi API değil; topluluk belgelerine göre ajans resmi API sunmuyor, şart ve lisans yok. "Yalnız resmi kaynak" kuralı gereği **eklenmedi**.
+
+### Adzuna kaynağı (`careeros/jobs/sources/feeds/adzuna.py`)
+- Kullanıcıların hedef ülkeleri (Adzuna'nın kapsadıkları: GB, DE, NL, PL, AT, ES, CH, FR, IT, BE, US, CA, AU, NZ, SG, IN) × hedef rolleri (en fazla 4); hedef yoksa GB / DE / NL / PL / ES / CH ve ML / AI / veri / backend.
+- Sayfa başına 50, en fazla 2 sayfa, son 30 gün, en yeni önce; **çalıştırma başına en fazla 40 istek**; Adzuna'nın sunmadığı ülke ilk denemede tamamen atlanıyor. Feed'ler günde iki kez okunuyor.
+- Alanlar: başlık, şirket, konum (ülke eklenir: "Berlin, Deutschland" → 🇩🇪), açıklama parçası, tarih, Adzuna yönlendirme bağlantısı (ilan bağlantısı ve başvuru), maaş yalnız işverenin yazdığıysa (Adzuna'nın tahmini maaşı alınmıyor), "remote" geçiyorsa remote.
+- Feed altyapısında: unvan filtresi, şirket panosundaki kopyaların ayıklanması, kaynak "via Adzuna", 21 gün görünmeyen ilanın kapanması.
+- Ayarlar: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (`.env.example`, `docker-compose.prod.yml`); yoksa kaynak kapalı.
+
+### Şartların istediği etiket (`components/ui/adzuna-badge.tsx`)
+- Her Adzuna ilanında **"Jobs by Adzuna"** (116×23 px), ilanın ülkesindeki Adzuna sitesine bağlı (adzuna.de, adzuna.co.uk…): Opportunities / Search kartları, okuyucu, Ready to apply listesi ve kit başlığı. Kartlar düğme olduğu için etiket düğmenin içinde değil, yanında ayrı bağlantı.
+
+### Doğrulama
+- Atılabilir DB'de iki örnek Adzuna ilanı gerçek feed hattından geçirildi: Search'te kartlarda ve okuyucuda etiket, ölçü 116×23, bağlantılar adzuna.de / adzuna.co.uk, düğmenin dışında; bayrak ve konum doğru.
+- 769 test (yeni: Adzuna alan eşleme, tahmini maaşın atlanması, anahtarsız kapalı, istek bütçesi, sunulmayan ülkenin atlanması, etiket sitesi), ruff, tsc, eslint, `next build` temiz.
+- Bekleyen: gerçek anahtarla kuru çalıştırma ve canlı (kullanıcının Adzuna anahtarı gerekli).
 
 ---
 

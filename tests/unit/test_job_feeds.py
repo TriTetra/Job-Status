@@ -259,3 +259,58 @@ def test_turkey_boards_are_configured():
 
     boards = {b.key: b for b in load_boards().boards}
     assert boards["ing-tr"].search == ("Istanbul",) and boards["bosch-tr"].search == ("tr",)
+
+
+# ── Adzuna ───────────────────────────────────────────────────────────────
+
+ADZ_JOB = {"id": "4711", "title": "Machine Learning Engineer", "redirect_url": "https://www.adzuna.de/land/ad/4711",
+           "company": {"display_name": "Acme GmbH"}, "location": {"display_name": "Berlin", "area": ["Deutschland", "Berlin"]},
+           "description": "Build <b>models</b>. Fully remote within Germany.", "created": "2026-11-20T10:00:00Z",
+           "salary_min": 70000, "salary_max": 90000, "salary_is_predicted": "0", "contract_time": "full_time"}
+
+
+def test_adzuna_posting_mapping():
+    from careeros.jobs.geo import countries_in
+    from careeros.jobs.sources.feeds import adzuna
+
+    p = adzuna._posting(ADZ_JOB, "de")
+    assert p.source == "adzuna" and p.url == p.apply_url == "https://www.adzuna.de/land/ad/4711"
+    assert p.company == "Acme GmbH" and p.location == "Berlin, Deutschland" and countries_in(p.location)[0][0] == "DE"
+    assert (p.salary_min, p.salary_max, p.salary_currency) == (70000, 90000, "EUR")
+    assert p.remote is True and " ".join(p.description.split()).startswith("Build models")
+    guessed = adzuna._posting({**ADZ_JOB, "salary_is_predicted": "1"}, "de")
+    assert guessed.salary_min is None                     # Adzuna's own estimate, not the employer's
+    assert adzuna._posting({**ADZ_JOB, "redirect_url": None}, "de") is None
+
+
+def test_adzuna_is_off_without_keys_and_stays_in_budget(monkeypatch):
+    from careeros.jobs.sources.feeds import adzuna
+
+    monkeypatch.setattr(adzuna, "_keys", lambda: None)
+    assert adzuna.fetch(object(), ["de"], ["ml"]) == []
+
+    calls = []
+
+    class Http:
+        def get(self, url, params=None, timeout=None):
+            calls.append((url, params["what"]))
+            if "/xx/" in url:
+                r = _Resp({}); r.status_code = 404
+                return r
+            n = len(calls)
+            return _Resp({"results": [{**ADZ_JOB, "id": str(n), "redirect_url": f"https://www.adzuna.de/land/ad/{n}"}
+                                      for _ in range(adzuna.PER_PAGE)]})
+
+    monkeypatch.setattr(adzuna, "_keys", lambda: ("id", "key"))
+    monkeypatch.setattr(adzuna, "MAX_CALLS", 5)
+    out = adzuna.fetch(Http(), ["xx", "de"], ["ml engineer", "data scientist", "ai engineer"])
+    assert calls[0][0].endswith("/xx/search/1")            # a country Adzuna doesn't offer is skipped
+    assert len(calls) == 5 and len(out) == 4               # never more calls than the budget
+    assert all("api_key" not in u for u, _ in calls)
+
+
+def test_adzuna_attribution_site_per_country():
+    from careeros.jobs.sources.feeds import adzuna
+
+    assert adzuna.site_for("GB") == "https://www.adzuna.co.uk" and adzuna.site_for("de") == "https://www.adzuna.de"
+    assert adzuna.site_for(None) == "https://www.adzuna.co.uk"

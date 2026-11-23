@@ -69,7 +69,7 @@ def _item(score: CareerScore, job: Job, kit: Optional[dict]) -> dict:
         "url": job.url, "title": job.title, "company": job.company, "location": job.location,
         "company_key": job.company_key, "score": score.career_score, "recommendation": score.recommendation,
         "p_interview": model.get("p_effective"), "apply_url": job.application_url or job.url,
-        "trust": ex.get("trust"), "ready": bool(kit), "kit": kit,
+        "trust": ex.get("trust"), "ready": bool(kit), "kit": kit, "source": ex.get("source"),
         # for the place badge: flag, city, on-site / hybrid / remote
         "place": {k: ex.get(k) for k in ("location", "remote", "workplace", "countries", "remote_regions", "remote_scope")},
     }

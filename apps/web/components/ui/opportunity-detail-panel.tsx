@@ -15,6 +15,7 @@ import { getPosting, type Posting } from "@/features/opportunities/posting";
 import type { Criterion, Opportunity } from "@/features/opportunities/types";
 import { WhyModal } from "./why-modal";
 import { PlaceBadge } from "./place-badge";
+import { AdzunaBadge, isAdzuna } from "./adzuna-badge";
 import { WhatPeopleSay } from "./what-people-say";
 
 interface OpportunityDetailPanelProps {
@@ -247,7 +248,10 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
                 Open posting <ArrowUpRight className="h-4 w-4" strokeWidth={2} />
               </a>
             )}
-            {posting?.via && safeHttpUrl(posting.via.url) && (
+            {isAdzuna(ex.source) && (
+              <p className="flex justify-center"><AdzunaBadge country={ex.countries?.[0]} /></p>
+            )}
+            {posting?.via && safeHttpUrl(posting.via.url) && !isAdzuna(ex.source) && (
               <p className="text-center text-[11px]" style={{ color: "var(--text-muted)" }}>
                 Found via{" "}
                 <a href={safeHttpUrl(posting.via.url)!} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">

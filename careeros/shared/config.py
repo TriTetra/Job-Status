@@ -122,6 +122,10 @@ class Settings:
     # CLI: whose account `career-os jobs scan / eval / eval-sheet` use when no e-mail is given
     cli_user_email: Optional[str]
 
+    # Adzuna job search API (developer.adzuna.com; free key): unset = the feed is off
+    adzuna_app_id: Optional[str]
+    adzuna_app_key: Optional[str]
+
     # Auth
     session_cookie_secure: bool
     token_encryption_key: Optional[str]
@@ -178,6 +182,8 @@ def get_settings() -> Settings:
         or os.getenv("WEB_APP_URL", "http://localhost:3000").rstrip("/") + "/api/oauth/github/callback",
         telegram_bot_token=(os.getenv("TELEGRAM_BOT_TOKEN") or "").strip() or None,
         cli_user_email=(os.getenv("CAREER_OS_EMAIL") or "").strip() or None,
+        adzuna_app_id=(os.getenv("ADZUNA_APP_ID") or "").strip() or None,
+        adzuna_app_key=(os.getenv("ADZUNA_APP_KEY") or "").strip() or None,
         # Secure cookies also work on http://localhost in current browsers; set false only for odd dev setups
         session_cookie_secure=_bool("SESSION_COOKIE_SECURE", True),
         token_encryption_key=os.getenv("TOKEN_ENCRYPTION_KEY") or None,

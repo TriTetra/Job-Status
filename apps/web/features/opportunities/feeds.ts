@@ -4,6 +4,7 @@ export const FEED_LABELS: Record<string, string> = {
   arbeitnow: "Arbeitnow",
   remotive: "Remotive",
   himalayas: "Himalayas",
+  adzuna: "Adzuna",
   jobicy: "Jobicy",
 };
 

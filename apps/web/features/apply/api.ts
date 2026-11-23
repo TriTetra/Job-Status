@@ -50,6 +50,7 @@ export interface QueueItem {
   ready: boolean;
   kit: Kit | null;
   place?: OpportunityExplanation;
+  source?: string | null;
 }
 
 export interface ReportApplication {

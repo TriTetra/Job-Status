@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, Check, Copy, Loader2, RefreshCw } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
 import { PlaceBadge } from "@/components/ui/place-badge";
+import { AdzunaBadge, isAdzuna } from "@/components/ui/adzuna-badge";
 import { opportunitiesApi } from "@/features/opportunities/api";
 import { SKIP_REASONS, type SkipReason } from "@/features/opportunities/format";
 import { SOURCE_LABEL, applyApi, type Kit, type KitQuestion, type QueueItem } from "@/features/apply/api";
@@ -80,6 +81,7 @@ function KitPanel({ item, kit, preparing, onPrepare, onApplied, onSkip, busy }: 
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{item.company}</p>
             <h2 className="font-serif-display text-[26px] leading-tight mt-0.5" style={{ color: "var(--text-primary)" }}>{item.title}</h2>
             <PlaceBadge ex={item.place ?? { location: item.location ?? undefined }} className="mt-1.5 text-sm" />
+            {isAdzuna(item.source) && <AdzunaBadge country={item.place?.countries?.[0]} className="mt-2" />}
             <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
               Score {Math.round(item.score ?? 0)}{chance ? ` · ${chance} chance of an interview` : ""}
               {kit ? ` · ${kit.form === "greenhouse" ? "the company's own form" : "the questions most forms ask"}` : ""}
@@ -269,9 +271,10 @@ export function ApplyView() {
             {items.map((it, i) => {
               const active = current?.url === it.url;
               return (
-                <li key={it.url}>
+                <li key={it.url} className="relative">
                   <button type="button" onClick={() => setSelected(it.url)} aria-current={active ? "true" : undefined}
                           className={cn("relative w-full text-left grid grid-cols-[1.5rem_2.5rem_minmax(0,1fr)] gap-x-3 px-3 py-3 rounded-lg transition-colors",
+                            isAdzuna(it.source) && "pb-10",
                             active ? "bg-[var(--surface)]" : "hover:bg-[rgba(44,59,77,0.5)]")}>
                     {active && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: "var(--accent)" }} />}
                     <span className="font-serif-display text-lg leading-none pt-2.5 tabular-nums" style={{ color: "var(--text-muted)" }}>{i + 1}</span>
@@ -285,6 +288,7 @@ export function ApplyView() {
                       </span>
                     </span>
                   </button>
+                  {isAdzuna(it.source) && <AdzunaBadge country={it.place?.countries?.[0]} className="absolute left-[5.5rem] bottom-2.5" />}
                 </li>
               );
             })}

@@ -3,6 +3,7 @@
 import { cn, formatScore } from "@/lib/utils";
 import { CompanyLogo } from "@/components/shared/company-logo";
 import { PlaceBadge } from "./place-badge";
+import { AdzunaBadge, isAdzuna } from "./adzuna-badge";
 import { feedLabel } from "@/features/opportunities/feeds";
 import { tierOf } from "@/features/opportunities/tier";
 import {
@@ -29,12 +30,15 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
   const tag = trustTag(opp);
   const key = typeof opp.explanation?.company_key === "string" ? opp.explanation.company_key : null;
 
+  const adzuna = isAdzuna(opp.explanation?.source);
   return (
+    <div className="relative">
     <button
       onClick={onClick}
       aria-current={selected ? "true" : undefined}
       className={cn(
         "relative w-full text-left grid grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 px-3 py-3 rounded-lg transition-colors",
+        adzuna && "pb-10",
         selected ? "bg-[var(--surface)]" : "hover:bg-[rgba(44,59,77,0.5)]",
       )}
     >
@@ -63,5 +67,8 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
         </p>
       </div>
     </button>
+    {/* Adzuna's terms: each Adzuna listing carries their label, linked to them (outside the button) */}
+    {adzuna && <AdzunaBadge country={opp.explanation?.countries?.[0]} className="absolute left-[4.25rem] bottom-2.5" />}
+    </div>
   );
 }

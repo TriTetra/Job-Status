@@ -47,6 +47,8 @@ services:
       GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}                  # empty = ${WEB_APP_URL}/api/oauth/github/callback
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}                    # @BotFather token; empty = Telegram off
       CAREER_OS_EMAIL: ${CAREER_OS_EMAIL:-}                          # CLI default account (jobs scan / eval)
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}                              # developer.adzuna.com; empty = Adzuna off
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
       - uploads:/app/personal                                        # uploaded CVs
