@@ -131,6 +131,7 @@ Sıralama: en yeniden en eskiye.
 - Doğrulama: atılabilir DB'de yalnız ayarla `jobs eval` çalıştı; yeni test (ayar yoksa çıkış, boşluklar kırpılıyor); smoke testleri ve ruff temiz.
 - **Yayında:** `d0d25ef` push edildi, Coolify'da dağıtıldı (Finished, 28 sn); API 10:46'da hatasız açıldı. Canlıda kullanmak için `CAREER_OS_EMAIL` Coolify ortam değişkenlerine eklenmeli (henüz eklenmedi).
 - Düzeltme: kullanıcı değişkeni Coolify'a ekledi, ama `docker-compose.prod.yml` API'ye giden değişkenleri tek tek sayıyor; `CAREER_OS_EMAIL` listede yoktu, konteynere ulaşmazdı. Listeye eklendi.
+- **Yayında:** `05e42af` push edildi, Coolify'da dağıtıldı (Finished, 29 sn); Coolify'daki "1 change unapplied" uyarısı kalktı, API 11:03'te hatasız açıldı. Değişkenin konteynerin içinde görünüp görünmediği ayrıca kontrol edilmedi.
 
 ---
 
