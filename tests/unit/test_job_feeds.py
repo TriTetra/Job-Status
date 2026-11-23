@@ -160,3 +160,50 @@ def test_feed_row_keeps_link_back_and_no_board_key():
     assert row["company_key"] is None                      # board syncs must never close it
     assert row["application_url"] == p.url                 # unsafe links are dropped, the feed page is kept
     assert dedupe_key("  ACME ", "ML  Engineer") == dedupe_key("acme", "ml engineer")
+
+
+def test_long_country_lists_keep_every_country():
+    from careeros.jobs.sources.feeds.base import remote_where
+
+    countries = [f"Country{i:02d}" for i in range(60)] + ["Turkey"]
+    location, description = remote_where(countries, "About the role")
+    assert len(location) <= 200 and location.startswith("Remote: 61 countries")
+    assert "Turkey" in description.splitlines()[0]          # the full list survives, at the top
+    assert remote_where(["Germany", "Spain"], "x") == ("Remote: Germany, Spain", "x")
+    assert remote_where([], "x") == ("Remote: anywhere", "x")
+
+
+def test_turkish_titles_pass_the_filter():
+    from careeros.jobs.boards import load_boards
+
+    keep = load_boards().titles.keeps
+    assert keep("Kıdemli Yazılım Mühendisi") and keep("Yapay Zeka Mühendisi") and keep("Backend Geliştiricisi")
+    assert not keep("İdari İşler Müdürü")
+
+
+def test_turkish_boards_are_configured():
+    from careeros.jobs.boards import load_boards
+
+    keys = {b.key for b in load_boards().boards}
+    assert {"trendyol", "dreamgames", "codeway", "insiderone", "midas", "obilet"} <= keys
+
+
+def test_discovered_board_already_in_the_list_is_not_read_twice(monkeypatch):
+    from careeros.jobs import boards
+    from careeros.jobs.models.discovered_board import DiscoveredBoard
+
+    rows = [DiscoveredBoard(key="trendyol-lever", name="Trendyol", ats="lever", board="Trendyol", host="", domain="", active=True),
+            DiscoveredBoard(key="acme", name="Acme", ats="ashby", board="acme", host="", domain="", active=True)]
+
+    class Q:
+        def filter(self, *a):
+            return self
+
+        def order_by(self, *a):
+            return self
+
+        def all(self):
+            return rows
+
+    found = boards.discovered_boards(SimpleNamespace(query=lambda *a: Q()))
+    assert [b.key for b in found] == ["acme"]

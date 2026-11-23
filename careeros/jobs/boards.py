@@ -101,9 +101,11 @@ def discovered_boards(session) -> list[Board]:
     """Active boards found through job feeds (careeros/jobs/feeds.py)."""
     from careeros.jobs.models.discovered_board import DiscoveredBoard
 
+    # A board later added to companies.yaml is read from there, not twice
+    listed = {(b.ats, b.board.lower()) for b in load_boards().boards}
     rows = session.query(DiscoveredBoard).filter(DiscoveredBoard.active.is_(True)).order_by(DiscoveredBoard.key).all()
     return [Board(key=d.key, name=d.name, ats=d.ats, board=d.board, host=d.host or "", domain=d.domain or "",
-                  discovered=True) for d in rows if d.ats in FETCHERS]
+                  discovered=True) for d in rows if d.ats in FETCHERS and (d.ats, d.board.lower()) not in listed]
 
 
 def all_boards(session=None) -> list[Board]:

@@ -42,6 +42,27 @@ def html_links(markup: Optional[str]) -> list[str]:
     return links(html.unescape(markup or ""))
 
 
+LOCATION_MAX = 200  # jobs.location is 256 characters
+
+
+def remote_where(regions: list[str], description: str) -> tuple[str, str]:
+    """(location, description) for a remote job open to `regions`.
+
+    Long country lists don't fit the location column (and were cut, dropping
+    whatever came late in the alphabet, e.g. Turkey). The full list goes at the
+    top of the description, where Claude and the region check read it; the
+    location says how many countries and names the first few."""
+    regions = [r.strip() for r in regions if r and r.strip()]
+    if not regions:
+        return "Remote: anywhere", description
+    full = "Remote: " + ", ".join(regions)
+    if len(full) <= LOCATION_MAX:
+        return full, description
+    head = ", ".join(regions[:4])
+    return (f"Remote: {len(regions)} countries ({head}, …)",
+            f"Open to candidates in: {', '.join(regions)}.\n\n{description}")
+
+
 def epoch(seconds) -> Optional[datetime]:
     try:
         return datetime.fromtimestamp(int(seconds), tz=timezone.utc) if seconds not in (None, "") else None

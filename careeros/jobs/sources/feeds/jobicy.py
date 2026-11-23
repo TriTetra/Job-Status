@@ -5,7 +5,7 @@ https://jobicy.com/jobs-rss-feed
 """
 
 from careeros.jobs.sources.ats.base import TIMEOUT, html_to_text, parse_time
-from careeros.jobs.sources.feeds.base import FeedPosting, html_links, yearly
+from careeros.jobs.sources.feeds.base import FeedPosting, html_links, remote_where, yearly
 
 API = "https://jobicy.com/api/v2/remote-jobs"
 GEOS = ("europe", "uk", "germany", "spain", "switzerland")
@@ -28,6 +28,8 @@ def _posting(j: dict) -> FeedPosting:
     low, high, cur = yearly(j.get("salaryMin") or j.get("annualSalaryMin"), j.get("salaryMax") or j.get("annualSalaryMax"),
                             j.get("salaryCurrency"), j.get("salaryPeriod") or "yearly")
     kinds = j.get("jobType") or []
+    geo = [g for g in str(j.get("jobGeo") or "").split(",") if g.strip()]
+    location, description = remote_where(geo, html_to_text(j.get("jobDescription")))
     return FeedPosting(
         source="jobicy",
         external_id=str(j.get("id") or j["url"])[-128:],
@@ -35,8 +37,8 @@ def _posting(j: dict) -> FeedPosting:
         apply_url=j["url"],
         title=(j.get("jobTitle") or "").strip(),
         company=(j.get("companyName") or "").strip()[:200] or "Unknown",
-        location=("Remote: " + j["jobGeo"]) if j.get("jobGeo") else "Remote",
-        description=html_to_text(j.get("jobDescription")),
+        location=location,
+        description=description,
         posted_at=parse_time(j.get("pubDate")),
         remote=True,
         employment_type=", ".join(kinds)[:64] if isinstance(kinds, list) else (kinds or None),

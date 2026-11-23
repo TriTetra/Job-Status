@@ -5,7 +5,7 @@ import pytest
 from careeros.jobs import ingest
 from careeros.jobs.boards import BoardConfigError, TitleFilter, load_boards, parse
 from careeros.jobs.extraction import TextExtractor
-from careeros.jobs.sources.ats import ashby, greenhouse, lever, workday
+from careeros.jobs.sources.ats import FETCHERS, ashby, greenhouse, lever, workday
 from careeros.jobs.sources.ats.base import Board, FetchResult, Posting, html_to_text
 
 
@@ -148,7 +148,9 @@ def test_visa_reading_respects_negation(ex, text, expected):
 def test_shipped_company_list_is_valid():
     config = load_boards()
     assert len(config.boards) >= 50
-    assert {b.ats for b in config.boards} == {"greenhouse", "lever", "ashby", "workday"}
+    used = {b.ats for b in config.boards}
+    assert {"greenhouse", "lever", "ashby", "workday"} <= used
+    assert used <= set(FETCHERS)  # every board has a reader
     assert all(b.search for b in config.boards if b.ats == "workday")
 
 

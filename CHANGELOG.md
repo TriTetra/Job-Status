@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Türkiye Sources | 15 Turkish tech / fintech / games boards (Trendyol, Insider One, Dream Games, Midas, Peak, Codeway…), Turkish title terms, Himalayas search for jobs open to Turkey, full remote country lists kept | ✅ Tamam | 2026-11-23 |
 | Job Feeds + Board Discovery | Startups and EU/remote roles: Hacker News Who is hiring, Arbeitnow, Remotive, Himalayas, Jobicy; company boards they link to are found and read from then on; new Personio, Recruitee, Workable, SmartRecruiters and Lever EU readers | ✅ Tamam | 2026-11-23 |
 | Manage: Applications Board + Analytics | Applications is a fixed board with logos, drag and drop, a drawer (stage, notes, history) and stale flags; new Analytics page (funnel, weekly pace, response rate, score vs interviews); Timeline dropped; applications are per user | ✅ Tamam | 2026-11-23 |
 | Settings Dialog + Account Menu | Settings is a dialog over any page (Profile, Preferences, Scoring, Connections, Account); one account menu replaces the sidebar user block and the top-right avatar; profile save no longer wipes briefing state | ✅ Tamam | 2026-11-23 |
@@ -110,6 +111,30 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Türkiye Sources] — 2026-11-23 — Turkish companies and remote jobs open to Turkey ✅
+
+**Neden:** Kullanıcı: Türkiye'deki iş ilanları (büyük şirketlerin kendi kariyer siteleri dahil) gelmeli. Durum: listede hiç Türk şirketi yoktu; yeni kaynaklardan gelen 1.131 ilanın hiçbiri Türkiye'de değildi.
+
+### Türk şirketleri (companies.yaml)
+- Tek tek denenip Türkiye lokasyonlu ilanı doğrulanan 15 şirket eklendi: **Trendyol, Insider One, Dream Games, Midas, Peak, Codeway, Bigger Games, Cypher Games, Commencis, Obilet, Loop Games, Agave Games, Ace Games, Picus Security, iyzico** (Lever / Ashby / Recruitee / Workable). Kuru çalıştırmada 14'ünden 273 ilan, 66'sı alanla ilgili (Ace Games o an Workable'ın istek sınırına takıldı; sunucuda normal okunur).
+- **Büyük kurumsallar** (Turkcell, Garanti BBVA, Akbank, Aselsan, Baykar, Migros, Hepsiburada, Getir, sahibinden…): kariyer sayfaları denendi; standart bir ilan sistemi ya da makinece okunabilir ilan verisi (schema.org JobPosting) yok, bazıları otomatik erişimi engelliyor (403). Çoğu Kariyer.net / LinkedIn'de ilan veriyor; bu sitelerin şartları otomatik toplamayı yasakladığı için eklenmedi.
+- Başlık filtresine Türkçe teknik terimler eklendi (Yazılım, Mühendis/Mühendisi, Geliştirici/Geliştiricisi, Veri, Yapay Zeka, Makine Öğrenmesi, Analist/Analisti); "İdari İşler Müdürü" gibi teknik olmayanlar yine elenir.
+
+### Türkiye'den çalışılabilen remote işler
+- **Himalayas** artık her aramayı bir de "Türkiye'de yaşayanlara açık" filtresiyle yapıyor: 198 → 330 ilan; 55'i Türkiye'yi adıyla sayıyor, 58'i her yerden alıyor.
+- **Hata düzeltmesi:** uzun "şu ülkelerden işe alınır" listeleri 256 karakterde kesiliyordu; alfabede sonda kalan Türkiye düşüyordu (önceki ölçümde Türkiye'ye açık 0 ilan). Artık konum kısa özet ("Remote: 76 countries (…)"), tam liste açıklamanın başında; Claude ve bölge kontrolü oradan okuyor. Jobicy için de aynı.
+- Jobicy'nin Türkiye filtresi yok (400); atlanıyor.
+
+### Diğer
+- Bir akıştan keşfedilen pano sonradan companies.yaml'a eklenirse iki kez okunmuyor.
+- `test_shipped_company_list_is_valid` artık sabit ATS kümesi yerine "her panonun okuyucusu var" kontrol ediyor.
+
+### Doğrulama
+- Gerçek açık API'lerle kuru çalıştırma (Docker kapalı olduğu için veritabanına yazmadan): 14 Türk panosu okundu, 66 ilgili ilan; Himalayas Türkiye aramaları çalışıyor, en uzun konum 153 karakter.
+- 606 test (yeni: uzun ülke listesi korunuyor, Türkçe başlıklar, Türk panoları listede, keşfedilen + listedeki pano tek okunuyor), ruff temiz.
 
 ---
 

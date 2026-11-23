@@ -7,6 +7,10 @@
 #   lever       jobs.lever.co/<board>
 #   ashby       jobs.ashbyhq.com/<board>
 #   workday     <tenant>.wdN.myworkdayjobs.com/<site>   → host, tenant, site
+#   personio    <board>.jobs.personio.de (host for .com) · recruitee <board>.recruitee.com
+#   workable    apply.workable.com/<board> · smartrecruiters jobs.smartrecruiters.com/<board>
+# Boards linked from the job feeds (careeros/jobs/feeds.py) are added automatically
+# to the discovered_boards table; this file is the hand-picked list.
 # Check it with:  career-os jobs sync --company <key> --dry-run
 #
 # Every board here answered with open jobs on 2026-10-28.
@@ -41,6 +45,17 @@ titles:
     - Android
     - cloud
     - analytics
+    # Turkish titles (whole words: suffixed forms are listed too)
+    - Yazılım
+    - Mühendis
+    - Mühendisi
+    - Geliştirici
+    - Geliştiricisi
+    - Veri
+    - Yapay Zeka
+    - Makine Öğrenmesi
+    - Analist
+    - Analisti
   exclude:
     - recruiter
     - recruiting
@@ -139,3 +154,24 @@ companies:
   - {key: salesforce, name: Salesforce, domain: salesforce.com, ats: workday, host: salesforce.wd12.myworkdayjobs.com, tenant: salesforce, site: External_Career_Site}
   - {key: thomsonreuters, name: Thomson Reuters, domain: thomsonreuters.com, ats: workday, host: thomsonreuters.wd5.myworkdayjobs.com, tenant: thomsonreuters, site: External_Career_Site}
   - {key: workday, name: Workday, domain: workday.com, ats: workday, host: workday.wd5.myworkdayjobs.com, tenant: workday, site: Workday}
+
+  # ── Türkiye ─────────────────────────────────────────────────────────────
+  # Turkish tech, fintech and games companies whose boards list jobs in Turkey
+  # (checked 2026-11-23). Big Turkish corporates (banks, telcos, defence, retail)
+  # run their own portals with no public job feed, or post on Kariyer.net /
+  # LinkedIn, whose terms forbid automated collection, so they are not here.
+  - {key: trendyol, name: Trendyol, domain: trendyol.com, ats: lever, board: trendyol}
+  - {key: insiderone, name: Insider One, domain: insiderone.com, ats: lever, board: insiderone}
+  - {key: dreamgames, name: Dream Games, domain: dreamgames.com, ats: lever, board: dreamgames}
+  - {key: midas, name: Midas, domain: getmidas.com, ats: lever, board: getmidas}
+  - {key: peakgames, name: Peak, domain: peak.com, ats: lever, board: peakgames}
+  - {key: codeway, name: Codeway, domain: codeway.co, ats: ashby, board: codeway}
+  - {key: biggergames, name: Bigger Games, domain: biggergames.com, ats: ashby, board: biggergames}
+  - {key: cyphergames, name: Cypher Games, domain: cyphergames.com, ats: lever, board: cypher-games}
+  - {key: commencis, name: Commencis, domain: commencis.com, ats: lever, board: commencis}
+  - {key: obilet, name: Obilet, domain: obilet.com, ats: recruitee, board: obilet}
+  - {key: loopgames, name: Loop Games, domain: loopgames.net, ats: lever, board: loopgames}
+  - {key: agavegames, name: Agave Games, domain: agave.games, ats: ashby, board: agavegames}
+  - {key: acegames, name: Ace Games, ats: workable, board: ace-games}
+  - {key: picus, name: Picus Security, domain: picussecurity.com, ats: lever, board: picus}
+  - {key: iyzico, name: iyzico, domain: iyzico.com, ats: lever, board: iyzico}
