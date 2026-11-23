@@ -47,6 +47,7 @@ TASKS = {
     "hn_extract": "bulk",
     "cv_extract": "interactive",
     "reasoning": "interactive",
+    "apply_kit": "interactive",
     "resume": "interactive",
     "general": "interactive",
 }

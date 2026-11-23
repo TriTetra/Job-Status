@@ -67,7 +67,7 @@ export function TelegramSection() {
     }
   };
 
-  const togglePref = async (key: "matches" | "reminders", value: boolean) => {
+  const togglePref = async (key: "matches" | "reminders" | "report", value: boolean) => {
     if (!st) return;
     setSt({ ...st, prefs: { ...st.prefs, [key]: value } });
     try {
@@ -142,6 +142,8 @@ export function TelegramSection() {
                     label="New strong matches" hint="After each refresh (about every 6 hours), only roles you haven't been told about" />
           <CheckRow checked={st.prefs.reminders} onChange={(v) => togglePref("reminders", v)}
                     label="Follow-up reminders" hint="An application with no answer for two weeks, once" />
+          <CheckRow checked={st.prefs.report ?? true} onChange={(v) => togglePref("report", v)}
+                    label="Daily report" hint="Once a day: what's ready to apply, where your applications stand, what to learn next" />
         </>
       )}
     </Section>

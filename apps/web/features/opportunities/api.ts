@@ -12,7 +12,7 @@ export const opportunitiesApi = {
   scanStatus: (jobId: string) => apiFetch<ScanStatusResponse>(`/api/jobs/scan/${jobId}/status`),
   /** Shortlist / Apply / Skip — creates the application if it doesn't exist yet. */
   decide: (url: string, status: "to_apply" | "applied" | "skipped",
-           opts: { reasons?: SkipReason[]; surface?: "inbox" | "search"; shown?: Opportunity } = {}) =>
+           opts: { reasons?: SkipReason[]; surface?: "inbox" | "search" | "queue"; shown?: Opportunity } = {}) =>
     apiFetch<{ status: UserDecisionStatus; decided_at: string }>("/api/jobs/decide", {
       method: "POST",
       body: JSON.stringify({

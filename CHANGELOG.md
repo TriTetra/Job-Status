@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| B: Ready to Apply + Daily Report | Her gün başvurulacak en iyi 5 iş (şirket başına bir), her biri hazırlanmış: formun soruları (Greenhouse'tan gerçek form), profilden cevaplar, kanıttan taslaklar, gönderilecek CV, kısa not; gönderen kişinin kendisi. Günlük rapor: Briefing'de ve Telegram'da | ✅ Tamam | 2026-11-23 |
 | Fix Pack A: Live Test Findings | Canlı hesapta test; konum tanıma (USA, eyaletler, şehirler; bilinmeyen konum artık "engel yok" değil), on-site / hybrid ayrımı, beceri eş anlamlıları ve kapsadığı beceriler, deeper read ham bilgileri kontrol ediyor | ✅ Tamam | 2026-11-23 |
 | CLI: CAREER_OS_EMAIL | `career-os jobs scan / eval / eval-sheet` e-posta yazılmazsa hesabı `.env`'deki `CAREER_OS_EMAIL`'den alıyor | ✅ Tamam | 2026-11-23 |
 | Kişi Hafızası Faz 0 + 1 | Unvan eşleşmesi hatası düzeltildi; tek profil kaynağı; kırık menü "Soon"; sıralama değerlendirmesi (`jobs eval`); `person_events` olay günlüğü ve tüm yazma yollarından olaylar; gösterim kaydı; "Not for me" nedenleri; başvuruya gönderilen CV etiketi | ✅ Tamam | 2026-11-23 |
@@ -120,6 +121,39 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [B: Ready to Apply + Daily Report] — 2026-11-23 — Hazırla, sen gönder ✅
+
+**Neden:** Kullanıcı başvuru formlarının sağlam önerilerle doldurulmasını, sistemin "senin için başvurayım" gibi çalışmasını, her gün başvuru ve rapor istedi: kime başvuruldu, durum ne, dönüş ihtimali, neye çalışmalı. Otomatik göndermenin meşru yolu yok (Greenhouse / Lever gönderme API'leri işverenin anahtarını istiyor, formlarda CAPTCHA var, tahkim ve onay metinleri kişinin kendi kabulü, bazı şirketler başvuruda yapay zekâyı kısıtlıyor); bu yüzden Aplio hazırlıyor, kişi gönderiyor.
+
+### Başvuru kiti (`careeros/applications/kit.py`, tablo `apply_kits`, migration `apply_kits_022`)
+- **Form:** Greenhouse ilanlarında şirketin gerçek formu (herkese açık API, `?questions=true`; özel sorular dahil). Diğerlerinde formların çoğunun sorduğu 12 soru.
+- **Cevaplar:** ad, e-posta, CV, GitHub / portfolyo profilden; vize sponsorluğu, çalışma izni (ülkeye göre), taşınma (hedef ülkeyse), ofis günleri, maaş beklentisi (minimumun, pazarlığa açık) tercihlerden; nereden duydun önerisi. Her cevabın kaynağı yazıyor.
+- **Asla cevaplanmayanlar:** tahkim / onay / gizlilik metinleri, demografik sorular, şirketin yapay zekâ politikası sorusu. Form ya da ilan yapay zekâ kuralı koyuyorsa hiçbir şey taslak yazılmıyor.
+- **Taslaklar (LLM, yeni görev `apply_kit`):** serbest metin sorular ("Why Anthropic?") ve ≤130 kelimelik kısa not; yalnız kişinin kanıtından (deneyim, proje, başarı, beceri), uydurma yasak; kanıt yetmezse boş bırakıp "kendin yaz" diyor.
+- **CV:** o anki birincil CV ve sürümü; "şunları gösterdiğinden emin ol" (eşleşen beceriler). Güven uyarıları (ajans, risk) ve CV yoksa uyarı.
+- Kit hafıza günlüğüne `KitPrepared` (actor `agent:apply_kit`) olarak yazılıyor.
+
+### Günlük kuyruk (`careeros/applications/queue.py`)
+- Puanlanmış eşleşmelerden: açık, karar verilmemiş, elenmemiş, APPLY / CONSIDER ve ≥65, güvenilir işveren (risk ya da ajans değil), son 30 gün, şirket başına bir; en iyi 5.
+- Zamanlayıcı her döngüde, yeniden puanlamadan sonra eksik kitleri hazırlıyor (kişi başına günde birkaç LLM çağrısı).
+
+### Günlük rapor (`careeros/applications/report.py`)
+- Bekleyen başvurular: kaç gündür sessiz, durum (bekliyor / takip et 14 gün / muhtemelen sessiz 21 gün / kapandı 45 gün), **şimdiki cevap ihtimali**: p(1−F(t)) / (1−p·F(t)), F = log-normal cevap süresi (medyan ~6 gün; Huntr 2025, kendi beyanı).
+- Bu hafta gönderilenler, bugünkü kuyruk, öğrenilecek beceri (iyi eşleşmelerin en çoğunda eksik olan), son 24 saatte yeni eşleşmeler.
+
+### Arayüz
+- **Ready to apply** (`/apply`, menüde MANAGE): solda bugünün 5 işi, sağda kit: "Open the application form", her soru için önerilen cevap ve kaynağı, kopyala düğmesi, taslaklar düzenlenebilir, kısa not, CV; "I submitted it" (Applications'a "applied" olarak, olay günlüğüne `surface: queue`) ve "Not for me" nedenleri.
+- **Briefing → Today:** kaç iş hazır, bekleyenler ve şimdiki cevap ihtimalleri, kaçı muhtemelen sessiz, öğrenilecek beceri.
+- **Telegram:** yeni "Daily report" ayarı (varsayılan açık): günde bir kez bugünün kuyruğu, bekleyenler ve ihtimaller, öğrenilecek beceri.
+
+### Doğrulama
+- Anthropic'in gerçek formuyla (örnek bilgiler): 21 soru; ad / e-posta / CV / web sitesi dolu, vize soruları "Yes", ofis "Yes", "Why Anthropic?" taslak için işaretli, yapay zekâ politikası ve iki tahkim sorusu kişiye bırakıldı, yapay zekâ politikası yüzünden taslak yok.
+- Atılabilir DB'de migration ve tarayıcı: kuyruk (5 iş, şirket başına bir), kit hazırlama (LLM anahtarı olmadığı için taslak yok, "kendin yaz"), Briefing "Today" bölümü; API'de hata yok.
+- 753 test (yeni `test_apply_queue.py`: 20 test, Telegram günlük rapor testi), ruff, tsc, eslint, `next build` temiz.
+- Not: kuyruk boyutu (5) ve eşik (65) şimdilik sabit; Settings'e taşınabilir.
 
 ---
 

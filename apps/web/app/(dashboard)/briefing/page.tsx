@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBriefing } from "@/features/briefing/api";
 import { BriefingHeadline } from "./_components/briefing-headline";
 import { BriefingTodos } from "./_components/briefing-todos";
+import { BriefingReport } from "./_components/briefing-report";
 
 const LABEL = "text-[11px] uppercase tracking-[0.08em]";
 const LABEL_STYLE = { color: "var(--text-muted)", fontFamily: "var(--font-display)" } as const;
@@ -72,6 +73,7 @@ export default async function BriefingPage() {
         </div>
 
         <div className="lg:min-h-0 flex flex-col">
+          <BriefingReport />
           <BriefingTodos todos={b.todos} />
         </div>
       </div>

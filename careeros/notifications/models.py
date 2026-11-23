@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from careeros.db.base import Base
 
-DEFAULT_PREFS = {"matches": True, "reminders": True}
+DEFAULT_PREFS = {"matches": True, "reminders": True, "report": True}
 
 
 class TelegramLink(Base):

@@ -29,6 +29,8 @@ EVENT_TYPES = {
     "JobShortlisted", "JobApplied", "JobSkipped",
     # applications over time
     "ApplicationStageChanged", "OutcomeObserved",
+    # what Aplio prepared for them
+    "KitPrepared",
 }
 ACTORS = ("user", "agent:", "import:", "system")
 

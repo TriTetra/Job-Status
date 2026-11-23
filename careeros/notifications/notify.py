@@ -79,6 +79,15 @@ def notify_user(session: Session, user_id: str, now: Optional[datetime] = None) 
         if stale:
             messages.append((reminders_message(stale), [f"remind:{a['url']}" for a in stale]))
 
+    if prefs.get("report"):
+        from careeros.applications.report import daily_report, report_text
+
+        day_key = f"report:{(now or datetime.now(timezone.utc)).date().isoformat()}"
+        if day_key not in seen:
+            r = daily_report(session, user_id, now)
+            if r["queue"] or r["active"] or r["learn"]:
+                messages.append((report_text(r, get_settings().web_app_url.rstrip("/")), [day_key]))
+
     count = 0
     for text_, keys in messages:
         try:

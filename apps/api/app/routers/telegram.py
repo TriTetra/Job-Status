@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/telegram", tags=["telegram"])
 class PrefsIn(BaseModel):
     matches: Optional[bool] = None
     reminders: Optional[bool] = None
+    report: Optional[bool] = None
 
 
 @router.get("")

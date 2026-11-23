@@ -15,7 +15,7 @@ from careeros.shared.logging import configure_logging
 
 from .dependencies import get_user_id
 from .routers import (
-    applications, auth, briefing, companies, evidence, goals, jobs, market, oauth,
+    applications, apply, auth, briefing, companies, evidence, goals, jobs, market, oauth,
     onboarding, preferences, resume, roles, settings, telegram,
 )
 
@@ -86,6 +86,7 @@ app.include_router(briefing.router, prefix="/api/briefing", tags=["briefing"], d
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"], dependencies=authenticated)
 app.include_router(companies.router, prefix="/api/companies", tags=["companies"], dependencies=authenticated)
 app.include_router(applications.router, prefix="/api/applications", tags=["applications"], dependencies=authenticated)
+app.include_router(apply.router, prefix="/api/apply", tags=["apply"], dependencies=authenticated)
 app.include_router(resume.router, prefix="/api/resume", tags=["resume"], dependencies=authenticated)
 app.include_router(market.router, prefix="/api/market", tags=["market"], dependencies=authenticated)
 app.include_router(evidence.router, prefix="/api/evidence", tags=["evidence"], dependencies=authenticated)

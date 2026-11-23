@@ -5,6 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
+import careeros.db.models  # noqa: F401  (every model registered, as in the app)
+
 from careeros.notifications import links, notify, telegram
 from careeros.notifications.models import TelegramLink
 
@@ -87,7 +89,8 @@ def test_messages_escape_html_and_link_into_aplio(monkeypatch):
 
 
 def test_notify_sends_only_whats_new_once(monkeypatch, sent):
-    row = TelegramLink(user_id="u1", chat_id=555, prefs={"matches": True, "reminders": True}, sent=["https://jobs/old"])
+    row = TelegramLink(user_id="u1", chat_id=555, prefs={"matches": True, "reminders": True, "report": False},
+                       sent=["https://jobs/old"])
     s = FakeSession([row])
     monkeypatch.setattr(notify, "get_settings", lambda: SimpleNamespace(web_app_url="https://career.example"))
     monkeypatch.setattr(notify, "strong_matches", lambda sess, uid, limit=50: [
@@ -102,5 +105,23 @@ def test_notify_sends_only_whats_new_once(monkeypatch, sent):
     assert "New" in sent[0][1] and "Old" not in sent[0][1]
     assert "Waiting" in sent[1][1] and "Fresh" not in sent[1][1]
     assert notify.notify_user(s, "u1") == 0                     # nothing new the second time
-    row.prefs = {"matches": False, "reminders": False}
+    row.prefs = {"matches": False, "reminders": False, "report": False}
     assert notify.notify_user(s, "u1") == 0
+
+
+def test_daily_report_goes_out_once_a_day(monkeypatch, sent):
+    from datetime import datetime, timezone
+
+    import careeros.applications.report as report_mod
+
+    row = TelegramLink(user_id="u1", chat_id=555, prefs={"matches": False, "reminders": False, "report": True}, sent=[])
+    s = FakeSession([row])
+    monkeypatch.setattr(notify, "get_settings", lambda: SimpleNamespace(web_app_url="https://career.example"))
+    monkeypatch.setattr(report_mod, "daily_report", lambda sess, uid, now=None: {
+        "date": "2026-11-23", "sent_this_week": 1, "active": [], "learn": [], "new_good_matches": 0,
+        "queue": [{"title": "AI Engineer", "company": "Clera", "score": 89}]})
+    day = datetime(2026, 11, 23, 9, tzinfo=timezone.utc)
+    assert notify.notify_user(s, "u1", day) == 1
+    assert "1 ready to apply" in sent[-1][1] and "/apply" in sent[-1][1]
+    assert notify.notify_user(s, "u1", day) == 0                 # same day: not again
+    assert notify.notify_user(s, "u1", datetime(2026, 11, 24, 9, tzinfo=timezone.utc)) == 1

@@ -8,7 +8,7 @@ export interface TelegramStatus {
   connected: boolean;
   username: string | null;
   linked_at: string | null;
-  prefs: { matches: boolean; reminders: boolean };
+  prefs: { matches: boolean; reminders: boolean; report?: boolean };
 }
 
 export const telegramApi = {

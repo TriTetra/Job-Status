@@ -38,6 +38,7 @@ from careeros.onboarding.models.career_graph_node import CareerGraphNode
 from careeros.onboarding.models.goal import Goal
 from careeros.market.models.market_skill import MarketSkill
 from careeros.memory.models import JobImpression, PersonEvent
+from careeros.applications.models.apply_kit import ApplyKit
 
 __all__ = [
     "Base",
@@ -80,4 +81,5 @@ __all__ = [
     "MarketSkill",
     "PersonEvent",
     "JobImpression",
+    "ApplyKit",
 ]

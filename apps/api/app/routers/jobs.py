@@ -62,7 +62,7 @@ class DecisionRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
     status: Literal["to_apply", "applied", "skipped"]
     reasons: list[str] = Field(default_factory=list, max_length=8)   # why "Not for me" (memory.events.SKIP_REASONS)
-    surface: Optional[Literal["inbox", "search", "briefing", "telegram"]] = None
+    surface: Optional[Literal["inbox", "search", "briefing", "telegram", "queue"]] = None
     # What the screen showed (search results scored on the fly have no saved score)
     shown_score: Optional[float] = Field(None, ge=0, le=100)
     shown_p_interview: Optional[float] = Field(None, ge=0, le=1)
