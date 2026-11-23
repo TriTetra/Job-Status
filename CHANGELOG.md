@@ -142,6 +142,7 @@ Sıralama: en yeniden en eskiye.
 - Atılabilir Postgres'te migration uygulandı; tarayıcıda: "Not for me" → "Pay too low" (olay: nedenler, puan 77,7, şans %1,15, Opportunities), Search'ten "I applied" ve "Shortlist" (ekranda gösterilen puan 76,4 olayda "shown" olarak), sahte bir CV kaydıyla başvuruya `doc:1@v2` etiketi; gösterimler (Opportunities ve Search, 50'şer); menüde "Soon"; Search'te Cryogenics ilanı artık üstte değil. `jobs eval` ve `jobs eval-sheet` çalışıyor (test DB'deki rastgele kararlarla AUC anlamsız).
 - 697 test (yeni: `test_person_memory.py`, `test_ranking_evaluation.py`, unvan aileleri), ruff, tsc, eslint, `next build` temiz.
 - Not: geliştirme sunucusunun önbelleği (`.next/dev`) üretim build'iyle bozulup her sayfayı 404 yapıyordu; yalnız önizleme için silinip yeniden kuruldu.
+- **Yayında:** `0ecf37f` (Search + What People Say), `eafc7c9` (araştırma ve tasarım) ve `8899b25` push edildi, Coolify'da dağıtıldı (Finished, 1 dk 02 sn). API açılışta `person_memory_021` migration'ını uyguladı, 10:36'da hatasız açıldı; zamanlayıcı 6 saatte bir. Canlıda `/sign-in` 200, `/api/jobs/search` oturumsuz 401. Bir sonraki döngüde herkes 8.1 ile yeniden puanlanır.
 
 ---
 
