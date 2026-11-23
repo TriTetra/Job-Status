@@ -118,9 +118,9 @@ def _feed_label(job: Job) -> Optional[dict]:
     return {"name": LABELS.get(job.site or "", job.site or "a job feed"), "url": job.url}
 
 
-def get_posting(session: Session, url: str) -> Optional[dict]:
+def get_posting(session: Session, url: str, user_id: Optional[str] = None) -> Optional[dict]:
     job = session.get(Job, url)
-    if job is None:
+    if job is None or (job.added_by and job.added_by != user_id):  # someone else's own job
         return None
     return {
         "url": job.url,
@@ -135,6 +135,7 @@ def get_posting(session: Session, url: str) -> Optional[dict]:
         "application_url": job.application_url or job.url,
         # Found through a job feed: credit it and link back to its page
         "via": _feed_label(job),
+        "added": bool(job.added_by),
         "facts": _facts(job),
         "blocks": posting_blocks(job.full_description or job.description or ""),
     }

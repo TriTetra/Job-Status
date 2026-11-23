@@ -27,6 +27,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
   const status = DECISION_LABEL[opp.user_decision?.status ?? "unreviewed"];
   const age = postedAgo(opp);
   const via = feedLabel(opp.explanation?.source);
+  const mine = opp.explanation?.source === "added";
   const tag = trustTag(opp);
   const key = typeof opp.explanation?.company_key === "string" ? opp.explanation.company_key : null;
 
@@ -51,6 +52,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
         <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>
           {company}{age ? <span style={{ color: "var(--text-muted)" }}> · {age}</span> : null}
           {via ? <span style={{ color: "var(--text-muted)" }}> · via {via}</span> : null}
+          {mine ? <span style={{ color: "var(--text-muted)" }}> · added by you</span> : null}
           {tag ? <span style={{ color: tag.color }}> · {tag.text}</span> : null}
         </p>
         <p className="text-xs mt-1 flex items-center gap-2 min-w-0" style={{ color: "var(--text-muted)" }}>

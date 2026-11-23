@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from careeros.jobs.models.career_score import CareerScore
 from careeros.applications.repositories.application_repo import ApplicationRepository
-from careeros.jobs import opportunities
+from careeros.jobs import added, opportunities
 from careeros.jobs import ingest
 from careeros.jobs import search as job_search
 from careeros.memory.events import log_impressions
@@ -79,10 +79,23 @@ def decide(body: DecisionRequest, user_id: str = Depends(get_user_id), session: 
         raise HTTPException(status_code=404, detail="This job is no longer available.")
 
 
+class AddJobBody(BaseModel):
+    url: str = Field(..., min_length=4, max_length=1900)
+    text: Optional[str] = Field(default=None, max_length=60_000)
+
+
+@router.post("/add", summary="Add any job: its link (read where the site allows) or its pasted text")
+def add_job(body: AddJobBody, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    try:
+        return added.add_and_score(session, user_id, body.url, body.text)
+    except added.AddJobError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 @router.get("/posting", summary="The full posting as clean text blocks + its facts")
 def job_posting(url: str = Query(..., max_length=2048), user_id: str = Depends(get_user_id),
                 session: Session = Depends(get_db_session)):
-    posting = get_posting(session, url)
+    posting = get_posting(session, url, user_id)
     if posting is None:
         raise HTTPException(status_code=404, detail="This job is no longer available.")
     return posting

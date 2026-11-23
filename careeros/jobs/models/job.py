@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -39,6 +39,9 @@ class Job(Base, TimestampMixin):
     application_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     company_domain: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)   # employer website (logo)
     company_logo: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)    # logo URL a feed provides
+    # A job a person added themselves (careeros/jobs/added.py): only they see it. NULL = shared.
+    added_by: Mapped[Optional[str]] = mapped_column(String(128), ForeignKey("users.id", ondelete="CASCADE"),
+                                                    nullable=True)
 
     # External scanner score (ApplyPilot imports only)
     fit_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -67,6 +70,13 @@ class Job(Base, TimestampMixin):
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    @staticmethod
+    def visible_to(user_id: Optional[str]):
+        """Shared jobs, plus the ones this person added themselves (never anyone else's)."""
+        from sqlalchemy import or_
+
+        return Job.added_by.is_(None) if not user_id else or_(Job.added_by.is_(None), Job.added_by == user_id)
+
     __table_args__ = (
         Index("idx_jobs_company", "company"),
         Index("idx_jobs_site", "site"),
@@ -76,6 +86,7 @@ class Job(Base, TimestampMixin):
         Index("idx_jobs_skills_gin", "required_skills", postgresql_using="gin"),
         Index("idx_jobs_company_key", "company_key"),
         Index("idx_jobs_open", "discovered_at", postgresql_where="closed_at IS NULL"),
+        Index("idx_jobs_added_by", "added_by", postgresql_where="added_by IS NOT NULL"),
     )
 
     def __repr__(self) -> str:

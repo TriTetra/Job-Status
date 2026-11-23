@@ -112,9 +112,11 @@ def place_in_query(q: str) -> tuple[Optional[str], str]:
     return found.pop(), " ".join(rest)
 
 
-def candidates(session: Session, f: SearchFilters, now: datetime) -> tuple[list[JobRow], bool]:
-    """Open postings matching the words, country (by name, or remote), source and age; newest first."""
-    q = session.query(JobRow).filter(JobRow.closed_at.is_(None))
+def candidates(session: Session, f: SearchFilters, now: datetime,
+               user_id: Optional[str] = None) -> tuple[list[JobRow], bool]:
+    """Open postings matching the words, country (by name, or remote), source and age; newest first.
+    Jobs people added themselves are seen only by them."""
+    q = session.query(JobRow).filter(JobRow.closed_at.is_(None), JobRow.visible_to(user_id))
     for w in _words(f.q):
         like = f"%{w}%"
         q = q.filter(or_(JobRow.title.ilike(like), JobRow.company.ilike(like), JobRow.department.ilike(like),
@@ -250,7 +252,7 @@ def search(session: Session, user_id: str, f: SearchFilters, now: Optional[datet
         code, rest = place_in_query(f.q)
         if code:  # "istanbul engineer" → country Türkiye, words "engineer"
             f = replace(f, country=code, q=rest)
-    rows, capped = candidates(session, f, now)
+    rows, capped = candidates(session, f, now, user_id)
     if not rows:
         return SearchResult(total=0, capped=False, items=[], country=f.country)
 

@@ -43,8 +43,9 @@ def market_snapshot(session: Session, user_id: str, days: int = 30, now: Optiona
     def mine(q):
         return [j for j in q.options(load_only(*_COLUMNS)).all() if titles.keeps(j.title or "")]
 
-    open_jobs = mine(session.query(Job).filter(Job.closed_at.is_(None)))
-    recent = mine(session.query(Job).filter(Job.discovered_at > now - 2 * period))
+    shared = Job.added_by.is_(None)  # jobs people added themselves aren't the market
+    open_jobs = mine(session.query(Job).filter(Job.closed_at.is_(None), shared))
+    recent = mine(session.query(Job).filter(Job.discovered_at > now - 2 * period, shared))
     this = [j for j in recent if j.discovered_at > now - period]
     before = [j for j in recent if j.discovered_at <= now - period]
 

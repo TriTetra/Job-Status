@@ -26,7 +26,7 @@ EVENT_TYPES = {
     # what they can show
     "CvUploaded", "CvRemoved", "CvPrimarySet", "EvidenceImported", "EvidenceRemoved",
     # decisions on jobs
-    "JobShortlisted", "JobApplied", "JobSkipped",
+    "JobShortlisted", "JobApplied", "JobSkipped", "JobAdded",
     # applications over time
     "ApplicationStageChanged", "OutcomeObserved",
     # what Aplio prepared for them

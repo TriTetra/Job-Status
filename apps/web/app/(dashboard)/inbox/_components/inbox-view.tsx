@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Search, Zap } from "lucide-react";
+import { Plus, Search, Zap } from "lucide-react";
 import { Button } from "@/components/shared/button";
 import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact";
 import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel";
 import { ScanOverlay } from "@/components/ui/scan-overlay";
-import { opportunitiesApi } from "@/features/opportunities/api";
+import { opportunitiesApi, type AddedJob } from "@/features/opportunities/api";
+import { AddJob } from "./add-job";
 import type { SkipReason } from "@/features/opportunities/format";
 import { toScanJob } from "@/features/opportunities/tier";
 import { byRank, companyOf, hasConflict, isUnreliable, inView, rulesSentence, type View } from "@/features/opportunities/format";
@@ -50,6 +51,8 @@ export function InboxView({ initial }: { initial: InboxData }) {
   );
   const [busy, setBusy] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [addedNote, setAddedNote] = useState<string | null>(null);
   const [scanJob, setScanJob] = useState<ScanJob>({ job_id: "", status: "idle", phase: "starting", progress: 0, logs: [] });
 
   const refresh = useCallback(async () => {
@@ -88,6 +91,29 @@ export function InboxView({ initial }: { initial: InboxData }) {
     } catch (err) {
       setScanJob((prev) => ({ ...prev, status: "failed", error: String(err) }));
     }
+  };
+
+  // A job the person added: show it, even when a filter would hide it
+  const handleAdded = async (job: AddedJob) => {
+    setAdding(false);
+    let list = jobs;
+    try {
+      list = (await opportunitiesApi.list()).jobs;
+      setJobs(list);
+    } catch (err) {
+      console.error("[inbox] refresh after add failed:", err);
+    }
+    const row = list.find((j) => j.url === job.url);
+    if (row) {
+      if (hasConflict(row)) setHideConflicts(false);
+      if (isUnreliable(row)) setOnlyReliable(false);
+      setView("all");
+      setQuery("");
+      setSelectedUrl(row.url);
+    }
+    setAddedNote(row
+      ? `Added ${job.title} at ${job.company}${job.career_score != null ? `, scored ${Math.round(job.career_score)}` : ""}.`
+      : `Added ${job.title} at ${job.company}. Finish onboarding to have it scored.`);
   };
 
   // ?scan=1 (from the briefing) starts a scan once
@@ -184,11 +210,22 @@ export function InboxView({ initial }: { initial: InboxData }) {
             {scanned ? ` · scored ${scanned}` : ""} · boards re-read every 6 hours
           </p>
         </div>
-        <Button variant="outline" size="md" onClick={handleScan} disabled={scanJob.status === "running"}>
-          <Zap className="h-4 w-4" />
-          Rescore now
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="md" onClick={() => { setAdding((v) => !v); setAddedNote(null); }} aria-expanded={adding}>
+            <Plus className="h-4 w-4" />
+            Add a job
+          </Button>
+          <Button variant="outline" size="md" onClick={handleScan} disabled={scanJob.status === "running"}>
+            <Zap className="h-4 w-4" />
+            Rescore now
+          </Button>
+        </div>
       </div>
+
+      {adding && <AddJob onAdded={handleAdded} onClose={() => setAdding(false)} />}
+      {addedNote && (
+        <p className="mt-4 text-sm shrink-0" role="status" style={{ color: "var(--text-secondary)" }}>{addedNote}</p>
+      )}
 
       {/* Views + search + conflict filter */}
       <div className="mt-5 shrink-0 flex flex-wrap items-center gap-x-6 gap-y-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>

@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.3 Herhangi Bir İlanı Ekleme | Opportunities'te "Add a job": bağlantı ya da yapıştırılan metin; bilinen iş sistemlerinde resmi API, diğer sitelerde robots.txt'e uyarak sayfa okuma, LinkedIn / Kariyer.net / Indeed / Glassdoor / kununu / XING hiç okunmaz (metin yapıştırılır); ilan puanlanır, yalnız ekleyen görür, kuyruk ve kit için hazır. Migration 023 | ✅ Tamam | 2026-11-23 |
 | 1.2 Unvan Filtresini Genişletme | Ölçüm: 18.975 başlıktan 8.904'ü eleniyordu; ilgili olup kaçanlar (Member of Technical Staff, Researcher, MLOps, Computer Vision, Tech Lead, Cybersecurity, Almanca / Fransızca / İspanyolca / İtalyanca / Hollandaca / Lehçe unvanlar) eklendi: 183 başlık artık içeride, önceden alınan hiçbir başlık kaybolmadı. Meslek adlarında çoğul, tırnaklı terimde tam ifade | ✅ Tamam | 2026-11-23 |
 | 1.1 Adzuna: kota ve anahtar güvenliği | Adzuna kotası doldu ya da anahtar etkin değil (401/403/429) yanıtında okuma duruyor, o ana kadar gelen ilanlar korunuyor; hata mesajları ve loglar artık anahtarı içeren URL'yi yazmıyor; okuma başına istek sayısı `ADZUNA_MAX_CALLS` ile ayarlanabiliyor (varsayılan 40) | ✅ Tamam | 2026-11-23 |
 | 1.1 Resmi İlan API'leri: Adzuna | Yeni kaynak Adzuna (GB, DE, NL, PL, ES, CH, FR, IT…): kullanıcıların hedef ülkeleri ve rolleri için arama, çalıştırma başına en fazla 40 istek; her Adzuna ilanında şartların istediği "Jobs by Adzuna" etiketi; anahtar girilene kadar kapalı. Reed şartları okunamadı (bekliyor), Almanya İş Ajansı resmi API değil (eklenmedi) | ✅ Tamam | 2026-11-23 |
@@ -129,6 +130,35 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.3 Herhangi Bir İlanı Ekleme] — 2026-11-23 — İş akışı ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.3. Aplio yalnız kendi okuduğu kaynaklardaki ilanları biliyordu; kişinin LinkedIn'de, Kariyer.net'te ya da bir şirket sitesinde bulduğu ilan sisteme giremiyordu.
+
+### Nasıl çalışıyor (`careeros/jobs/added.py`)
+1. **Bağlantı Aplio'nun okuduğu bir iş sistemindeyse** (Greenhouse, Lever, Ashby, Workable, Personio, Recruitee): ilan o sistemin resmi API'sinden alınır; yapay zekâ gerekmez. Aynı ilan zaten ortak havuzdaysa kopyalanmaz, kişi için puanlanır.
+2. **Başka bir siteyse:** önce **robots.txt** okunur (RFC 9309: robots.txt yoksa izin var, ulaşılamıyorsa yok). İzin varsa sayfa okunur. Sayfada schema.org **JobPosting** verisi varsa oradan alınır (başlık, şirket, konum, uzaktan çalışma, yıllık maaş, tarih). Yoksa sayfa metni yapay zekâya okutulur.
+3. **Şartları otomatik okumayı yasaklayan siteler** (LinkedIn, Kariyer.net, Indeed, Glassdoor, kununu, XING) **hiç okunmaz**, robots.txt'ine bile istek gitmez. Kişiden ilan metnini yapıştırması istenir; arayüz bu sitelerde metin alanını kendiliğinden açar.
+4. **Yapıştırılan metin:** yapay zekâ başlığı, şirketi ve konumu okur (`job_add` görevi). Tek bir ilan değilse (ilan listesi, giriş sayfası…) reddedilir. Ardından ilanın ayrıntıları da okunur (`job_extract`) ve ilk puan bunlarla hesaplanır. Yapay zekâ kapalıysa anahtar kelime çıkarımı kullanılır.
+5. **Güvenli okuma:** yalnız herkese açık adresler okunur (localhost, iç ağ, bulut metadata yok; yönlendirmeler yeniden kontrol edilir; `evidence/portfolio.check_url`), 2 MB sınırı ve 12 saniye zaman aşımı var. `javascript:`, `data:` ve benzeri bağlantılar reddedilir.
+
+### Yalnız ekleyen görür
+- **`jobs.added_by`** (migration `jobs_added_by_023`): kişinin eklediği ilan onun. Satır anahtarı bağlantıya kişiye özel bir parça eklenerek oluşturulur (`…#aplio-<hash>`). Böylece iki kişi aynı bağlantıyı eklediğinde satırlar karışmaz; bağlantı yine aynı sayfayı açar. "Open posting" asıl bağlantıya gider.
+- **`Job.visible_to(user_id)`** Search'te ve taramada kullanılıyor. İlan okuyucu (`/api/jobs/posting`) başkasının eklediği ilanı göstermiyor. Pazar istatistikleri (`own_market`) eklenen ilanları saymıyor. Kullanıcı silinince ilanları da silinir.
+- Kişisel hafızaya **`JobAdded`** olayı yazılıyor: ilgi sinyali.
+
+### Arayüz
+- **Opportunities → "Add a job"**: başlığın altında açılan sade bir bölüm (kutu yok). İçinde bağlantı alanı, "Paste the posting text instead" seçeneği ve "Add and score" düğmesi var. Hata mesajı sunucudan geliyor ("…paste the posting text below").
+- Eklenince liste yenileniyor ve ilan seçiliyor. Bir filtre (çakışma, güvenilirlik) gizleyecek olsa bile ilan görünür kalıyor. Kartta "· added by you", okuyucuda "You added this job; only you see it" yazıyor.
+- Puanlanan ilan Opportunities, Search, Ready to apply kuyruğu ve kit için diğer ilanlarla aynı yoldan geçiyor.
+
+### Doğrulama
+- Gerçek sayfalarda yalnız okuma: Lever sayfası JSON-LD'den, Ashby ve Greenhouse bağlantıları API'den doğru okundu. LinkedIn hiç istek atılmadan reddedildi. example.com "too little text" mesajı aldı.
+- Önizlemede (atılabilir DB, migration 023 uygulandı): bir Ashby ilanı eklendi, puanlandı, listede seçildi; "added by you" etiketi ve okuyucu notu göründü. LinkedIn bağlantısı metinsiz gönderilince arayüz metin istedi. 422 mesajı ekranda göründü. `JobAdded` olayı yazıldı.
+- 783 test (yeni 10: bağlantı doğrulama, kişiye özel anahtar, JSON-LD eşleme, robots kuralları, okunabilir sayfa, yasak siteler, okunamayan sayfa, ilan olmayan metin, ortak ilanın yeniden kullanılması, iş sistemi API'sinden okuma, başkasının ilanını görmeme), ruff, tsc, eslint, `next build` temiz.
+- Bekleyen: canlıda yapay zekâ açıkken yapıştırılmış bir LinkedIn ilanının puanlanıp kit alması (planın "bitti" ölçütü). Deploy sonrası kontrol edilecek.
 
 ---
 

@@ -28,7 +28,7 @@ EXPECTED_PATHS = {
     "/api/evidence/skills/aggregated", "/api/evidence/sources",
     "/api/briefing", "/api/briefing/dismiss",
     "/api/goals/catalog",
-    "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan", "/api/jobs/decide", "/api/jobs/posting",
+    "/api/jobs/", "/api/jobs/pipeline", "/api/jobs/reasoning/{url}", "/api/jobs/scan", "/api/jobs/decide", "/api/jobs/posting", "/api/jobs/add",
     "/api/jobs/scan/{job_id}/status", "/api/jobs/{url}",
     "/api/jobs/boards", "/api/jobs/sync", "/api/jobs/sync/{job_id}/status", "/api/jobs/search",
     "/api/apply/queue", "/api/apply/kit", "/api/apply/report",

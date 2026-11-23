@@ -218,7 +218,7 @@ def candidate_urls(session, user_id: str, hours: int) -> list[str]:
     from careeros.jobs.targeting import user_title_filter
 
     titles = user_title_filter(session, user_id)
-    q = session.query(JobRow.url, JobRow.title).filter(JobRow.closed_at.is_(None))
+    q = session.query(JobRow.url, JobRow.title).filter(JobRow.closed_at.is_(None), JobRow.visible_to(user_id))
     if hours < ALL_TIME_HOURS:
         q = q.filter(JobRow.discovered_at >= datetime.now(timezone.utc) - timedelta(hours=hours))
     rows = q.order_by(JobRow.discovered_at.desc().nullslast()).all()

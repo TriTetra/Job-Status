@@ -48,6 +48,7 @@ TASKS = {
     "cv_extract": "interactive",
     "reasoning": "interactive",
     "apply_kit": "interactive",
+    "job_add": "interactive",
     "resume": "interactive",
     "general": "interactive",
 }
