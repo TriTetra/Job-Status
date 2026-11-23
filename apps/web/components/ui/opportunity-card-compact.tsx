@@ -2,11 +2,12 @@
 
 import { cn, formatScore } from "@/lib/utils";
 import { CompanyLogo } from "@/components/shared/company-logo";
+import { PlaceBadge } from "./place-badge";
 import { feedLabel } from "@/features/opportunities/feeds";
 import { tierOf } from "@/features/opportunities/tier";
 import {
   CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, TIER_COLOR,
-  chanceOf, companyOf, postedAgo, salaryOf, trustTag, whereOf,
+  chanceOf, companyOf, postedAgo, salaryOf, trustTag,
 } from "@/features/opportunities/format";
 import type { Opportunity } from "@/features/opportunities/types";
 
@@ -21,7 +22,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
   const tier = tierOf(opp);
   const chance = chanceOf(opp);
   const company = companyOf(opp);
-  const facts = [whereOf(opp), salaryOf(opp)].filter(Boolean).join(" · ");
+  const salary = salaryOf(opp);
   const status = DECISION_LABEL[opp.user_decision?.status ?? "unreviewed"];
   const age = postedAgo(opp);
   const via = feedLabel(opp.explanation?.source);
@@ -48,7 +49,10 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
           {via ? <span style={{ color: "var(--text-muted)" }}> · via {via}</span> : null}
           {tag ? <span style={{ color: tag.color }}> · {tag.text}</span> : null}
         </p>
-        {facts && <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{facts}</p>}
+        <p className="text-xs mt-1 flex items-center gap-2 min-w-0" style={{ color: "var(--text-muted)" }}>
+          <PlaceBadge ex={opp.explanation ?? {}} compact className="min-w-0" />
+          {salary && <span className="shrink-0">· {salary}</span>}
+        </p>
       </div>
       <div className="text-right">
         <p className="font-mono text-base font-semibold tabular-nums leading-none" style={{ color: TIER_COLOR[tier] }}>

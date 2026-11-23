@@ -54,6 +54,9 @@ export interface OpportunityExplanation {
   title?: string;
   location?: string;
   remote_regions?: string[];
+  countries?: string[];           // where the job is (ISO codes): the place badge's flags
+  workplace?: "remote" | "hybrid" | "onsite" | null;
+  remote_scope?: "worldwide" | "region" | "country" | null;
   remote?: boolean;
   remote_region?: string;
   source?: string;

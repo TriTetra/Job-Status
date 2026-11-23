@@ -232,3 +232,30 @@ def test_eightfold_board_needs_a_host():
 
     with pytest.raises(BoardConfigError, match="eightfold needs host"):
         parse({"companies": [{"key": "x", "name": "X", "ats": "eightfold", "board": "x.com"}]})
+
+
+def test_smartrecruiters_can_follow_one_country():
+    asked = []
+
+    class Http(_Http):
+        def get(self, url, params=None, **kw):
+            if params is not None:
+                asked.append(dict(params))
+            return super().get(url, params=params, **kw)
+
+    listing = {"totalFound": 1, "content": [{"id": "9", "name": "Backend Engineer"}]}
+    detail = {"id": "9", "name": "Backend Engineer", "location": {"city": "Istanbul", "country": "tr", "hybrid": True},
+              "jobAd": {"sections": {}}, "releasedDate": "2026-11-20T07:44:55Z"}
+    http = Http({"https://api.smartrecruiters.com/v1/companies/BoschGroup/postings/9": _Resp(detail),
+                 "https://api.smartrecruiters.com/v1/companies/BoschGroup/postings": _Resp(listing)})
+    r = FETCHERS["smartrecruiters"](Board("bosch-tr", "Bosch Türkiye", "smartrecruiters", board="BoschGroup", search=("tr",)),
+                                    http, set(), None)
+    assert asked[0]["country"] == "tr"
+    assert [p.location for p in r.postings] == ["Istanbul, TR"]
+
+
+def test_turkey_boards_are_configured():
+    from careeros.jobs.boards import load_boards
+
+    boards = {b.key: b for b in load_boards().boards}
+    assert boards["ing-tr"].search == ("Istanbul",) and boards["bosch-tr"].search == ("tr",)

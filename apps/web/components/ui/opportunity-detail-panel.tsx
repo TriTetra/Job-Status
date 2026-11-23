@@ -9,11 +9,12 @@ import { ScoreRing } from "./score-ring";
 import { tierOf } from "@/features/opportunities/tier";
 import {
   CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, SIZE_LABEL, SKIP_REASONS, TIER_COLOR, TIER_LABEL, type SkipReason,
-  chanceOf, companyOf, postedAgo, salaryOf, whereOf,
+  chanceOf, companyOf, postedAgo, salaryOf,
 } from "@/features/opportunities/format";
 import { getPosting, type Posting } from "@/features/opportunities/posting";
 import type { Criterion, Opportunity } from "@/features/opportunities/types";
 import { WhyModal } from "./why-modal";
+import { PlaceBadge } from "./place-badge";
 import { WhatPeopleSay } from "./what-people-say";
 
 interface OpportunityDetailPanelProps {
@@ -120,8 +121,6 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
   const f = posting?.facts;
 
   const chips = [
-    whereOf(opp),
-    f?.workplace && f.workplace !== "remote" ? (f.workplace === "onsite" ? "On-site" : "Hybrid") : null,
     salaryOf(opp),
     f?.seniority ? SENIORITY[f.seniority] ?? f.seniority : null,
     f?.min_years ? `${f.min_years}+ yrs` : null,
@@ -170,8 +169,10 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
             </h2>
           </div>
         </div>
+        <PlaceBadge ex={{ ...ex, workplace: ex.workplace ?? (f?.workplace === "remote" || f?.workplace === "hybrid" || f?.workplace === "onsite" ? f.workplace : null) }}
+                    className="mt-4 text-sm" />
         {chips.length > 0 && (
-          <ul className="mt-4 flex flex-wrap gap-x-2 gap-y-2">
+          <ul className="mt-3 flex flex-wrap gap-x-2 gap-y-2">
             {chips.map((c) => (
               <li key={c} className="text-xs px-2.5 py-1 rounded-full border" style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
                 {c}

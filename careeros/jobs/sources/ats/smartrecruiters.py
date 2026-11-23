@@ -1,5 +1,6 @@
 """SmartRecruiters public postings API. The list has no descriptions, so (like Workday)
 only new postings with a relevant title are read in detail, a capped number per run.
+Optional country filter: `search: [tr]` in companies.yaml.
 
 https://developers.smartrecruiters.com/docs/posting-api
 """
@@ -17,16 +18,26 @@ def public_url(company: str, posting_id: str) -> str:
 
 
 def fetch(board: Board, http, known_urls: set[str], keep_title=None) -> FetchResult:
-    listed, complete = [], True
-    for page in range(MAX_PAGES):
-        resp = http.get(API.format(company=board.board), params={"limit": PAGE, "offset": page * PAGE}, timeout=TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
-        listed += data.get("content") or []
-        if not data.get("content") or len(listed) >= int(data.get("totalFound") or 0):
-            break
-    else:
-        complete = False
+    """`search` in companies.yaml lists country codes (["tr"]): only that country's postings are read,
+    so a large employer can be followed in one country (the API's own `country` filter)."""
+    listed, complete, ids = [], True, set()
+    for country in board.search or (None,):
+        got = 0
+        for page in range(MAX_PAGES):
+            params = {"limit": PAGE, "offset": page * PAGE}
+            if country:
+                params["country"] = country.lower()
+            resp = http.get(API.format(company=board.board), params=params, timeout=TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data.get("content") or []
+            got += len(content)
+            listed += [c for c in content if c.get("id") not in ids]
+            ids.update(c.get("id") for c in content)
+            if not content or got >= int(data.get("totalFound") or 0):
+                break
+        else:
+            complete = False
 
     seen, postings, details = set(), [], 0
     for item in listed:

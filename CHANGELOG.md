@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Yer Rozeti (Bayrak) + Türkiye Kaynakları | Her işte bayrak · şehir · On-site / Hybrid / Remote / Global; Türkiye'ye açık remote işler 🇹🇷 ile; yeni Türkiye kaynakları: ING Hubs Türkiye, AstraZeneca Türkiye (Workday "Istanbul"), Bosch Türkiye (SmartRecruiters country=tr) | ✅ Tamam | 2026-11-23 |
 | Search: Türkiye ve Yer Aramaları | Ülke filtresinde o ülkedeki işler önce okunuyor (remote ilanlar artık dışarı itemiyor); kutuya yazılan yer (İstanbul, Türkiye, Berlin) ülke filtresi oluyor; kelimeler konumda da aranıyor; noktalı İ yazımları | ✅ Tamam | 2026-11-23 |
 | Taslaklar: Kanıta Bağlı ve Denetlenen | Başvuru taslakları her iddiada dayandığı kanıtı gösteriyor; bir aracı yanlış işe bağlayan ya da kanıtta olmayan beceriyi iddia eden cümleler yakalanıyor, bir düzeltme turu, kalanlar "Check:" notu | ✅ Tamam | 2026-11-23 |
 | B: Ready to Apply + Daily Report | Her gün başvurulacak en iyi 5 iş (şirket başına bir), her biri hazırlanmış: formun soruları (Greenhouse'tan gerçek form), profilden cevaplar, kanıttan taslaklar, gönderilecek CV, kısa not; gönderen kişinin kendisi. Günlük rapor: Briefing'de ve Telegram'da | ✅ Tamam | 2026-11-23 |
@@ -123,6 +124,32 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Yer Rozeti (Bayrak) + Türkiye Kaynakları] — 2026-11-23 — Bir bakışta nerede, nasıl ✅
+
+**Neden:** Kullanıcı: Türkiye'deki işler çoğunlukla on-site ya da hybrid; Türkiye'ye açık remote işler "TR" olarak görünmüyor; ülke yerine bayrağı, ayrıca global / remote / iş yeri bilgisini hızlı anlaşılır biçimde göstermek, kendi tasarımımızla. Bayraklar için `flag-icons` paketini seçti.
+
+### Yer rozeti (`components/ui/place-badge.tsx`)
+- **Ofiste / hybrid:** ülkenin bayrağı · şehir (birden çok yer varsa "+N") · **On-site** / **Hybrid** (ilanın söylediği; söylemiyorsa boş). Ülke tanınmıyorsa konum iğnesi ve yazdığı yer.
+- **Remote:** nerede yaşayabileceğin: **Global** (küre), **Europe** (AB bayrağı), **EMEA**, ya da ülkelerin bayrakları ("Remote · Türkiye", "Remote · CZ, FI, DE +2"); belirtilmemişse "location not stated".
+- Bayraklar `flag-icons` (MIT, 7.6.0): SVG, sitenin kendisinden, yalnız ekrandakiler yükleniyor; Windows'ta emoji bayraklar harf olarak göründüğü için emoji kullanılmadı. Ülke adları tarayıcının kendi listesinden (Intl.DisplayNames).
+- Kullanıldığı yerler: Opportunities ve Search kartları, okuyucu başlığı, Ready to apply listesi ve kit başlığı.
+- Veri: her puan artık işin ülke kodlarını, çalışma şeklini ve remote kapsamını taşıyor (SCORER_VERSION 8.3; bir sonraki döngüde herkese dolar).
+
+### Türkiye kaynakları (`infra/config/companies.yaml`)
+- Türk şirketlerinin çoğunun Lever / Greenhouse / Ashby / Workable'da herkese açık panosu yok (Getir, Papara, Hepsiburada, Param, Paribu, BtcTurk, Akinon, ikas, Martı, Jotform, Sahibinden… denendi; Kariyer.net / LinkedIn / kendi portalları). Türkiye'de teknoloji merkezi olan küresel işverenler denendi; eklendi:
+  - **ING Hubs Türkiye** (Workday, "Istanbul" araması): 31 ilan, 21 ilgili (Backend Engineer…).
+  - **AstraZeneca Türkiye** (Workday, "Istanbul"): 10 ilan, 2 ilgili (AI & Digital…).
+  - **Bosch Türkiye** (SmartRecruiters, `country=tr`): 42 ilan, 21 ilgili (Bursa, mühendislik; bazıları hybrid).
+  - **Delivery Hero Türkiye** (SmartRecruiters, `country=tr`): şu an ilgili unvan yok.
+- SmartRecruiters kaynağı artık ülke filtresi alıyor (`search: [tr]`); büyük bir işvereni tek ülkede izlemek için.
+- Kuru çalıştırma (yazmadan): 4 pano, **44 yeni ilgili Türkiye işi**.
+
+### Doğrulama
+- Atılabilir DB'de tarayıcı: "Remote · Israel", "Remote · Türkiye", "Remote · Global", "London · $150K–$250K", "Amsterdam +3", bayraklar doğru.
+- 761 test (yeni: SmartRecruiters ülke filtresi, Türkiye panoları), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

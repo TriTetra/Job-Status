@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Check, Copy, Loader2, RefreshCw } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
+import { PlaceBadge } from "@/components/ui/place-badge";
 import { opportunitiesApi } from "@/features/opportunities/api";
 import { SKIP_REASONS, type SkipReason } from "@/features/opportunities/format";
 import { SOURCE_LABEL, applyApi, type Kit, type KitQuestion, type QueueItem } from "@/features/apply/api";
@@ -76,8 +77,9 @@ function KitPanel({ item, kit, preparing, onPrepare, onApplied, onSkip, busy }: 
         <div className="flex items-start gap-4">
           <CompanyLogo name={item.company} companyKey={item.company_key} jobUrl={item.url} size={52} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{item.company}{item.location ? ` · ${item.location}` : ""}</p>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{item.company}</p>
             <h2 className="font-serif-display text-[26px] leading-tight mt-0.5" style={{ color: "var(--text-primary)" }}>{item.title}</h2>
+            <PlaceBadge ex={item.place ?? { location: item.location ?? undefined }} className="mt-1.5 text-sm" />
             <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
               Score {Math.round(item.score ?? 0)}{chance ? ` · ${chance} chance of an interview` : ""}
               {kit ? ` · ${kit.form === "greenhouse" ? "the company's own form" : "the questions most forms ask"}` : ""}
@@ -277,6 +279,7 @@ export function ApplyView() {
                     <span className="min-w-0">
                       <span className="block text-sm font-medium leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>{it.title}</span>
                       <span className="block text-xs mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>{it.company} · {Math.round(it.score ?? 0)}</span>
+                      <PlaceBadge ex={it.place ?? { location: it.location ?? undefined }} compact className="mt-0.5 max-w-full" />
                       <span className="block text-[11px] mt-0.5" style={{ color: it.kit ? "var(--success)" : "var(--text-muted)" }}>
                         {preparing === it.url ? "Preparing…" : it.kit ? "Prepared" : "Not prepared yet"}
                       </span>

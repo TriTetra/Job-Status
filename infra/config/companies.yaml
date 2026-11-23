@@ -178,3 +178,9 @@ companies:
   - {key: iyzico, name: iyzico, domain: iyzico.com, ats: lever, board: iyzico}
   # Large employers on Eightfold: only their Turkey jobs (the career site's own search, allowed by robots.txt)
   - {key: vodafone-tr, name: Vodafone Türkiye, domain: vodafone.com.tr, ats: eightfold, host: jobs.vodafone.com, board: vodafone.com, search: [Turkey]}
+  # Global employers with tech hubs in Turkey: only their Turkey jobs, through each job system's own
+  # public search (Workday "Istanbul", SmartRecruiters country=tr; checked 2026-11-23)
+  - {key: ing-tr, name: ING Hubs Türkiye, domain: ing.com, ats: workday, host: ing.wd3.myworkdayjobs.com, tenant: ing, site: ICSGBLCOR, search: [Istanbul]}
+  - {key: astrazeneca-tr, name: AstraZeneca Türkiye, domain: astrazeneca.com, ats: workday, host: astrazeneca.wd3.myworkdayjobs.com, tenant: astrazeneca, site: Careers, search: [Istanbul]}
+  - {key: bosch-tr, name: Bosch Türkiye, domain: bosch.com.tr, ats: smartrecruiters, board: BoschGroup, search: [tr]}
+  - {key: deliveryhero-tr, name: Delivery Hero Türkiye, domain: deliveryhero.com, ats: smartrecruiters, board: DeliveryHero, search: [tr]}

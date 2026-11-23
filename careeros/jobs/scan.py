@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "8.2"  # 8.2: locations (USA, states, cities; unknown ≠ free pass), on-site vs hybrid, implied skills · 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
+SCORER_VERSION = "8.3"  # 8.3: countries, workplace and remote scope stored for the place badge · 8.2: locations (USA, states, cities; unknown ≠ free pass), on-site vs hybrid, implied skills · 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -400,6 +400,8 @@ def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] =
             "location": r.location or "",
             "remote": f["remote"],
             "workplace": f["workplace"],
+            "countries": signals.countries,          # where the job is (codes): the place badge's flags
+            "remote_scope": signals.remote_scope,    # worldwide | region | country
             "remote_region": f["remote_region"],
             "sponsors_visa": f["sponsors_visa"],
             "salary_min": f["salary_min"],

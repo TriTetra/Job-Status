@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import type { OpportunityExplanation } from "@/features/opportunities/types";
 
 /** Where a suggested answer comes from (careeros/applications/kit.py). */
 export type AnswerSource = "profile" | "preferences" | "suggestion" | "draft" | "you" | "llm";
@@ -48,6 +49,7 @@ export interface QueueItem {
   apply_url: string;
   ready: boolean;
   kit: Kit | null;
+  place?: OpportunityExplanation;
 }
 
 export interface ReportApplication {

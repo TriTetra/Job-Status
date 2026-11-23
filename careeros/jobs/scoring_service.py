@@ -169,7 +169,8 @@ class ScoringService:
         for key in ("source", "remote_region", "application_url", "company_key", "posted_at",
                     "summary", "extracted_by", "preferred_skills",
                     "salary_min", "salary_max", "salary_currency",
-                    "trust", "company_size", "company_domain", "remote_regions"):
+                    "trust", "company_size", "company_domain", "remote_regions",
+                    "countries", "workplace", "remote_scope"):
             if job_meta.get(key) and job_meta[key] != "unknown":
                 explanation[key] = job_meta[key]
 
