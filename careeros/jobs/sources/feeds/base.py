@@ -32,6 +32,7 @@ class FeedPosting:
     salary_max: Optional[int] = None
     salary_currency: Optional[str] = None
     links: list[str] = field(default_factory=list)   # every link in the posting (board discovery)
+    logo_url: Optional[str] = None                   # company logo the feed provides
 
 
 FeedFetcher = Callable[["requests.Session"], list[FeedPosting]]

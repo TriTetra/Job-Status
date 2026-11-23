@@ -20,6 +20,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from careeros.db.connection import db
 from careeros.jobs.boards import TitleFilter, all_boards, load_boards
+from careeros.jobs.discovery import company_site
 from careeros.jobs.extraction import TextExtractor
 from careeros.jobs.models.board_run import JobBoardRun
 from careeros.jobs.models.job import Job
@@ -99,6 +100,7 @@ def to_row(board: Board, p: Posting, extract: TextExtractor) -> dict:
         "ats": board.ats,
         "external_id": p.external_id[:128],
         "application_url": _http(p.apply_url) or p.url,
+        "company_domain": board.domain or company_site([], desc),
         "salary_min": low,
         "salary_max": high,
         "salary_currency": currency,

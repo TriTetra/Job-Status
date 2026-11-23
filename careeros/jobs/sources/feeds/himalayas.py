@@ -54,4 +54,5 @@ def _posting(j: dict, url: str) -> FeedPosting:
         employment_type=j.get("employmentType") or None,
         salary_min=low, salary_max=high, salary_currency=cur,
         links=html_links(j.get("description")),
+        logo_url=j.get("companyLogo") or None,
     )

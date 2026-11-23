@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "6"  # 5: real work-style preferences, user weights · 6: salary in the explanation
+SCORER_VERSION = "7"  # 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -69,7 +69,7 @@ def build_profile_from_evidence(user_id: str) -> Optional[UserProfile]:
         )
 
         prefs = s.execute(
-            sa.text("SELECT requires_sponsorship, work_arrangements, preferred_country_codes, salary_min, salary_max "
+            sa.text("SELECT requires_sponsorship, work_arrangements, preferred_country_codes, salary_min, salary_max, salary_currency "
                     "FROM career_preferences WHERE user_id = :u"), {"u": user_id}
         ).fetchone()
         apply_preferences(profile, prefs)
@@ -87,7 +87,8 @@ def apply_preferences(profile: UserProfile, row) -> None:
         p.remote = p.hybrid_acceptable = p.onsite_acceptable = True
         p.work_visa_required = False
         return
-    sponsorship, arrangements, countries, salary_min, salary_max = row
+    sponsorship, arrangements, countries, salary_min, salary_max, *rest = row
+    salary_currency = rest[0] if rest else None
     p.work_visa_required = bool(sponsorship)
     chosen = set(arrangements or [])
     if chosen:
@@ -99,6 +100,7 @@ def apply_preferences(profile: UserProfile, row) -> None:
     p.preferred_locations = list(countries or [])
     p.min_salary = salary_min
     p.max_salary = salary_max
+    p.salary_currency = salary_currency or "USD"
 
 
 def load_weights(user_id: str) -> dict:
@@ -234,11 +236,83 @@ def job_fields(r: JobRow) -> dict:
     return fields
 
 
-def to_scoring_input(rows: list[JobRow]) -> tuple[list[Job], dict[str, dict]]:
+# Postings on a company's whole board (every role, before the title filter) → its size,
+# when the curated list doesn't say
+SIZE_BY_OPEN_ROLES = ((25, "startup"), (200, "midsize"))
+MIN_CORPUS_FOR_DEMAND = 100
+
+
+def company_open_counts(session) -> dict[str, int]:
+    """Board key → postings on the board at its last read (job_board_runs.fetched); stored
+    open jobs only where a board has no run yet."""
+    from sqlalchemy import func
+
+    from careeros.jobs.models.board_run import JobBoardRun
+
+    counts = {k: n for k, n in session.query(JobRow.company_key, func.count())
+              .filter(JobRow.closed_at.is_(None), JobRow.company_key.isnot(None))
+              .group_by(JobRow.company_key).all()}
+    for key, fetched in session.query(JobBoardRun.company_key, JobBoardRun.fetched).all():
+        if fetched and not key.startswith("feed:"):
+            counts[key] = fetched
+    return counts
+
+
+def company_size_of(r: JobRow, open_counts: dict[str, int]) -> str:
+    if r.company_size and r.company_size != "unknown":
+        return r.company_size  # the curated list (big tech, large, …) wins
+    n = open_counts.get(r.company_key or "")
+    if n:
+        return next((size for limit, size in SIZE_BY_OPEN_ROLES if n <= limit), "large")
+    if r.site == "hackernews":
+        return "startup"  # "Who is hiring?" posts are overwhelmingly startups
+    return "unknown"
+
+
+def market_demand(rows: list[JobRow]) -> dict[str, float]:
+    """Skill → demand 0.3–1.0 from how often the open jobs matching the user ask for it.
+    Empty (the scorer keeps its built-in table) when there are too few jobs to say."""
+    from collections import Counter
+
+    if len(rows) < MIN_CORPUS_FOR_DEMAND:
+        return {}
+    counts = Counter(s.lower() for r in rows for s in set(job_fields(r)["required_skills"]))
+    if not counts:
+        return {}
+    top = counts.most_common(1)[0][1]
+    return {skill: round(0.3 + 0.7 * n / top, 3) for skill, n in counts.items()}
+
+
+def demand_signature(demand: dict[str, float]) -> str:
+    """Coarse view of the market for the profile fingerprint: a real shift rescores, noise doesn't."""
+    top = sorted(demand.items(), key=lambda kv: -kv[1])[:15]
+    return ",".join(f"{k}:{round(v * 10) / 10}" for k, v in top)
+
+
+def remote_regions(r: JobRow, facts: Optional[dict]) -> list[str]:
+    from careeros.jobs.geo import open_to
+
+    regions = [x for x in ((facts or {}).get("remote_regions") or []) if isinstance(x, str)]
+    return regions or open_to(r.description) or ([r.remote_region] if r.remote_region else [])
+
+
+def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] = None,
+                     preferred_countries: Optional[list[str]] = None,
+                     now: Optional[datetime] = None) -> tuple[list[Job], dict[str, dict]]:
     """Stored job rows → (Job objects to score, per-URL metadata the Job type doesn't carry)."""
+    from careeros.jobs.geo import location_match
+    from careeros.jobs.trust import assess
+
+    open_counts = open_counts or {}
     jobs, meta = [], {}
     for r in rows:
         f = job_fields(r)
+        regions = remote_regions(r, current_facts(r))
+        where = location_match(r.location, regions, preferred_countries or [], f["remote"])
+        trust = assess(company=r.company or "", description=r.description or r.full_description or "",
+                       ats=r.ats, company_domain=r.company_domain,
+                       salary_stated=bool(f["salary_min"] or f["salary_max"]), posted_at=r.posted_at, now=now)
+        size = company_size_of(r, open_counts)
         jobs.append(Job(
             id=r.url,
             title=r.title or "",
@@ -254,9 +328,11 @@ def to_scoring_input(rows: list[JobRow]) -> tuple[list[Job], dict[str, dict]]:
             salary_min=f["salary_min"],
             salary_max=f["salary_max"],
             salary_currency=f["salary_currency"],
-            company_size=r.company_size or "unknown",
+            company_size=size,
             sponsors_visa=f["sponsors_visa"],
             source=r.source or "unknown",
+            trust=trust.level,
+            location_match=where,
         ))
         meta[r.url] = {
             "title": r.title or "",
@@ -276,6 +352,11 @@ def to_scoring_input(rows: list[JobRow]) -> tuple[list[Job], dict[str, dict]]:
             "posted_at": r.posted_at.isoformat() if r.posted_at else None,
             "summary": f["summary"],
             "extracted_by": f["extracted_by"],
+            "remote_regions": regions[:40],
+            "location_match": where,
+            "trust": trust.to_dict(),
+            "company_size": size,
+            "company_domain": r.company_domain,
         }
     return jobs, meta
 
@@ -295,7 +376,6 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         job.log(f"✓ Profile: {len(profile.skills)} skills, {profile.years_experience}y")
         service = ScoringService(user_id=user_id)
         weights = load_weights(user_id)
-        fingerprint = profile_fingerprint(profile, service.load_prefs(), weights)
 
         job.update(status="scanning", progress=30)
         job.log("Picking open jobs that match your roles…")
@@ -307,6 +387,11 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
                 loaded += s.query(JobRow).filter(JobRow.url.in_(urls[i:i + 500])).all()
             order = {u: i for i, u in enumerate(urls)}
             loaded.sort(key=lambda r: order[r.url])
+            open_counts = company_open_counts(s)
+            demand = market_demand(loaded)
+            # The market (what these jobs ask for) is part of what a score depends on
+            fingerprint = profile_fingerprint(profile, {**service.load_prefs(), "_market": demand_signature(demand)},
+                                              weights)
             rows, hashes, unchanged = pick_changed(loaded, known, fingerprint, limit)
             s.expunge_all()
         job.log(f"✓ {len(urls)} matching open jobs · {len(rows)} to score · {unchanged} unchanged")
@@ -314,7 +399,8 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         job.update(status="scoring", progress=60)
         if rows:
             job.log("Scoring against your career graph…")
-            jobs, meta = to_scoring_input(rows)
+            jobs, meta = to_scoring_input(rows, open_counts, profile.preferences.preferred_locations)
+            service.set_market_demand(demand)
             result = service.run_pipeline(jobs, profile, weights=weights, semantic=False, job_meta=meta,
                                           input_hashes=hashes)
         else:

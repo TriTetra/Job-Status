@@ -70,15 +70,37 @@ def boards_in(urls: Iterable[str]) -> list[FoundBoard]:
     return list(dict.fromkeys(b for b in found if b))
 
 
-def company_site(urls: Iterable[str]) -> Optional[str]:
-    """The first link that looks like the company's own website (not a job board or a social site)."""
-    skip = ("ycombinator.com", "greenhouse.io", "lever.co", "ashbyhq.com", "workable.com", "smartrecruiters.com",
-            "personio.de", "personio.com", "recruitee.com", "linkedin.com", "github.com", "twitter.com", "x.com",
-            "google.com", "notion.site", "notion.so", "youtube.com", "medium.com", "wellfound.com", "join.com",
-            "teamtailor.com", "calendly.com", "docs.google.com", "forms.gle", "typeform.com")
+_NOT_COMPANY_SITES = (
+    "ycombinator.com", "greenhouse.io", "lever.co", "ashbyhq.com", "workable.com", "smartrecruiters.com",
+    "personio.de", "personio.com", "recruitee.com", "linkedin.com", "github.com", "twitter.com", "x.com",
+    "google.com", "notion.site", "notion.so", "youtube.com", "medium.com", "wellfound.com", "join.com",
+    "teamtailor.com", "calendly.com", "forms.gle", "typeform.com", "facebook.com", "instagram.com",
+    "arxiv.org", "wikipedia.org", "apple.com", "microsoft.com", "amazon.com", "bit.ly", "glassdoor.com",
+    # job feeds and their CDNs
+    "himalayas.app", "jobicy.com", "remotive.com", "remotive.io", "arbeitnow.com", "eightfold.ai",
+    # personal mail
+    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "proton.me", "protonmail.com", "icloud.com",
+)
+_EMAIL_DOMAIN = re.compile(r"[\w.+-]+@([a-z0-9-]+(?:\.[a-z0-9-]+)+)", re.I)
+
+
+def _company_host(host: str) -> Optional[str]:
+    host = host.lower().removeprefix("www.").strip(".")
+    if host and "." in host and not any(host == s or host.endswith("." + s) for s in _NOT_COMPANY_SITES):
+        return host
+    return None
+
+
+def company_site(urls: Iterable[str], text: Optional[str] = None) -> Optional[str]:
+    """The company's own website: the first link that isn't a job board / social / feed site,
+    else the domain of an e-mail address in the text (jobs@acme.ai → acme.ai)."""
     for url in urls:
-        host = (urlparse(url).hostname or "").lower().removeprefix("www.")
-        if host and "." in host and not any(host == s or host.endswith("." + s) for s in skip):
+        host = _company_host(urlparse(url).hostname or "")
+        if host:
+            return host
+    for domain in _EMAIL_DOMAIN.findall(text or ""):
+        host = _company_host(domain)
+        if host:
             return host
     return None
 

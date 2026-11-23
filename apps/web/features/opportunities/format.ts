@@ -72,6 +72,25 @@ export function hasConflict(o: Opportunity): boolean {
   return (o.decision?.criteria ?? []).some((c) => c.state === "conflict");
 }
 
+/** Agency posts and postings with scam signs: hidden by default ("only reliable employers"). */
+export function isUnreliable(o: Opportunity): boolean {
+  const t = o.explanation?.trust;
+  return Boolean(t && (t.level === "risk" || t.agency));
+}
+
+/** One short word on a card: who is hiring, and how much to trust it. */
+export function trustTag(o: Opportunity): { text: string; color: string } | null {
+  const t = o.explanation?.trust;
+  if (!t) return null;
+  if (t.level === "risk") return { text: "Warning signs", color: "var(--danger)" };
+  if (t.agency) return { text: "Agency", color: "#E6A817" };
+  if (t.level === "caution") return { text: "Old posting", color: "#E6A817" };
+  if (t.level === "verified") return { text: "Direct", color: "var(--success)" };
+  return null;
+}
+
+export const SIZE_LABEL: Record<string, string> = { startup: "Startup", midsize: "Mid-size", large: "Large company", big_tech: "Big tech" };
+
 export const DECISION_LABEL: Partial<Record<Opportunity["user_decision"]["status"], string>> = {
   shortlisted: "Shortlisted",
   applied: "Applied",

@@ -65,7 +65,18 @@ export interface OpportunityExplanation {
   salary_min?: number;
   salary_max?: number;
   salary_currency?: string;
+  /** How far the posting and the company behind it can be trusted (careeros/jobs/trust.py) */
+  trust?: Trust;
+  company_size?: "startup" | "midsize" | "large" | "big_tech" | "unknown";
+  company_domain?: string;
   [key: string]: unknown;
+}
+
+export interface Trust {
+  level: "verified" | "ok" | "caution" | "risk";
+  good: string[];
+  concerns: string[];
+  agency: boolean;
 }
 
 export interface Opportunity {

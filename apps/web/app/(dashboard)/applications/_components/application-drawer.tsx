@@ -71,7 +71,7 @@ export function ApplicationDrawer({ app, onClose, onMove, onChanged, onRemoved }
            style={{ background: "var(--background)", borderColor: "var(--border-strong)", boxShadow: "-30px 0 80px rgba(0,0,0,0.45)" }}>
         <header className="shrink-0 px-6 pt-6 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-start gap-4">
-            <CompanyLogo name={companyOf(app)} companyKey={app.company_key} size={52} />
+            <CompanyLogo name={companyOf(app)} companyKey={app.company_key} jobUrl={app.url} size={52} />
             <div className="min-w-0 flex-1">
               <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{companyOf(app)}</p>
               <h2 id="app-title" className="font-serif-display text-[24px] leading-tight" style={{ color: "var(--text-primary)" }}>{app.title}</h2>

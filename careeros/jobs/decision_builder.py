@@ -106,6 +106,30 @@ def _region_covers(region: Optional[str], preferred: List[str]) -> Optional[bool
     return None
 
 
+def _location_criterion(job: Dict[str, Any], pref_countries: List[str]) -> Dict[str, str]:
+    from careeros.jobs.geo import countries_in, location_match
+
+    remote = job.get("remote") is True or "remote" in str(job.get("location") or "").lower()
+    regions = job.get("remote_regions") or ([job["remote_region"]] if job.get("remote_region") else [])
+    named = countries_in(job.get("location"))
+    if remote and regions:
+        shown = ", ".join(regions[:3]) + (f" +{len(regions) - 3}" if len(regions) > 3 else "")
+        where = f"Remote ({shown})"
+    elif named:
+        where = ", ".join(name for _, name in named[:2])
+    else:
+        where = "Remote" if remote else ""
+    if not pref_countries:
+        detail = f"{where} — set your target markets in Settings" if where else "Not stated"
+        return {"key": "location", "label": "Location", "state": "unknown", "detail": detail}
+    match = location_match(job.get("location"), regions, pref_countries, remote)
+    if match is True:
+        return {"key": "location", "label": "Location", "state": "confirmed", "detail": f"{where} — in your target markets"}
+    if match is False:
+        return {"key": "location", "label": "Location", "state": "conflict", "detail": f"{where} — outside your target markets"}
+    return {"key": "location", "label": "Location", "state": "unknown", "detail": f"{where} — unclear for your markets" if where else "Not stated"}
+
+
 # ── criteria matrix ──────────────────────────────────────────────────────
 
 def build_criteria(job: Dict[str, Any], prefs: Dict[str, Any]) -> List[Dict[str, str]]:
@@ -131,30 +155,15 @@ def build_criteria(job: Dict[str, Any], prefs: Dict[str, Any]) -> List[Dict[str,
     else:
         out.append({"key": "work_style", "label": "Work style", "state": "unknown", "detail": "Not stated"})
 
-    # location — always shown
-    pref_countries = prefs.get("preferred_country_codes") or []
-    c = _country_from_location(job.get("location"))
-    if c:
-        code, name = c
-        if not pref_countries:
-            out.append({"key": "location", "label": "Location", "state": "unknown", "detail": f"{name} — set your target markets in Settings"})
-        elif code in pref_countries:
-            out.append({"key": "location", "label": "Location", "state": "confirmed", "detail": f"{name} — target market"})
-        else:
-            out.append({"key": "location", "label": "Location", "state": "conflict", "detail": f"{name} — outside your target markets"})
-    else:
-        region = job.get("remote_region")
-        covers = _region_covers(region, pref_countries)
-        if covers is True:
-            out.append({"key": "location", "label": "Location", "state": "confirmed", "detail": f"Remote ({region}) — covers your markets"})
-        elif covers is False:
-            out.append({"key": "location", "label": "Location", "state": "conflict", "detail": f"Remote ({region}) — outside your target markets"})
-        else:
-            out.append({"key": "location", "label": "Location", "state": "unknown", "detail": "Not stated"})
+    # location — always shown (careeros/jobs/geo.py, the same rule the score uses)
+    out.append(_location_criterion(job, prefs.get("preferred_country_codes") or []))
 
-    # compensation — shown if either side has a number
-    u_min = prefs.get("salary_min")
-    j_min, j_max = job.get("salary_min"), job.get("salary_max")
+    # compensation — shown if either side has a number (compared in USD a year)
+    from careeros.shared.money import to_usd_year
+
+    u_min = to_usd_year(prefs.get("salary_min"), prefs.get("salary_currency") or "USD") if prefs.get("salary_min") else None
+    j_min = to_usd_year(job.get("salary_min"), job.get("salary_currency") or "USD") if job.get("salary_min") else None
+    j_max = to_usd_year(job.get("salary_max"), job.get("salary_currency") or "USD") if job.get("salary_max") else None
     has_job_salary = j_min is not None or j_max is not None
     has_user_range = u_min is not None or prefs.get("salary_max") is not None
     if has_job_salary or has_user_range:

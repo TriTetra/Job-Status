@@ -40,6 +40,7 @@ class UserPreferences:
     preferred_locations: List[str] = field(default_factory=list)
     min_salary: Optional[int] = None
     max_salary: Optional[int] = None
+    salary_currency: str = "USD"
     preferred_company_sizes: List[str] = field(default_factory=lambda: ["startup", "midsize"])
     preferred_industries: List[str] = field(default_factory=list)
     work_visa_required: bool = True

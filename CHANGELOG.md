@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Scoring v7: Trust, Location, Size, Currency + Small-Company Logos | Score now uses your target countries, company size from the whole board, salaries in any currency, skill demand from real postings; employer trust check (agency / ghost / scam) with "Only reliable employers" on by default; logos for small companies | ✅ Tamam | 2026-11-23 |
 | Telegram Notifications | Connect Telegram in Settings → Connections (one tap in the bot); new strong matches and follow-up reminders after each refresh, each job once | ✅ Tamam | 2026-11-23 |
 | Eightfold Reader + Vodafone Türkiye | Big-company career sites on Eightfold, read through the search their robots.txt allows; Vodafone Türkiye added (Turkey jobs only); other big TR portals checked and why they can't be read | ✅ Tamam | 2026-11-23 |
 | Türkiye Sources | 15 Turkish tech / fintech / games boards (Trendyol, Insider One, Dream Games, Midas, Peak, Codeway…), Turkish title terms, Himalayas search for jobs open to Turkey, full remote country lists kept | ✅ Tamam | 2026-11-23 |
@@ -113,6 +114,38 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Scoring v7 + Employer Trust + Small-Company Logos] — 2026-11-23 — Scores that fit your search, only reliable employers ✅
+
+**Neden:** Kullanıcı: puanlama düzgün çalışsın; küçük / orta / startup şirketlerin ne kadar güvenilir ve iyi olduğu hesaba katılsın, yalnız güvenilir olanlar gelsin; Avrupa ve Türkiye'den gelen küçük şirketlerin logoları da görünsün.
+
+### Puanlama (SCORER_VERSION 7 — herkes ilk taramada yeniden puanlanır)
+- **Ülke tercihin artık puana giriyor** (önce yalnız "çakışma" olarak işaretleniyordu): hedef ülkede ya da oraya açık remote ×1.15, açıkça dışında ×0.45, belirsiz ×0.9 (kabul şansına). Yeni `careeros/jobs/geo.py`: şehirler (İstanbul, Berlin, Zürih…), Türkiye / Türkiye, "Open to candidates in: …" listeleri, Europe / EMEA (EMEA Türkiye'yi kapsar, Europe kapsamaz), "anywhere". Okuyucudaki "Your priorities → Location" aynı kuralı kullanıyor.
+- **Şirket büyüklüğü veriden:** elle yazılmış listede yoksa şirket panosundaki toplam ilan sayısı (son okuma, başlık filtresinden önce): ≤25 startup, ≤200 orta, üstü büyük; Hacker News ilanları startup. Startup'lar artık "bilinmiyor" (×0.6) değil "startup" (×1.2) sayılıyor.
+- **Maaş her para biriminde:** `careeros/shared/money.py` ile yıllık USD'ye çevrilip (EUR, GBP, CHF, TRY, PLN…) senin minimumunla (kendi para biriminde) karşılaştırılıyor; minimum yoksa $60k–$240k ölçeği (eskiden sabit $100k ve kur yoktu). Kriterlerdeki "Compensation" da aynı.
+- **Pazar talebi gerçek ilanlardan:** sabit tablo yerine, sana uyan açık ilanların (≥100) hangi becerileri ne sıklıkla istediği. Pazar belirgin değişince profil parmak izi değişiyor ve yeniden puanlanıyor.
+
+### İşveren güvenilirliği (`careeros/jobs/trust.py`)
+- İlanın kendisinden okunan işaretler (Glassdoor / Kununu otomatik erişime izin vermiyor):
+  - **+** işverenin kendi işe alım sistemi (ATS panosu), şirket sitesi biliniyor, maaş yazılı, son bir ayda açılmış.
+  - **Dikkat:** işe alım ajansı (ad ya da "on behalf of our client", "für unseren Kunden", "müşterimiz için"…), 4 aydan uzun açık ("hayalet ilan" olabilir), kişisel e-posta ile iletişim.
+  - **Risk:** WhatsApp / Telegram'dan başvuru, ücret / depozito istemek, "günde $X kazan", kripto / forex "trader".
+- Seviyeler: **verified** (doğrudan işveren) · ok · caution · risk. Puana etkisi: verified ×1.05, caution ×0.75, risk ×0.2 ve her zaman SKIP.
+- **Opportunities:** kartta "· Direct" (yeşil) / "· Agency" / "· Old posting" / "· Warning signs"; okuyucuda **About this employer** (iyi yanlar ve kaygılar); **"Only reliable employers"** varsayılan açık: ajans ilanlarını ve uyarı işaretli ilanları gizliyor (kaç tanesi gizlendi yazıyor). Büyüklük çipi (Startup / Mid-size / Large company).
+
+### Küçük şirketlerin logoları
+- `jobs.company_domain` ve `jobs.company_logo` (migration `job_company_domain_020`): şirket sitesi panodan, ya da ilandaki linklerden ve e-posta adreslerinden (jobs@acme.ai → acme.ai; iş sitesi / sosyal / kişisel e-posta sayılmıyor); akışların verdiği logo görseli.
+- Yeni `GET /api/companies/logo-job?url=` — yalnız kayıtlı bir işin şirketi için: pano logosu → şirket sitesi ikonu → akışın logosu (yalnız Himalayas / Jobicy / Remotive görsel sunucularından; açık proxy değil). Keşfedilen panonun sitesi yoksa ilanlarının en sık gösterdiği site kullanılıyor.
+- `CompanyLogo` önce pano logosunu, olmazsa işin logosunu, o da yoksa harfleri gösteriyor (Opportunities, okuyucu, Briefing, Applications).
+
+### Hata düzeltmesi
+- Arbeitnow sayfalanırken değişince aynı işi iki kez verebiliyor → akış yazımı tümden düşüyordu; artık URL başına tek satır.
+
+### Doğrulama
+- Atılabilir Postgres'te: migration 020; akışlardan 852 açık ilanın 401'inde şirket sitesi, 355'inde logo; v7 ile 323 eşleşme yeniden puanlandı: 67 verified, 36 caution (8 ajans); konum kriteri 141 hedefte / 89 dışında. Tarayıcıda: "Only reliable employers (8 hidden)", kartta "Direct", ajans ilanında "About this employer", küçük şirket logoları (Reducto keşfedilen siteden, Northflank Jobicy logosundan).
+- 649 test (yeni `test_scoring_v7.py`: konum eşleşmesi, güven seviyeleri ve dolandırıcılık işaretleri, kur çevirisi, puan faktörleri, şirket büyüklüğü, talep, logo güvenliği), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

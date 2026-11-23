@@ -91,6 +91,8 @@ def to_row(p: FeedPosting, extract: TextExtractor) -> dict:
         "ats": None,
         "external_id": p.external_id[:128],
         "application_url": _http(p.apply_url) or p.url,
+        "company_domain": company_site(p.links, p.description),
+        "company_logo": _http(p.logo_url),
         "salary_min": low,
         "salary_max": high,
         "salary_currency": currency,
@@ -168,7 +170,7 @@ def remember_boards(found: dict[FoundBoard, FeedPosting], now: datetime, limit: 
             s.add(DiscoveredBoard(
                 key=key, name=post.company[:256] if post.company != "Unknown" else fb.board[:256],
                 ats=fb.ats, board=fb.board, host=fb.host,
-                domain=company_site(post.links) or "", source=post.source, source_url=post.url[:2048],
+                domain=company_site(post.links, post.description) or "", source=post.source, source_url=post.url[:2048],
                 discovered_at=now, last_linked_at=now, active=True, failures=0,
             ))
             existing[ident] = None  # type: ignore[assignment]  # don't add twice in one run
@@ -214,10 +216,13 @@ def sync_feeds(names: Optional[Iterable[str]] = None, *, dry_run: bool = False,
             r.fetched = len(postings)
             kept = [p for p in postings if _http(p.url) and p.title and titles.keeps(p.title)]
             r.kept = len(kept)
-            rows = []
+            rows, urls = [], set()
             for p in kept:
                 for fb in boards_in([*p.links, p.apply_url or ""]):
                     found.setdefault(fb, p)
+                if p.url in urls:
+                    continue  # a feed paged while it changed can list a job twice: one row per URL
+                urls.add(p.url)
                 if dedupe_key(p.company, p.title) in on_boards:
                     r.duplicates += 1
                     continue

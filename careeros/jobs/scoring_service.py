@@ -46,6 +46,11 @@ class ScoringService:
         self.user_id = user_id
         self._scorer = OpportunityScorer(matcher=None)
 
+    def set_market_demand(self, demand: Dict[str, float]) -> None:
+        """Skill demand read from the current job corpus (scan.market_demand); empty keeps the built-in table."""
+        if demand:
+            self._scorer.skill_demand = demand
+
     def score_jobs(
         self,
         jobs: List[Job],
@@ -178,7 +183,8 @@ class ScoringService:
                     # Root-level fields the UI reads directly
                     for key in ("source", "remote_region", "application_url", "company_key", "posted_at",
                                 "summary", "extracted_by", "preferred_skills",
-                                "salary_min", "salary_max", "salary_currency"):
+                                "salary_min", "salary_max", "salary_currency",
+                                "trust", "company_size", "company_domain", "remote_regions"):
                         if job_meta_data.get(key) and job_meta_data[key] != "unknown":
                             explanation[key] = job_meta_data[key]
 
@@ -216,6 +222,7 @@ class ScoringService:
                     "requires_sponsorship": p.requires_sponsorship,
                     "salary_min": p.salary_min,
                     "salary_max": p.salary_max,
+                    "salary_currency": p.salary_currency or "USD",
                 }
         except Exception:
             return {}

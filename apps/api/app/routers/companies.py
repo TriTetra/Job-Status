@@ -35,14 +35,24 @@ def companies_hiring_now(
     return [CompanyResponse.model_validate(c) for c in repo.get_hiring_now(limit=limit)]
 
 
-@router.get("/logo/{key}", summary="A board company's logo (cached)")
-def company_logo(key: str, user_id: str = Depends(get_user_id)):
-    """The logo image, or 404 (the web then shows a monogram). Browsers keep it for a week."""
-    found = logos.logo(key)
+def _image(found) -> Response:
     if found is None:
         raise HTTPException(status_code=404, detail="No logo")
     data, ctype = found
     return Response(content=data, media_type=ctype, headers={"Cache-Control": "private, max-age=604800"})
+
+
+@router.get("/logo/{key}", summary="A board company's logo (cached)")
+def company_logo(key: str, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """The logo image, or 404 (the web then shows a monogram). Browsers keep it for a week."""
+    return _image(logos.logo(key, session=session))
+
+
+@router.get("/logo-job", summary="The logo of the company behind a stored job (cached)")
+def job_logo(url: str = Query(..., max_length=2048), user_id: str = Depends(get_user_id),
+             session: Session = Depends(get_db_session)):
+    """Small companies too: board logo, else the employer's website icon, else the feed's logo."""
+    return _image(logos.logo_for_job(session, url))
 
 
 @router.get("/boards", summary="Companies from the job boards, with this user's view")

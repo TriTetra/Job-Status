@@ -5,8 +5,10 @@ import { cn } from "@/lib/utils";
 
 interface CompanyLogoProps {
   name: string;
-  /** Board key (infra/config/companies.yaml); without one the monogram shows */
+  /** Board key (companies.yaml or a discovered board) */
   companyKey?: string | null;
+  /** A stored job's URL: finds the logo of small companies too (website icon or the feed's logo) */
+  jobUrl?: string | null;
   size?: number;
   className?: string;
 }
@@ -17,15 +19,20 @@ function initials(name: string): string {
 }
 
 /**
- * The company's logo on a light tile (dark marks stay visible on the dark UI);
- * a monogram when there is no logo.
+ * The company's logo on a light tile (dark marks stay visible on the dark UI). Tries the
+ * board logo, then the job's company logo, then shows a monogram.
  */
-export function CompanyLogo({ name, companyKey, size = 36, className }: CompanyLogoProps) {
-  const [failed, setFailed] = useState(false);
+export function CompanyLogo({ name, companyKey, jobUrl, size = 36, className }: CompanyLogoProps) {
+  const sources = [
+    companyKey ? `/api/companies/logo/${encodeURIComponent(companyKey)}` : null,
+    jobUrl ? `/api/companies/logo-job?url=${encodeURIComponent(jobUrl)}` : null,
+  ].filter((s): s is string => Boolean(s));
+  const [attempt, setAttempt] = useState(0);
   const radius = Math.round(size * 0.24);
   const box = { width: size, height: size, borderRadius: radius };
+  const src = sources[attempt];
 
-  if (!companyKey || failed) {
+  if (!src) {
     return (
       <span
         aria-hidden="true"
@@ -41,12 +48,13 @@ export function CompanyLogo({ name, companyKey, size = 36, className }: CompanyL
           style={{ ...box, background: "#F6F3EC" }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- small same-origin icon, no optimisation needed */}
       <img
-        src={`/api/companies/logo/${encodeURIComponent(companyKey)}`}
+        key={src}
+        src={src}
         alt=""
         width={Math.round(size * 0.7)}
         height={Math.round(size * 0.7)}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => setAttempt((a) => a + 1)}
         style={{ width: "70%", height: "70%", objectFit: "contain" }}
       />
     </span>

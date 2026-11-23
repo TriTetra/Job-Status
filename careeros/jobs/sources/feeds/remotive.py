@@ -30,4 +30,5 @@ def _posting(j: dict) -> FeedPosting:
         remote=True,
         employment_type=(j.get("job_type") or None),
         links=html_links(j.get("description")),
+        logo_url=j.get("company_logo") or j.get("company_logo_url") or None,
     )

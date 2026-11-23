@@ -190,7 +190,7 @@ export function ApplicationsView({ initialApps }: { initialApps: Application[] }
                   <button onClick={() => setOpenUrl(a.url)}
                           className="w-full text-left grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-4 py-3 border-b -mx-3 px-3 rounded-md hover:bg-[rgba(44,59,77,0.5)] transition-colors"
                           style={{ borderColor: "var(--border)" }}>
-                    <CompanyLogo name={companyOf(a)} companyKey={a.company_key} size={36} />
+                    <CompanyLogo name={companyOf(a)} companyKey={a.company_key} jobUrl={a.url} size={36} />
                     <span className="min-w-0">
                       <span className="block text-sm truncate" style={{ color: "var(--text-primary)" }}>{a.title}</span>
                       <span className="block text-xs truncate" style={{ color: "var(--text-muted)" }}>{companyOf(a)}</span>
@@ -234,7 +234,7 @@ function Card({ app, dragging, onOpen, onNext, nextLabel, onDragStart, onDragEnd
       style={{ background: "var(--surface)", borderColor: app.stale ? "rgba(201,106,90,0.5)" : "var(--border)" }}
     >
       <button onClick={onOpen} className="w-full text-left p-3 pb-2 grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-3">
-        <CompanyLogo name={companyOf(app)} companyKey={app.company_key} size={32} className="mt-0.5" />
+        <CompanyLogo name={companyOf(app)} companyKey={app.company_key} jobUrl={app.url} size={32} className="mt-0.5" />
         <span className="min-w-0">
           <span className="block text-sm leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>{app.title}</span>
           <span className="block text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>

@@ -8,7 +8,7 @@ import { CompanyLogo } from "@/components/shared/company-logo";
 import { ScoreRing } from "./score-ring";
 import { tierOf } from "@/features/opportunities/tier";
 import {
-  CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, TIER_COLOR, TIER_LABEL,
+  CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, SIZE_LABEL, TIER_COLOR, TIER_LABEL,
   chanceOf, companyOf, postedAgo, salaryOf, whereOf,
 } from "@/features/opportunities/format";
 import { getPosting, type Posting } from "@/features/opportunities/posting";
@@ -110,7 +110,9 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
     f?.min_years ? `${f.min_years}+ yrs` : null,
     f?.visa === "yes" ? "Sponsors visa" : f?.visa === "no" ? "No visa sponsorship" : null,
     postedAgo(opp) ? `Posted ${postedAgo(opp)}` : null,
+    ex.company_size && SIZE_LABEL[ex.company_size] ? SIZE_LABEL[ex.company_size] : null,
   ].filter(Boolean) as string[];
+  const trust = ex.trust;
 
   const explain = async () => {
     setExplaining(true);
@@ -136,7 +138,7 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
       {/* Masthead */}
       <header className="px-8 pt-7 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-start gap-4">
-          <CompanyLogo name={company} companyKey={companyKey} size={52} />
+          <CompanyLogo name={company} companyKey={companyKey} jobUrl={opp.url} size={52} />
           <div className="min-w-0 flex-1">
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               {company}
@@ -288,6 +290,26 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
                     </li>
                   );
                 })}
+              </ul>
+            </section>
+          )}
+
+          {trust && (trust.good.length > 0 || trust.concerns.length > 0) && (
+            <section>
+              <p className={LABEL} style={LABEL_STYLE}>About this employer</p>
+              <ul className="mt-2 space-y-2">
+                {trust.concerns.map((c) => (
+                  <li key={c} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-2 text-xs leading-relaxed">
+                    <span className="pt-0.5"><CriterionIcon state="conflict" /></span>
+                    <span style={{ color: trust.level === "risk" ? "var(--danger)" : "var(--text-secondary)" }}>{c}</span>
+                  </li>
+                ))}
+                {trust.good.map((g) => (
+                  <li key={g} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-2 text-xs leading-relaxed">
+                    <span className="pt-0.5"><CriterionIcon state="confirmed" /></span>
+                    <span style={{ color: "var(--text-secondary)" }}>{g}</span>
+                  </li>
+                ))}
               </ul>
             </section>
           )}

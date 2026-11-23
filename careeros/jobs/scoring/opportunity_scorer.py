@@ -3,6 +3,7 @@ Opportunity scoring with acceptance probability and career value.
 """
 
 from typing import List, Dict, Optional
+from careeros.shared.money import to_usd_year
 import numpy as np
 
 from careeros.identity.domain.profile import UserProfile
@@ -12,6 +13,10 @@ from careeros.knowledge.skill_names import key as skill_key
 
 
 FIT_CORE_SKILLS = 6
+
+
+# Acceptance multiplier by posting trust (careeros/jobs/trust.py)
+TRUST_FACTOR = {"verified": 1.05, "ok": 1.0, "caution": 0.75, "risk": 0.2, "unknown": 1.0}
 
 
 class OpportunityScorer:
@@ -98,7 +103,7 @@ class OpportunityScorer:
 
         # Recommendation
         recommendation = self._generate_recommendation(
-            career_score, acceptance, fit
+            career_score, acceptance, fit, job.trust
         )
 
         return OpportunityScore(
@@ -179,7 +184,14 @@ class OpportunityScorer:
         competition = self._estimate_competition(job)
         prob *= competition
 
-        # Factor 6: Seniority mismatch
+        # Factor 6: Where — in (or open to) a country the user targets
+        if user.preferences.preferred_locations:
+            prob *= {True: 1.15, False: 0.45}.get(job.location_match, 0.9)
+
+        # Factor 7: How trustworthy the posting is (agency, ghost job, scam signs)
+        prob *= TRUST_FACTOR.get(job.trust, 1.0)
+
+        # Factor 8: Seniority mismatch
         if "senior" in job.title.lower() and user.years_experience < 5:
             prob *= 0.6  # Harder to get senior roles early
         elif "junior" in job.title.lower() and user.years_experience > 4:
@@ -305,11 +317,17 @@ class OpportunityScorer:
             skill_growth = min(len(missing) / 5, 0.3)  # Up to +0.3
             value += skill_growth
 
-        # Factor 2: Salary
-        if job.salary_min:
-            # Normalize to 0-0.3 scale (100k = 0, 300k = 0.3)
-            salary_score = min((job.salary_min - 100000) / 666666, 0.3)
-            value += max(salary_score, 0)
+        # Factor 2: Salary, compared in USD a year whatever the posting's currency
+        job_usd = to_usd_year(job.salary_min or job.salary_max, job.salary_currency)
+        if job_usd:
+            p = user.preferences
+            floor = to_usd_year(p.min_salary, p.salary_currency) if p.min_salary else None
+            if floor:
+                # Above your minimum adds up to +0.25; below it costs a little
+                value += max(min((job_usd - floor) / floor * 0.5, 0.25), -0.1)
+            else:
+                # No minimum set: $60k = 0 … $240k = +0.3
+                value += max(min((job_usd - 60000) / 600000, 0.3), 0)
 
         # Factor 3: Company prestige
         prestige = {
@@ -379,7 +397,8 @@ class OpportunityScorer:
     def _generate_recommendation(self,
                                  career_score: float,
                                  acceptance: float,
-                                 fit: float) -> str:
+                                 fit: float,
+                                 trust: str = "unknown") -> str:
         """
         Generate application recommendation.
 
@@ -395,6 +414,9 @@ class OpportunityScorer:
         Returns:
             Recommendation string
         """
+        if trust == "risk":
+            return "SKIP - Posting shows warning signs"
+
         if career_score < 40 or acceptance < 0.05:
             return "SKIP - Better opportunities available"
 

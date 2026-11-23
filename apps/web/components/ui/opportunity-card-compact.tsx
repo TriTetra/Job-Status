@@ -6,7 +6,7 @@ import { feedLabel } from "@/features/opportunities/feeds";
 import { tierOf } from "@/features/opportunities/tier";
 import {
   CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, TIER_COLOR,
-  chanceOf, companyOf, postedAgo, salaryOf, whereOf,
+  chanceOf, companyOf, postedAgo, salaryOf, trustTag, whereOf,
 } from "@/features/opportunities/format";
 import type { Opportunity } from "@/features/opportunities/types";
 
@@ -25,6 +25,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
   const status = DECISION_LABEL[opp.user_decision?.status ?? "unreviewed"];
   const age = postedAgo(opp);
   const via = feedLabel(opp.explanation?.source);
+  const tag = trustTag(opp);
   const key = typeof opp.explanation?.company_key === "string" ? opp.explanation.company_key : null;
 
   return (
@@ -37,7 +38,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
       )}
     >
       {selected && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: "var(--accent)" }} />}
-      <CompanyLogo name={company} companyKey={key} size={40} className="mt-0.5" />
+      <CompanyLogo name={company} companyKey={key} jobUrl={opp.url} size={40} className="mt-0.5" />
       <div className="min-w-0">
         <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>
           {opp.explanation?.title ?? "Open role"}
@@ -45,6 +46,7 @@ export function OpportunityCardCompact({ opp, selected, onClick }: OpportunityCa
         <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>
           {company}{age ? <span style={{ color: "var(--text-muted)" }}> · {age}</span> : null}
           {via ? <span style={{ color: "var(--text-muted)" }}> · via {via}</span> : null}
+          {tag ? <span style={{ color: tag.color }}> · {tag.text}</span> : null}
         </p>
         {facts && <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{facts}</p>}
       </div>

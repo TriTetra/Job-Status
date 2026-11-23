@@ -44,4 +44,5 @@ def _posting(j: dict) -> FeedPosting:
         employment_type=", ".join(kinds)[:64] if isinstance(kinds, list) else (kinds or None),
         salary_min=low, salary_max=high, salary_currency=cur,
         links=html_links(j.get("jobDescription")),
+        logo_url=j.get("companyLogo") or None,
     )

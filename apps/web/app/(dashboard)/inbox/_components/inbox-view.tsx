@@ -10,7 +10,7 @@ import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel
 import { ScanOverlay } from "@/components/ui/scan-overlay";
 import { opportunitiesApi } from "@/features/opportunities/api";
 import { toScanJob } from "@/features/opportunities/tier";
-import { byRank, companyOf, hasConflict, inView, rulesSentence, type View } from "@/features/opportunities/format";
+import { byRank, companyOf, hasConflict, isUnreliable, inView, rulesSentence, type View } from "@/features/opportunities/format";
 import type { InboxData, Opportunity, ScanJob } from "@/features/opportunities/types";
 
 const VIEWS: Array<{ id: View; label: string }> = [
@@ -43,6 +43,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
   });
   const [query, setQuery] = useState("");
   const [hideConflicts, setHideConflicts] = useState(true);
+  const [onlyReliable, setOnlyReliable] = useState(true);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(
     () => initial.jobs.find((j) => j.url === wantedJob)?.url ?? null,
   );
@@ -110,14 +111,21 @@ export function InboxView({ initial }: { initial: InboxData }) {
     [jobs, view, filtersConflicts],
   );
 
+  const filtersUnreliable = onlyReliable && view !== "skipped" && view !== "shortlisted";
+  const unreliableHidden = useMemo(
+    () => (filtersUnreliable ? jobs.filter((j) => inView(j, view) && isUnreliable(j)).length : 0),
+    [jobs, view, filtersUnreliable],
+  );
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return jobs
       .filter((j) => inView(j, view))
       .filter((j) => !(filtersConflicts && hasConflict(j)))
+      .filter((j) => !(filtersUnreliable && isUnreliable(j)))
       .filter((j) => !q || `${companyOf(j)} ${j.explanation?.title ?? ""}`.toLowerCase().includes(q))
       .sort(byRank);
-  }, [jobs, view, query, filtersConflicts]);
+  }, [jobs, view, query, filtersConflicts, filtersUnreliable]);
 
   const selected = shown.find((j) => j.url === selectedUrl) ?? shown[0] ?? null;
 
@@ -218,6 +226,14 @@ export function InboxView({ initial }: { initial: InboxData }) {
             <input type="checkbox" checked={hideConflicts} onChange={(e) => setHideConflicts(e.target.checked)}
                    className="accent-[var(--accent)]" />
             Hide conflicts with my priorities{conflictsHidden ? ` (${conflictsHidden})` : ""}
+          </label>
+        )}
+        {view !== "skipped" && view !== "shortlisted" && (
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: "var(--text-muted)" }}
+                 title="Hides recruiting-agency posts and postings with scam warning signs">
+            <input type="checkbox" checked={onlyReliable} onChange={(e) => setOnlyReliable(e.target.checked)}
+                   className="accent-[var(--accent)]" />
+            Only reliable employers{unreliableHidden ? ` (${unreliableHidden} hidden)` : ""}
           </label>
         )}
       </div>

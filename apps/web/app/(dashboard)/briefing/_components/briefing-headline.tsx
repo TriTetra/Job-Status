@@ -39,7 +39,7 @@ export function BriefingHeadline({ h }: { h: Headline }) {
         Top pick
       </p>
       <div className="mt-4 flex items-start gap-5">
-        <CompanyLogo name={h.company} companyKey={h.companyKey} size={60} />
+        <CompanyLogo name={h.company} companyKey={h.companyKey} jobUrl={h.url} size={60} />
         <div className="min-w-0 flex-1">
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{h.company}</p>
           <h2 className="font-serif-display text-[28px] xl:text-[32px] leading-tight" style={{ color: "var(--text-primary)" }}>{h.title}</h2>

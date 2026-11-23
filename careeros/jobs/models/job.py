@@ -37,6 +37,8 @@ class Job(Base, TimestampMixin):
     ats: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     external_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     application_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    company_domain: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)   # employer website (logo)
+    company_logo: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)    # logo URL a feed provides
 
     # External scanner score (ApplyPilot imports only)
     fit_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
