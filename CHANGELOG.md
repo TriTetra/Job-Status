@@ -154,6 +154,7 @@ Sıralama: en yeniden en eskiye.
 - Atılabilir DB'de migration ve tarayıcı: kuyruk (5 iş, şirket başına bir), kit hazırlama (LLM anahtarı olmadığı için taslak yok, "kendin yaz"), Briefing "Today" bölümü; API'de hata yok.
 - 753 test (yeni `test_apply_queue.py`: 20 test, Telegram günlük rapor testi), ruff, tsc, eslint, `next build` temiz.
 - Not: kuyruk boyutu (5) ve eşik (65) şimdilik sabit; Settings'e taşınabilir.
+- **Yayında:** `0844e71` push edildi, Coolify'da dağıtıldı (Finished, 1 dk 02 sn); API açılışta `apply_kits_022` migration'ını uyguladı, hatasız açıldı. İlk döngüde bugünün 5 kiti otomatik hazırlandı (12:10–12:11): Clera, Alan, Squid Support, Theodo, Intel; hepsi standart form (bugünkülerin hiçbiri Greenhouse değil), hepsinde LLM taslakları. Taslaklar kişinin kanıtına dayanıyor (Vefa Havacılık, KOU STORM UAV, IMMUNO-TCR / TEKNOFEST, eBPF / Tetragon yayını) ve dürüst bir eksik cümlesiyle bitiyor; bir kayma görüldü: Alan notunda gRPC ve PostgreSQL Boenstitü deneyimine bağlanmış (kanıtta gRPC Sentropy projesinde). Taslaklar göndermeden önce okunmalı.
 
 ---
 
