@@ -37,7 +37,7 @@ EXPECTED_PATHS = {
     "/api/mail", "/api/mail/connect", "/api/mail/check", "/api/mail/signals/{signal_id}",
     "/api/companies/employers", "/api/companies/logo-domain",
     "/api/settings/llm-usage",
-    "/api/market/refresh", "/api/market/refresh/{job_id}/status", "/api/market/signals", "/api/market/jobs",
+    "/api/market/refresh", "/api/market/refresh/{job_id}/status", "/api/market/signals", "/api/market/jobs", "/api/market/pay",
     "/api/market/summary", "/api/market/trend/{skill}",
     "/api/oauth/github", "/api/oauth/github/authorize", "/api/oauth/github/callback",
     "/api/oauth/github/status", "/api/oauth/github/sync",

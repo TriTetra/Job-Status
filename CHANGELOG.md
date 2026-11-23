@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.4 Maaş Verisi (Adzuna'sız) | Market'te ülke × rol ailesi maaşları, yerel para biriminde, yalnız işverenin yazdığı maaştan, kaç ilana dayandığı yazılı; doğrulanmış resmî rakam (BLS) kaynak bağlantısıyla. Puandaki maaş referansı da para birimi tahmin edilen tutarları artık kullanmıyor (scorer 8.4). UK / DE resmî rakamları okunamadı, eklenmedi | ✅ Kısmen | 2026-11-23 |
 | 1.8 Takip Mesajları | 14. günde ilk takip, 21. günde son kontrol (ilkinden en az bir hafta sonra), sonra bir daha sorulmaz. Taslak yalnız kanıttan (kit'in kanıt kontrolüyle) ya da sade şablondan; kişi gönderir, "I sent it" ile işaretler, "Don't follow up" ile durdurur. Telegram hatırlatması doğrudan taslağı açar | ✅ Tamam | 2026-11-23 |
 | 1.7 Sonucu E-postadan Görme | Settings → Connections → Mailbox: uygulama şifresiyle IMAP (salt okunur, şifre şifreli). Yalnız başvurulan şirketlerin e-postaları okunur; LLM red / mülakat / teklif / bilgi isteği / alındı diye sınıflandırır; eminse başvuruyu ilerletir (OutcomeObserved, agent:mail), değilse Applications'ta sorar. "Disconnect and forget" her şeyi siler. Migration 024 | ✅ Tamam | 2026-11-23 |
 | Deploy: eklenen ilan listede kalır | 9c70841 canlıda (Coolify 27 sn), API yanıt veriyor (toplam 603 eşleşme). Adzuna: kullanıcı ücretli plan seçmedi, hesap 25 deneme çağrısında; anahtar girilirse ADZUNA_MAX_CALLS=5 önerildi | ✅ Canlı | 2026-11-23 |
@@ -135,6 +136,48 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.4 Maaş Verisi] — 2026-11-23 — Kapsam, kısmen ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.4. Plan Adzuna'nın maaş dağılımına dayanıyordu; kullanıcı ücretli Adzuna planını almadı. Market'teki tek "median starting pay" rakamı en yaygın para birimindeydi, bu da ABD ilanları demekti. Puandaki maaş referansı da aynı havuzdan geliyordu.
+
+### Önce ölçüldü
+- Atılabilir DB'de açık 1.383 ilanın 267'sinde maaş var; 221'i USD, 19'u EUR, 11'i GBP, TRY hiç yok. Yalnız ilanlarla Berlin, Londra ya da İstanbul medyanı güvenilir değil.
+- **Bulunan veri hatası:** anahtar kelime çıkarıcısı metinden okuduğu tutarı para birimini bilmeden **"USD"** diye kaydediyor (`extract.salary` → `currency = "USD"`). Almanya'daki bir ilanın "USD" maaşı aslında euro olabilir.
+- **Resmî kaynaklar:**
+  - **ABD BLS:** yazılım geliştirici medyanı Mayıs 2025'te $135,980. BLS'nin kendi sayfasından okundu.
+  - **Birleşik Krallık ONS ASHE (SOC 2134):** rakam yalnız Excel indirmesinde, okunamadı.
+  - **Almanya (Entgeltatlas):** site bir JavaScript uygulaması, rakam okunamadı.
+  - **Eurostat SES 2022:** meslekler yalnız tek haneli ISCO grubunda ("Professionals"), yazılım için fazla kaba.
+  - Mevcut tohum dosyalarındaki maaşlar (`infra/seeds/v1/salaries`) "Glassdoor, Levels.fyi" kaynaklı yazıyor ama doğrulanamıyor; **kullanılmadı**.
+
+### Yeni: `careeros/market/pay.py`
+- **Yalnız işverenin yazdığı maaş:**
+  - LLM'in okuması (para birimi ve dönem kayıtlı), ya da
+  - ilanın kendi maaş alanları, ancak para birimi ilanın ülkesinin para birimiyse. Almanya'daki bir ilanda "USD" görünüyorsa güvenilmez.
+  - Yalnız yıllık tutarlar; aralığın ortası alınır; makul olmayan tutarlar (saatlik, yazım hatası) atılır.
+- **Ülke × rol ailesi:** ML / AI, Data, Full stack, Frontend, Mobile, DevOps / Platform, Security, Backend, Software. Teknik olmayan başlıklar (satış, hukuk, İK, mühendislikte makine ve inşaat) dışarıda. Birden çok ülkeye açık remote ilanlar tek bir ülkeye yazılmaz.
+- **Son 180 gün**, ortak ilanlar (kişinin kendi eklediği ilanlar hariç). Medyan için en az 5, çeyrekler için en az 8 ilan. Her aile için örnek ilan bağlantıları da dönüyor.
+- **Resmî rakamlar (`infra/config/pay_official.yaml`):** yalnız yayıncının kendi sayfasından okunanlar; her satırda yayın, dönem, kapsadığı kitle ve bağlantı var. Şimdilik ABD (BLS). UK ve DE'nin neden eklenmediği dosyada yazıyor.
+- **API:** `GET /api/market/pay`.
+
+### Puan: maaş referansı (`SCORER_VERSION` 8.4)
+- `pool_medians` (tarama) ve Search'teki maaş referansı artık yalnız işverenin yazdığı maaştan hesaplanıyor; para birimi tahmin edilen tutarlar girmiyor. Sürüm değiştiği için bir sonraki taramada tüm ilanlar yeniden puanlanacak (LLM gerekmez).
+
+### Market sayfası
+- **Üst rakam:** "median stated pay · <ülke>", hedef ülkelerin ilkinde yeterli ilan varsa o ülkenin para biriminde; yoksa eski gösterim.
+- **Yeni bölüm "What tech roles pay · yearly, as stated":** her ülke için bayrak, medyan, orta yarı ve ilan sayısı; rol ailesine göre satırlar; resmî rakam satırı ve kaynağına bağlantı. Hedef ülkeler önce geliyor; yetersiz veride "fewer than 5 to say" yazıyor. Altta, ilanlardaki maaşın neden mesleğin genelinden yüksek göründüğünü açıklayan bir not var.
+
+### Doğrulama
+- 812 test (yeni: rol aileleri, para birimi kuralı ("USD" tahmini, LLM okuması, aylık, saatlik, eski facts), en az ilan sayısı, iki ülkeli remote ilanın atlanması, teknik olmayan ilan, resmî rakamın kaynağı, puan referansının tahminleri dışlaması), ruff, tsc, eslint, `next build` temiz.
+- Önizleme (atılabilir DB): üst rakam "£121K median stated pay · United Kingdom, 8 tech postings". Almanya ve İspanya "fewer than 5 to say". ABD: ML / AI $188K (57), Software $218K (27), Backend $205K (15), Data $174K (14); resmî BLS $136K bağlantılı. Konsolda hata yok.
+
+### Kalan
+- **UK ONS ASHE rakamı:** ONS'nin Excel dosyasının indirilip okunması gerekiyor (dosya indirme kullanıcı onayı ister).
+- **Almanya için resmî rakam:** Entgeltatlas'ın okunabilir resmî bir kaynağı ya da Destatis gerekiyor.
+- **Berlin / Londra / İstanbul medyanları:** canlıda daha çok ilan var ama TL maaş yazan ilan çok az; İstanbul için güvenilir medyan şimdilik yok.
 
 ---
 

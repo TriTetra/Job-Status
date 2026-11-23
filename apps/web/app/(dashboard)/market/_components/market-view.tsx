@@ -6,7 +6,9 @@ import { ArrowUpRight, Check, RefreshCw } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { CompanyLogo } from "@/components/shared/company-logo";
 import { loadMarket } from "@/features/market/snapshot";
-import type { MarketData, OwnMarket, Period } from "@/features/market/types";
+import type { MarketData, OwnMarket, PayByCountry, Period } from "@/features/market/types";
+import { countryName } from "@/components/ui/place-badge";
+import { PayByCountrySection } from "./pay-by-country";
 
 const LABEL = "text-[11px] uppercase tracking-[0.08em]";
 const LABEL_STYLE = { color: "var(--text-muted)", fontFamily: "var(--font-display)" } as const;
@@ -20,6 +22,12 @@ function money(currency: string, n: number): string {
 }
 
 const pct = (x: number | null | undefined) => (x == null ? "—" : `${Math.round(x * 100)}%`);
+
+/** The first country (targets first) with a median of stated pay: shown in its own currency. */
+function headlinePay(pay: PayByCountry | null) {
+  const c = pay?.countries.find((x) => x.all.median != null);
+  return c && c.currency ? { code: c.code, currency: c.currency, ...c.all } : null;
+}
 
 function lead(m: OwnMarket): string {
   if (m.open_matches === 0) return "No open roles match your roles yet — the boards are read every 6 hours.";
@@ -49,6 +57,7 @@ export function MarketView({ initial }: { initial: MarketData }) {
   const topGap = m.skills.filter((s) => !s.you_show).sort((a, b) => b.open_jobs - a.open_jobs)[0];
   const shown = m.skills.filter((s) => s.you_show).length;
   const busiestMax = Math.max(1, ...m.busiest_companies.map((c) => c.new));
+  const headline = headlinePay(data.pay);
 
   const changePeriod = async (p: Period) => {
     setPeriod(p);
@@ -83,10 +92,14 @@ export function MarketView({ initial }: { initial: MarketData }) {
     { value: String(m.new_this_period), label: `new in ${m.days} days`,
       note: m.change_pct == null ? undefined : `${m.change_pct >= 0 ? "+" : ""}${m.change_pct}% vs before`,
       noteColor: m.change_pct == null ? undefined : m.change_pct > 5 ? "var(--success)" : m.change_pct < -5 ? "var(--danger)" : undefined },
-    m.salary
-      ? { value: money(m.salary.currency, m.salary.median), label: "median starting pay",
-          note: `${money(m.salary.currency, m.salary.low)}–${money(m.salary.currency, m.salary.high)} middle half · ${m.salary.postings} state pay` }
-      : { value: "—", label: "median starting pay", note: "too few postings state pay" },
+    headline
+      ? { value: money(headline.currency, headline.median!), label: `median stated pay · ${countryName(headline.code)}`,
+          note: `${headline.postings} tech postings state it${headline.p25 != null && headline.p75 != null
+            ? ` · ${money(headline.currency, headline.p25)}–${money(headline.currency, headline.p75)} middle half` : ""}` }
+      : m.salary
+        ? { value: money(m.salary.currency, m.salary.median), label: "median starting pay",
+            note: `${money(m.salary.currency, m.salary.low)}–${money(m.salary.currency, m.salary.high)} middle half · ${m.salary.postings} state pay` }
+        : { value: "—", label: "median starting pay", note: "too few postings state pay" },
     { value: pct(m.remote_share), label: "fully remote" },
     m.visa
       ? { value: pct(m.visa.sponsor_share), label: "sponsor visas", note: `of ${m.visa.stated} postings that say` }
@@ -205,6 +218,8 @@ export function MarketView({ initial }: { initial: MarketData }) {
               </ul>
             </section>
           )}
+
+          {data.pay && <PayByCountrySection pay={data.pay} />}
 
           <section className="lg:flex-1 lg:min-h-0 flex flex-col">
             <div className="shrink-0 flex items-baseline justify-between gap-4">

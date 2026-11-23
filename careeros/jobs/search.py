@@ -243,8 +243,7 @@ def with_pay_reference(jobs: list, medians: dict[str, int]) -> list:
 
 
 def search(session: Session, user_id: str, f: SearchFilters, now: Optional[datetime] = None) -> SearchResult:
-    from careeros.jobs.scan import company_open_counts, profile_fingerprint
-    from careeros.jobs.scoring.signals import market_medians
+    from careeros.jobs.scan import company_open_counts, pool_medians, profile_fingerprint
     from careeros.jobs.scoring_service import ScoringService
 
     now = now or datetime.now(timezone.utc)
@@ -260,7 +259,7 @@ def search(session: Session, user_id: str, f: SearchFilters, now: Optional[datet
     preferred = profile.preferences.preferred_locations if profile else []
     jobs, meta = prepare(rows, company_open_counts(session), preferred, now)
     # Pay is judged against what similar roles (this search's postings) pay in the same country
-    medians = market_medians((j.signals.countries, j.signals.offer_usd) for j in jobs)
+    medians = pool_medians(rows)  # stated pay only (careeros/market/pay.py)
     kept = with_pay_reference([j for j in jobs if keeps(j, meta[j.url], f)], medians)
 
     urls = [j.url for j in kept]

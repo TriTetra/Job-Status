@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "8.3"  # 8.3: countries, workplace and remote scope stored for the place badge · 8.2: locations (USA, states, cities; unknown ≠ free pass), on-site vs hybrid, implied skills · 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
+SCORER_VERSION = "8.4"  # 8.4: pay reference from stated pay only (no currency guesses) · 8.3: countries, workplace and remote scope stored for the place badge · 8.2: locations (USA, states, cities; unknown ≠ free pass), on-site vs hybrid, implied skills · 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -322,15 +322,18 @@ def market_demand(rows: list[JobRow]) -> dict[str, float]:
 
 
 def pool_medians(rows: list[JobRow]) -> dict[str, int]:
-    """Typical expected offer per country among the user's matching jobs (pay reference)."""
+    """Typical expected offer per country among the user's matching jobs (pay reference).
+    Only pay the employer stated (careeros/market/pay.py): not amounts the keyword extractor
+    stored as USD without knowing the currency."""
     from careeros.jobs.geo import countries_in
     from careeros.jobs.scoring.signals import market_medians, offer_usd
+    from careeros.market.pay import stated_range
 
     pairs = []
     for r in rows:
-        f = job_fields(r)
-        pairs.append(([c for c, _ in countries_in(r.location)],
-                      offer_usd(f["salary_min"], f["salary_max"], f["salary_currency"])))
+        codes = [c for c, _ in countries_in(r.location)]
+        stated = stated_range(r, codes[0] if len(codes) == 1 else None)
+        pairs.append((codes, offer_usd(*stated) if stated else None))
     return market_medians(pairs)
 
 

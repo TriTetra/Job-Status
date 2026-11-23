@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from careeros.market.repositories.market_signal_repo import MarketSignalRepository
+from careeros.market import pay
 from careeros.market.own_market import market_snapshot
 from careeros.market.refresh import refresh_jobs, run_refresh, start_refresh
 from careeros.shared.background import JobNotFound
@@ -24,6 +25,12 @@ def own_market(
 ):
     """Open matches, arrival pace, pay, remote / visa share, skills asked — against the user's evidence."""
     return market_snapshot(session, user_id, days)
+
+
+@router.get("/pay", summary="What tech roles pay, by country and role family, with sources")
+def market_pay(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """Stated pay from postings (counts, links) and verified official figures."""
+    return pay.snapshot(session, user_id)
 
 
 @router.get("/signals", response_model=List[MarketSignalResponse])

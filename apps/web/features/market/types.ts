@@ -39,7 +39,43 @@ export interface OwnMarket {
 
 export type Period = 30 | 90;
 
+/** GET /api/market/pay (careeros/market/pay.py): stated pay by country and role family, plus official figures. */
+export interface PayStats {
+  postings: number;
+  median?: number;
+  p25?: number;
+  p75?: number;
+}
+
+export interface OfficialPay {
+  country: string;
+  occupation: string;
+  median: number;
+  currency: string;
+  period: string;
+  reference: string;
+  population: string;
+  source: string;
+  url: string;
+}
+
+export interface PayCountry {
+  code: string;
+  currency: string | null;
+  all: PayStats;
+  families: Array<PayStats & { family: string; examples: string[] }>;
+  official: OfficialPay[];
+}
+
+export interface PayByCountry {
+  window_days: number;
+  min_postings: number;
+  as_of: string;
+  countries: PayCountry[];
+}
+
 export interface MarketData {
   own: OwnMarket;
   news: MarketSignal[];
+  pay: PayByCountry | null;
 }

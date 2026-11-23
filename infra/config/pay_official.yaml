@@ -1,0 +1,23 @@
+# Official pay statistics shown next to stated pay on the Market page (careeros/market/pay.py).
+#
+# Only figures read on the publisher's own page go here, with the exact link, the
+# reference period and what population they describe. No estimates, no salary sites.
+#
+# Not added yet, and why:
+# - UK, ONS ASHE Table 14, SOC 2020 2134 (programmers and software development
+#   professionals): the figure is only in the Excel download; to be read from it and added.
+# - Germany, Bundesagentur für Arbeit Entgeltatlas (Softwareentwicklung): the site is an
+#   app whose figures couldn't be read from its pages.
+# - Eurostat SES 2022 publishes occupations only at ISCO one-digit level ("Professionals"),
+#   too broad for software roles.
+
+figures:
+  - country: US
+    occupation: Software developers (SOC 15-1252)
+    median: 135980
+    currency: USD
+    period: year
+    reference: May 2025
+    population: All workers in the occupation, gross annual wage
+    source: U.S. Bureau of Labor Statistics, Occupational Outlook Handbook (OEWS)
+    url: https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm
