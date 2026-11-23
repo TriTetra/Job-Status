@@ -16,7 +16,18 @@ export interface AddedJob {
   recommendation: string | null;
 }
 
+/** GET /api/jobs/freshness (careeros/jobs/freshness.py::lag): how fast new postings reach Aplio. */
+export interface Freshness {
+  days: number;
+  postings: number;
+  boards: number;
+  last_read: string | null;
+  median_hours?: number;
+  p90_hours?: number;
+}
+
 export const opportunitiesApi = {
+  freshness: () => apiFetch<Freshness>("/api/jobs/freshness"),
   list: () => apiFetch<OpportunityListResponse>(ALL_OPPORTUNITIES),
   preferences: () => apiFetch<InboxPreferences>("/api/preferences"),
   startScan: () => apiFetch<{ job_id: string }>("/api/jobs/scan", { method: "POST" }),

@@ -63,7 +63,7 @@ def reminders_message(items: list[dict]) -> str:
             + "you send it, then mark it sent.")
 
 
-def notify_user(session: Session, user_id: str, now: Optional[datetime] = None) -> int:
+def notify_user(session: Session, user_id: str, now: Optional[datetime] = None, report: bool = True) -> int:
     """Send what's new to this user's Telegram; returns how many messages went out."""
     row = session.get(TelegramLink, user_id)
     if not (row and row.chat_id and telegram.available()):
@@ -86,7 +86,7 @@ def notify_user(session: Session, user_id: str, now: Optional[datetime] = None) 
         if waiting:
             messages.append((reminders_message(waiting), [key(a) for a in waiting]))
 
-    if prefs.get("report"):
+    if report and prefs.get("report"):
         from careeros.applications.report import daily_report, report_text
 
         day_key = f"report:{(now or datetime.now(timezone.utc)).date().isoformat()}"
@@ -111,7 +111,7 @@ def notify_user(session: Session, user_id: str, now: Optional[datetime] = None) 
     return count
 
 
-def notify_all(user_ids: list[str]) -> None:
+def notify_all(user_ids: list[str], report: bool = True) -> None:
     """Scheduler hook: one session per user, failures logged, never raised."""
     from careeros.db.connection import db
 
@@ -120,7 +120,7 @@ def notify_all(user_ids: list[str]) -> None:
     for uid in user_ids:
         try:
             with db.session_scope() as s:
-                n = notify_user(s, uid, datetime.now(timezone.utc))
+                n = notify_user(s, uid, datetime.now(timezone.utc), report=report)
             if n:
                 logger.info("Telegram: %d message(s) to %s", n, uid)
         except Exception:

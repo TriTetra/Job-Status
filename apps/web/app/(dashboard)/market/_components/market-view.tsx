@@ -30,7 +30,7 @@ function headlinePay(pay: PayByCountry | null) {
 }
 
 function lead(m: OwnMarket): string {
-  if (m.open_matches === 0) return "No open roles match your roles yet — the boards are read every 6 hours.";
+  if (m.open_matches === 0) return "No open roles match your roles yet — busy company boards are read hourly.";
   const pace =
     m.change_pct == null
       ? ""

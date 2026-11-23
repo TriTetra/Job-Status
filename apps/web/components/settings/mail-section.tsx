@@ -56,7 +56,7 @@ export function MailSection() {
     try {
       setSt(await mailApi.connect(email.trim(), password, needsHost ? host : undefined));
       setPassword("");
-      setNote({ ok: true, text: "Connected. Aplio checks it at every refresh (about every 6 hours)." });
+      setNote({ ok: true, text: "Connected. Aplio checks it every hour." });
     } catch (err) {
       setNote({ ok: false, text: detail(err) ?? "Couldn't connect. Try again." });
     } finally {

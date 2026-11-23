@@ -137,6 +137,7 @@ class Settings:
     # Web app (redirect target after OAuth)
     web_app_url: str
     job_sync_interval_hours: float
+    job_tick_minutes: float  # due boards and new matches between full refreshes (0 = full refreshes only)
 
     # Logging
     log_level: str
@@ -196,6 +197,7 @@ def get_settings() -> Settings:
         web_app_url=os.getenv("WEB_APP_URL", "http://localhost:3000").rstrip("/"),
         # Company board sync + rescore inside the API process; 0 = off (run `career-os jobs sync` yourself)
         job_sync_interval_hours=float(os.getenv("JOB_SYNC_INTERVAL_HOURS") or 0),
+        job_tick_minutes=float(os.getenv("JOB_TICK_MINUTES") or 15),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
     )
 

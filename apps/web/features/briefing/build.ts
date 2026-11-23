@@ -96,7 +96,7 @@ function changeLines(f: DigestFacts): ChangeLine[] {
     lines.push({ text: `${job.title} at ${job.company} has closed.` });
   }
   if (lines.length === 0 && f.has_scores) {
-    lines.push({ text: "Nothing new since your last visit. The company boards are re-read every 6 hours." });
+    lines.push({ text: "Nothing new since your last visit. Busy company boards are read hourly." });
   }
   return lines;
 }

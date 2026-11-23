@@ -37,7 +37,7 @@ async def lifespan(_: FastAPI):
     if hours > 0:
         from careeros.jobs.scheduler import JobScheduler
 
-        scheduler = JobScheduler(hours)
+        scheduler = JobScheduler(hours, settings_.job_tick_minutes)
         scheduler.start()
     yield
     if scheduler:

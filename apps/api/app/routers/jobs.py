@@ -212,6 +212,13 @@ def search_jobs(
     return JobSearchResponse(total=result.total, capped=result.capped, jobs=jobs, country=result.country)
 
 
+@router.get("/freshness", summary="How fast new postings reach Aplio (hours from posting to first seen)")
+def job_freshness(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    from careeros.jobs.freshness import lag
+
+    return lag(session)
+
+
 @router.get("/{url:path}", response_model=JobWithScore)
 def get_job(url: str, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
     """Latest score for a specific job URL."""

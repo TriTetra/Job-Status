@@ -8,7 +8,7 @@ import { Button } from "@/components/shared/button";
 import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact";
 import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel";
 import { ScanOverlay } from "@/components/ui/scan-overlay";
-import { opportunitiesApi, type AddedJob } from "@/features/opportunities/api";
+import { opportunitiesApi, type AddedJob, type Freshness } from "@/features/opportunities/api";
 import { AddJob } from "./add-job";
 import type { SkipReason } from "@/features/opportunities/format";
 import { toScanJob } from "@/features/opportunities/tier";
@@ -22,6 +22,14 @@ const VIEWS: Array<{ id: View; label: string }> = [
   { id: "shortlisted", label: "Shortlisted" },
   { id: "skipped", label: "Skipped" },
 ];
+
+/** "busy boards read hourly · new roles here within ~2 h" from the measured lag (last 7 days). */
+function freshnessLine(f: Freshness | null): string {
+  if (!f || f.median_hours == null) return "busy boards read hourly";
+  const h = f.median_hours;
+  const when = h < 1 ? "within the hour" : `within ~${Math.round(h)} h`;
+  return `busy boards read hourly · new roles usually here ${when}`;
+}
 
 function lastScan(jobs: Opportunity[]): string | null {
   const latest = Math.max(...jobs.map((j) => (j.scanned_at ? Date.parse(j.scanned_at + (j.scanned_at.endsWith("Z") ? "" : "Z")) : 0)));
@@ -53,6 +61,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [addedNote, setAddedNote] = useState<string | null>(null);
+  const fresh = initial.freshness ?? null;
   const [scanJob, setScanJob] = useState<ScanJob>({ job_id: "", status: "idle", phase: "starting", progress: 0, logs: [] });
 
   const refresh = useCallback(async () => {
@@ -207,7 +216,9 @@ export function InboxView({ initial }: { initial: InboxData }) {
           )}
           <p className="mt-1.5 text-sm" style={{ color: "var(--text-muted)" }}>
             {jobs.length} open matches · {counts.strong} strong
-            {scanned ? ` · scored ${scanned}` : ""} · boards re-read every 6 hours
+            {scanned ? ` · scored ${scanned}` : ""} · <span title={fresh?.median_hours != null
+              ? `Median time from a posting's date to Aplio, last ${fresh.days} days, ${fresh.postings} postings (90% within ${fresh.p90_hours} h)`
+              : undefined}>{freshnessLine(fresh)}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -288,7 +299,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
           </p>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
             {jobs.length === 0
-              ? "Run a scan to match your evidence against open roles from 74 company boards."
+              ? "Run a scan to match your evidence against open roles from the company boards Aplio reads."
               : conflictsHidden
                 ? `${conflictsHidden} hidden because they conflict with your priorities.`
                 : "Try another view or clear the search."}

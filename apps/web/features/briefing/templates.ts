@@ -40,7 +40,7 @@ export function leadFor(tone: Tone, c: { newMatches: number; newStrong: number; 
 
 export function closingFor(tone: Tone, hour: number, dow: number): string[] {
   if (tone === "direct") return ["That's it."];
-  if (tone === "analytical") return ["End of briefing. Boards are re-read every 6 hours."];
+  if (tone === "analytical") return ["End of briefing. Busy boards are read hourly."];
   if (dow === 5) return ["That's everything for this week.", "Enjoy your weekend — we'll keep reading the boards."];
   if (dow === 0) return ["Rest well tonight.", "Tomorrow is a fresh start."];
   if (hour >= 22 || hour < 5) return ["That's everything for today.", "Rest well. We'll keep watching."];

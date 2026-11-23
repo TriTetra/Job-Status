@@ -139,7 +139,7 @@ export function TelegramSection() {
       {st?.connected && (
         <>
           <CheckRow checked={st.prefs.matches} onChange={(v) => togglePref("matches", v)}
-                    label="New strong matches" hint="After each refresh (about every 6 hours), only roles you haven't been told about" />
+                    label="New strong matches" hint="Within the hour a strong one is posted (busy boards are read hourly), only roles you haven't been told about" />
           <CheckRow checked={st.prefs.reminders} onChange={(v) => togglePref("reminders", v)}
                     label="Follow-up reminders" hint="An application with no answer for two weeks, once" />
           <CheckRow checked={st.prefs.report ?? true} onChange={(v) => togglePref("report", v)}

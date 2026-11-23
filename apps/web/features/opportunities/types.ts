@@ -178,4 +178,6 @@ export interface InboxPreferences {
 export interface InboxData {
   jobs: Opportunity[];
   prefs: InboxPreferences | null;
+  /** how fast new postings reach Aplio (careeros/jobs/freshness.py); optional */
+  freshness?: import("./api").Freshness | null;
 }

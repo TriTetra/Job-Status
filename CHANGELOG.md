@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.6 Tazelik | Zamanlayıcı 15 dakikalık tiklere geçti: yeni ilan ekleyen ucuz panolar saatlik, sakin ya da pahalı panolar 3–6 saatte, hatalı panolar 6 saat bekler; feed'ler kendi kotasında. Yeni ilan gelince hemen LLM okuması, yeniden puanlama ve Telegram'a yeni güçlü eşleşme; posta kutusu saatlik. Gecikme ölçümü `/api/jobs/freshness` ve Opportunities başlığında | ✅ Tamam | 2026-11-23 |
 | 1.5 Şirket Verisi | Okuyucuda ve Companies'te "On the public record" kartı: Wikidata (yalnız web sitesi eşleşirse; benzer isimli başka şirket asla gösterilmez), Companies House (UK, anahtar girilince), okunan haberlerde işten çıkarma / yatırım; Hacker News'te "çalışanlar ne diyor" özeti, her madde yorum bağlantısıyla. Kapanmış şirket, iflas, yakın işten çıkarma güven kontrolüne girer. Migration 025 | ✅ Tamam | 2026-11-23 |
 | 1.4 Maaş Verisi (Adzuna'sız) | Market'te ülke × rol ailesi maaşları, yerel para biriminde, yalnız işverenin yazdığı maaştan, kaç ilana dayandığı yazılı; doğrulanmış resmî rakam (BLS) kaynak bağlantısıyla. Puandaki maaş referansı da para birimi tahmin edilen tutarları artık kullanmıyor (scorer 8.4). UK / DE resmî rakamları okunamadı, eklenmedi | ✅ Kısmen | 2026-11-23 |
 | 1.8 Takip Mesajları | 14. günde ilk takip, 21. günde son kontrol (ilkinden en az bir hafta sonra), sonra bir daha sorulmaz. Taslak yalnız kanıttan (kit'in kanıt kontrolüyle) ya da sade şablondan; kişi gönderir, "I sent it" ile işaretler, "Don't follow up" ile durdurur. Telegram hatırlatması doğrudan taslağı açar | ✅ Tamam | 2026-11-23 |
@@ -137,6 +138,37 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.6 Tazelik] — 2026-11-23 — Hız ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.6. Her şey 6 saatte bir topluca çalışıyordu: tüm panolar, LLM okuması, yeniden puanlama, kitler, bildirimler. Yeni bir ilan ortalama ~3, en kötü durumda 6 saatten fazla gecikmeyle görünüyor; Telegram bildirimi de döngünün sonunda gidiyordu.
+
+### Okuma sıklığı (`careeros/jobs/freshness.py`)
+- **Tek istekle okunan panolar** (Greenhouse, Lever, Ashby, Workable, Recruitee, Personio): son 14 günde yeni ilan eklediyse **saatlik**, eklemediyse 3 saatte bir.
+- **İlan başına istek gerektiren panolar** (SmartRecruiters, Workday, Eightfold): aktifse 3 saatte, sakinse 6 saatte bir.
+- **Son okuması hata veren pano:** 6 saat bekler, art arda denenmez.
+- **Feed'ler** kendi hızında kalır: şartları ve kotaları gereği günde yaklaşık iki kez (`MIN_INTERVAL_H`, Adzuna'nın istek sınırı dahil).
+
+### Zamanlayıcı (`careeros/jobs/scheduler.py`)
+- **Tik (`JOB_TICK_MINUTES`, 15 dk):** vadesi gelen panolar ve feed'ler okunur. **Yeni ilan geldiyse** sırasıyla:
+  - LLM yeni ilanları okur (en fazla 80, böylece ilk puan bunlara dayanır);
+  - etkin her kullanıcı yeniden puanlanır (yalnız değişen ilanlar);
+  - **Telegram'a yeni güçlü eşleşmeler** gönderilir. Günlük rapor beklemez ama tik'lerde gönderilmez, kendi hızında kalır.
+- **Posta kutuları saatlik** kontrol edilir.
+- **Tam yenileme (`JOB_SYNC_INTERVAL_HOURS`, 6 saat):** her pano, posta kutuları, kitler, günlük raporla birlikte bildirimler, piyasa haberleri (günlük). Eskisi gibi.
+- `JOB_TICK_MINUTES=0`: yalnız tam yenileme (eski davranış). `.env.example` ve `docker-compose.prod.yml` güncellendi.
+
+### Ölçüm
+- **`GET /api/jobs/freshness`:** son 7 günde, şirket panolarındaki ilanın kendi tarihinden Aplio'da ilk görünmesine kadar geçen süre (medyan ve %90). Planın "bitti" ölçütü (gecikmenin saatlere inmesi) bununla izlenecek.
+- **Opportunities başlığı:** "busy boards read hourly · new roles usually here within ~N h"; üzerine gelince ölçümün açıklaması çıkıyor. Bilgi sayfanın sunucu tarafındaki ilk verisiyle geliyor.
+- "every 6 hours" yazan metinler güncellendi: Market, Briefing, Telegram ayarı, posta kutusu.
+
+### Doğrulama
+- 824 test (yeni: aralık kuralları; vadesi gelen panolar (55 dakika önce okunan saatlik pano vadeli, hatalı pano bekliyor, hiç okunmamış vadeli); yeni ilan gelince tik'in LLM okuması, yeniden puanlama, raporsuz bildirim ve posta kontrolü yapması, ilan gelmeyince hiçbir şey yapmaması), ruff, tsc, eslint, `next build` temiz. Zamanlayıcı ve Telegram testleri değişmeden geçiyor.
+- **Önizleme:** başlık "busy boards read hourly · new roles usually here within ~88 h". Atılabilir DB sürekli senkronize edilmediği için sayı yüksek; canlıda gerçek gecikme görünecek. İstemci tarafında bu bilgiyi getiren istek önizleme proxy'sinde askıda kaldığı için bilgi sayfanın sunucu tarafındaki ilk verisine taşındı.
+- **Bekleyen:** canlıda deploy sonrası birkaç gün içinde gecikmenin saatlere indiğinin ölçülmesi.
 
 ---
 
