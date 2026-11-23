@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Taslaklar: Kanıta Bağlı ve Denetlenen | Başvuru taslakları her iddiada dayandığı kanıtı gösteriyor; bir aracı yanlış işe bağlayan ya da kanıtta olmayan beceriyi iddia eden cümleler yakalanıyor, bir düzeltme turu, kalanlar "Check:" notu | ✅ Tamam | 2026-11-23 |
 | B: Ready to Apply + Daily Report | Her gün başvurulacak en iyi 5 iş (şirket başına bir), her biri hazırlanmış: formun soruları (Greenhouse'tan gerçek form), profilden cevaplar, kanıttan taslaklar, gönderilecek CV, kısa not; gönderen kişinin kendisi. Günlük rapor: Briefing'de ve Telegram'da | ✅ Tamam | 2026-11-23 |
 | Fix Pack A: Live Test Findings | Canlı hesapta test; konum tanıma (USA, eyaletler, şehirler; bilinmeyen konum artık "engel yok" değil), on-site / hybrid ayrımı, beceri eş anlamlıları ve kapsadığı beceriler, deeper read ham bilgileri kontrol ediyor | ✅ Tamam | 2026-11-23 |
 | CLI: CAREER_OS_EMAIL | `career-os jobs scan / eval / eval-sheet` e-posta yazılmazsa hesabı `.env`'deki `CAREER_OS_EMAIL`'den alıyor | ✅ Tamam | 2026-11-23 |
@@ -121,6 +122,25 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Taslaklar: Kanıta Bağlı ve Denetlenen] — 2026-11-23 — Yanlış işe bağlanan araçlar ✅
+
+**Neden:** Canlıdaki ilk kitlerde Alan notu gRPC ve PostgreSQL'i Boenstitü deneyimine bağlamıştı; kanıtta gRPC Sentropy projesinde, PostgreSQL hiçbir işe bağlı değil. Kullanıcı taslakların sıkılaştırılmasını seçti ("Tighten drafts").
+
+### Ne değişti (`careeros/applications/kit.py`)
+- **Kanıt, kimlikleriyle:** LLM'e her deneyim / proje / başarı ayrı satır ve kimlikle gidiyor ([E1], [P1], [A1]…), her birinin altında **o işte gerçekten kullanılan araçlar** ("used: Spring Boot, Redis…"); işe bağlı olmayan beceriler ayrı [S] satırında.
+- **Kurallar:** bir araç ancak o işin "used" listesinde varsa o işe bağlanabilir; [S] becerileri "bildiğim beceriler" olarak geçebilir, bir işte yapılmış gibi değil; kişi hakkında bilgi veren her cümle dayandığı kimliklerle biter.
+- **Denetleyici (`check_grounding`, LLM'siz):** cümle bir işi ya da projeyi anıyorsa (adıyla ya da kimliğiyle) ve o işin listesinde olmayan bir araç geçiyorsa yakalıyor ("gRPC is tied to Boenstitü, but your evidence lists it under Sentropy Engine"); kanıtta hiç olmayan bir beceri iddia ediliyorsa yakalıyor ("AWS isn't in your evidence"). Eksikliği kabul eden cümleler ("haven't used AWS yet") sayılmıyor; kanıtın kapsadığı beceriler (LLM Agents → LLM) sayılıyor; taksonomi adları yazıldığı gibi eşleşiyor ("go" fiili Go dili değil).
+- **Bir düzeltme turu:** sorun varsa LLM'e tam sorunlar listesiyle bir kez daha gidiyor ("yalnız bunları düzelt"); kalan sorunlar kişiye cevabın yanında ve notun üstünde **"Check: …"** olarak gösteriliyor.
+- Kimlikler gösterilmeden önce metinden siliniyor.
+- Kit sürümü 2: bugünün kitleri bir sonraki döngüde (ya da "Prepare again" ile) yeni kurallarla yeniden hazırlanıyor.
+
+### Doğrulama
+- Denetleyici gerçek kaymayı yakalıyor (gRPC → Sentropy, PostgreSQL → işe bağlı değil; Redis / Spring Boot doğru diye geçiyor).
+- 757 test (yeni: yanlış işe bağlanan araç, kanıtta olmayan beceri, kabul edilen eksik, düzeltme turu, inatçı taslakta "Check" notu, kimliklerin silinmesi), ruff, tsc, eslint temiz.
+- Gerçek LLM ile yeni taslaklar canlıda, deploy sonrası görülecek.
 
 ---
 

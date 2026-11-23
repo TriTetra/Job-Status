@@ -14,8 +14,9 @@ and agreeing to terms is the person's act.
 
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import requests
 from pydantic import BaseModel, Field
@@ -26,7 +27,7 @@ from careeros.jobs.models.job import Job
 
 logger = logging.getLogger(__name__)
 
-KIT_VERSION = 1
+KIT_VERSION = 2  # 2: drafts cite evidence items and are checked for tools tied to the wrong job
 GREENHOUSE_FORM = "https://boards-api.greenhouse.io/v1/boards/{board}/jobs/{job_id}?questions=true"
 HTTP_TIMEOUT = 10
 MAX_COVER_WORDS = 130
@@ -286,20 +287,115 @@ def applicant_facts(session: Session, user_id: str) -> dict:
     return facts
 
 
-def evidence_brief(session: Session, user_id: str, limit: int = 25) -> str:
-    """The person's evidence as short lines for a drafting prompt (experience, projects, results, skills)."""
+@dataclass
+class EvidenceItem:
+    """One piece of the person's evidence a draft may rely on, with the tools it actually used."""
+    id: str                      # E1 (experience), P1 (project), A1 (achievement)
+    kind: str
+    name: str
+    names: list[str]             # how a sentence may refer to it (company, project name)
+    tools: list[str]
+    line: str
+
+
+_KIND_PREFIX = {"experiences": ("E", "experience"), "projects": ("P", "project"),
+                "achievements": ("A", "achievement"), "certifications": ("C", "certification"),
+                "education": ("D", "education")}
+
+
+def _names_for(kind: str, it: dict) -> list[str]:
+    data = it.get("evidence_data") or {}
+    raw = [data.get("company")] if kind == "experiences" else [it.get("name")]
+    out = []
+    for r in raw:
+        if not r:
+            continue
+        out.append(str(r))
+        out += [p.strip() for p in re.split(r"[()/,]", str(r)) if len(p.strip()) >= 3]
+    return list(dict.fromkeys(out))
+
+
+def evidence_items(session: Session, user_id: str) -> tuple[list[EvidenceItem], list[str]]:
+    """(experience / project / achievement items with ids and tools, the person's other skills)."""
     from careeros.evidence.items import list_for_review
 
     g = list_for_review(session, user_id)
-    lines = []
-    for kind in ("experiences", "projects", "achievements", "certifications", "education"):
-        for it in g.get(kind, [])[:6]:
-            text = " ".join(str(it.get("evidence_text") or "").split())[:220]
-            lines.append(f"- {kind[:-1]}: {it['name']}" + (f" — {text}" if text else ""))
-    skills = [s["name"] for s in g.get("skills", [])[:limit]]
+    items: list[EvidenceItem] = []
+    for group, (prefix, label) in _KIND_PREFIX.items():
+        for n, it in enumerate(g.get(group, [])[:6], start=1):
+            data = it.get("evidence_data") or {}
+            tools = [str(t) for t in data.get("technologies") or [] if t]
+            detail = data.get("description") or data.get("detail") or "; ".join(data.get("highlights") or []) \
+                or it.get("evidence_text") or ""
+            when = data.get("duration") or data.get("year") or ""
+            kind = data.get("type", label) if group == "achievements" else label
+            line = (f"[{prefix}{n}] {kind}: {it['name']}" + (f" ({when})" if when else "")
+                    + (f" — used: {', '.join(tools)}" if tools else "")
+                    + (f" — {' '.join(str(detail).split())[:240]}" if detail else ""))
+            items.append(EvidenceItem(f"{prefix}{n}", kind, it["name"], _names_for(group, it), tools, line))
+    skills = [s["name"] for s in g.get("skills", [])]
+    return items, skills
+
+
+def evidence_brief(items: list[EvidenceItem], skills: list[str], limit: int = 30) -> str:
+    lines = [i.line for i in items]
     if skills:
-        lines.append("- skills: " + ", ".join(skills))
+        lines.append("[S] skills the person shows (not tied to one job): " + ", ".join(skills[:limit]))
     return "\n".join(lines) or "- (no evidence yet)"
+
+
+# ── checking a draft against the evidence ────────────────────────────────
+
+_CITE = re.compile(r"\s*(?:\[(?:[EPACDS]\d*)\])+")
+_SENTENCES = re.compile(r"(?<=[.!?])\s+")
+_NEGATION = re.compile(r"\b(haven't|have not|hasn't|not yet|don't|do not|no (hands-on )?experience|never|"
+                       r"new to|still learning|would (need to )?(learn|ramp)|expect to ramp|gap)\b", re.I)
+
+
+def strip_citations(text: str) -> str:
+    return re.sub(r"\s+([.,;:])", r"\1", _CITE.sub("", text or "")).strip()
+
+
+def _mentions(text: str, names: Iterable[str], case: bool = False) -> list[str]:
+    found = []
+    for n in names:
+        if n and re.search(rf"(?<![\w]){re.escape(n)}(?![\w])", text, 0 if case else re.I):
+            found.append(n)
+    return found
+
+
+def check_grounding(text: str, items: list[EvidenceItem], skills: list[str],
+                    vocabulary: Optional[Iterable[str]] = None) -> list[str]:
+    """Claims a draft makes that the evidence doesn't support:
+    - a tool named in the same sentence as a job or project that didn't list it;
+    - a tool the person's evidence doesn't show at all (unless the sentence says they lack it)."""
+    from careeros.knowledge.skill_names import key, known_names, with_implied
+
+    by_id = {i.id: i for i in items}
+    have = with_implied(key(s) for s in skills) | {key(t) for i in items for t in i.tools}
+    tools = sorted({t for i in items for t in i.tools} | set(skills), key=len, reverse=True)
+    # every skill name Aplio knows, matched only as written ("Go", "AWS"): a claim the evidence lacks
+    others = sorted({n for n in (vocabulary if vocabulary is not None else known_names())
+                     if len(n) >= 2 and key(n) not in {key(t) for t in tools}}, key=len, reverse=True)
+    issues: list[str] = []
+    for sentence in _SENTENCES.split(text or ""):
+        if not sentence.strip() or _NEGATION.search(sentence):
+            continue
+        cited = [by_id[c] for c in re.findall(r"\[([EPACD]\d+)\]", sentence) if c in by_id]
+        named = [i for i in items if _mentions(sentence, i.names)]
+        anchors = list({i.id: i for i in cited + named}.values())
+        plain = strip_citations(sentence)
+        mentioned = _mentions(plain, tools) + _mentions(plain, others, case=True)
+        for t in mentioned:
+            k = key(t)
+            if k not in have:
+                issues.append(f"{t} isn't in your evidence")
+            elif anchors and all(i.tools for i in anchors) and not any(k in {key(x) for x in i.tools} for i in anchors):
+                where = ", ".join(i.name for i in anchors)
+                home = [i.name for i in items if k in {key(x) for x in i.tools}]
+                issues.append(f"{t} is tied to {where}, but your evidence lists it under "
+                              + (", ".join(home) if home else "your skills, not that job"))
+    return list(dict.fromkeys(issues))
 
 
 # ── drafts (LLM, evidence only) ──────────────────────────────────────────
@@ -313,6 +409,10 @@ DRAFT_RULES = (
     "You draft parts of a job application for the person, in first person, in plain English.\n"
     "Rules:\n"
     "- Use only facts from THE PERSON'S EVIDENCE. Never invent employers, numbers, dates, degrees or results.\n"
+    "- A tool or skill may be tied to a job or project ONLY if it is listed under that item's \"used:\". "
+    "Skills under [S] may be named as skills the person has, never as something done at a specific job.\n"
+    "- End every sentence that states a fact about the person with the ids it relies on, like [E1] or [P2][A1]. "
+    "A sentence with no id must not state a fact about them.\n"
     "- If a question can't be answered from the evidence, return an empty string for it.\n"
     f"- cover_note: at most {MAX_COVER_WORDS} words: why this role, two concrete matches from the evidence, "
     "one honest line on a gap if there is a big one. No greetings or sign-off, no clichés.\n"
@@ -330,7 +430,7 @@ def draft_prompt(job: dict, questions: list[dict], evidence: str, facts: dict) -
         f"- Skills it asks for: {', '.join(job.get('required_skills') or []) or 'not listed'}\n"
         f"- Skills the person shows of those: {', '.join(job.get('matched') or []) or 'none'}\n"
         f"- Skills the person doesn't show yet: {', '.join(job.get('gaps') or []) or 'none'}\n"
-        "THE PERSON'S EVIDENCE\n"
+        "THE PERSON'S EVIDENCE (ids in brackets)\n"
         f"{evidence}\n"
         f"- target role: {', '.join(facts.get('target_roles') or []) or 'not stated'}; "
         f"years of experience: {facts.get('years') if facts.get('years') is not None else 'not stated'}\n"
@@ -339,19 +439,53 @@ def draft_prompt(job: dict, questions: list[dict], evidence: str, facts: dict) -
     )
 
 
-def draft_texts(job: dict, questions: list[dict], evidence: str, facts: dict, user_id: str) -> Optional[Drafts]:
+def _repair_prompt(drafts: "Drafts", problems: dict[str, list[str]], evidence: str) -> str:
+    listed = "\n".join(f"- {where}: {'; '.join(p)}" for where, p in problems.items())
+    return (
+        "These drafts make claims the evidence doesn't support. Fix only those claims (remove the tool or tie "
+        "it to the item that lists it); keep everything else as it is, ids included.\n"
+        f"PROBLEMS\n{listed}\n"
+        f"THE PERSON'S EVIDENCE (ids in brackets)\n{evidence}\n"
+        f"DRAFTS\n{drafts.model_dump_json()}"
+    )
+
+
+def _problems(d: "Drafts", items: list[EvidenceItem], skills: list[str]) -> dict[str, list[str]]:
+    out = {}
+    note = check_grounding(d.cover_note, items, skills)
+    if note:
+        out["cover_note"] = note
+    for qid, text in d.answers.items():
+        found = check_grounding(text, items, skills)
+        if found:
+            out[qid] = found
+    return out
+
+
+def draft_texts(job: dict, questions: list[dict], evidence: str, facts: dict, user_id: str,
+                items: Optional[list[EvidenceItem]] = None, skills: Optional[list[str]] = None
+                ) -> Optional[tuple["Drafts", dict[str, list[str]]]]:
+    """(drafts with citations removed, claims still unsupported after one repair pass), or None."""
     from careeros.shared.llm import LLMError, get_llm_client
 
+    client = get_llm_client()
+    kwargs = dict(system=DRAFT_RULES, task="apply_kit", user_id=user_id, temperature=0.3, max_tokens=1400)
     try:
-        d = get_llm_client().complete_model(draft_prompt(job, questions, evidence, facts), Drafts, system=DRAFT_RULES,
-                                            task="apply_kit", user_id=user_id, temperature=0.3, max_tokens=1200)
+        d = client.complete_model(draft_prompt(job, questions, evidence, facts), Drafts, **kwargs)
+        problems = _problems(d, items or [], skills or [])
+        if problems:  # one repair pass with the exact problems
+            try:
+                fixed = client.complete_model(_repair_prompt(d, problems, evidence), Drafts, **kwargs)
+                d, problems = fixed, _problems(fixed, items or [], skills or [])
+            except (LLMError, Exception) as e:
+                logger.info("Apply kit repair pass failed for %s: %s", user_id, e)
     except (LLMError, Exception) as e:  # no key, over budget, provider down: the person writes these
         logger.info("Apply kit drafts unavailable for %s: %s", user_id, e)
         return None
-    words = d.cover_note.split()
+    words = strip_citations(d.cover_note).split()
     d.cover_note = " ".join(words[:MAX_COVER_WORDS])
-    d.answers = {k: v.strip()[:MAX_ANSWER_CHARS] for k, v in d.answers.items() if isinstance(v, str)}
-    return d
+    d.answers = {k: strip_citations(v)[:MAX_ANSWER_CHARS] for k, v in d.answers.items() if isinstance(v, str)}
+    return d, problems
 
 
 # ── the kit ──────────────────────────────────────────────────────────────
@@ -424,13 +558,18 @@ def build_kit(session: Session, user_id: str, url: str, *, refresh: bool = False
             facts["target_roles"] = list(getattr(profile, "target_roles", None) or [])
         except Exception:
             facts["target_roles"] = []
-        drafts = draft_texts(ctx, to_draft, evidence_brief(session, user_id), facts, user_id)
+        items, skills = evidence_items(session, user_id)
+        result = draft_texts(ctx, to_draft, evidence_brief(items, skills), facts, user_id, items, skills)
+        drafts, unsupported = result if result else (None, {})
+    else:
+        unsupported = {}
     for q in questions:
         if q["source"] == "llm":
             text = (drafts.answers.get(q["id"]) if drafts else None) or None
+            check = unsupported.get(q["id"])
             q.update(suggested=text, source="draft" if text else "you",
-                     note=q.get("note") if text else ("Write this yourself" if ai_policy or not drafts
-                                                      else "Not enough in your evidence to draft this"))
+                     note=("Check: " + "; ".join(check)) if text and check else q.get("note") if text
+                     else ("Write this yourself" if ai_policy or not drafts else "Not enough in your evidence to draft this"))
 
     payload: dict[str, Any] = {
         "v": KIT_VERSION, "url": url, "title": job.title, "company": job.company, "location": job.location,
@@ -439,6 +578,7 @@ def build_kit(session: Session, user_id: str, url: str, *, refresh: bool = False
         "matched": ctx.get("matched"), "gaps": ctx.get("gaps"),
         "warnings": warnings, "ai_policy": ai_policy, "questions": questions,
         "cover_note": drafts.cover_note if drafts and drafts.cover_note else None,
+        "cover_note_check": unsupported.get("cover_note") or [],
         "drafted": bool(drafts), "created_at": now.isoformat(),
     }
     if row is None:

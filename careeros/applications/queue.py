@@ -87,7 +87,10 @@ def prepare(session: Session, user_id: str, n: int = QUEUE_SIZE, now: Optional[d
 
     built = 0
     for s, j in pick(session, user_id, n, now):
-        if session.get(ApplyKit, (user_id, j.url)) is not None:
+        from careeros.applications.kit import KIT_VERSION
+
+        existing = session.get(ApplyKit, (user_id, j.url))
+        if existing is not None and (existing.payload or {}).get("v") == KIT_VERSION:
             continue
         try:
             build_kit(session, user_id, j.url, now=now)

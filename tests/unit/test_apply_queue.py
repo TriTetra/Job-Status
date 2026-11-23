@@ -85,20 +85,76 @@ def test_greenhouse_reference_from_url_and_board_list():
     assert k.greenhouse_ref(SimpleNamespace(ats="lever", company_key="x", external_id="1", url="u"), {}) is None
 
 
+ITEMS = [
+    k.EvidenceItem("E3", "experience", "Backend Engineer @ Boenstitü (BoenCV)", ["Boenstitü (BoenCV)", "Boenstitü", "BoenCV"],
+                   ["Spring Boot", "Redis", "Puppeteer", "Next.js"], "[E3] experience: Backend Engineer @ Boenstitü"),
+    k.EvidenceItem("P1", "project", "Sentropy Engine", ["Sentropy Engine"], ["Kubernetes", "eBPF", "gRPC"],
+                   "[P1] project: Sentropy Engine — used: Kubernetes, eBPF, gRPC"),
+]
+SKILLS = ["Python", "Go", "PostgreSQL", "gRPC", "LLM Agents", "PyTorch"]
+
+
 def test_drafts_use_only_evidence_and_are_trimmed(monkeypatch):
     prompt = k.draft_prompt({"title": "AI Engineer", "company": "Acme", "matched": ["Python"], "gaps": ["AWS"]},
-                            [{"id": "q3", "label": "Why Acme?"}], "- project: Sentropy", {"years": 3})
-    assert "THE PERSON'S EVIDENCE" in prompt and "- project: Sentropy" in prompt and "q3: Why Acme?" in prompt
-    assert "Never invent" in k.DRAFT_RULES
+                            [{"id": "q3", "label": "Why Acme?"}], "[P1] project: Sentropy", {"years": 3})
+    assert "THE PERSON'S EVIDENCE" in prompt and "[P1] project: Sentropy" in prompt and "q3: Why Acme?" in prompt
+    assert "Never invent" in k.DRAFT_RULES and "ONLY if it is listed" in k.DRAFT_RULES
 
     class Fake:
         def complete_model(self, prompt, schema, **kw):
             assert kw["task"] == "apply_kit"
-            return schema(cover_note="word " * 400, answers={"q3": "x" * 5000})
+            return schema(cover_note="word " * 400 + "[P1]", answers={"q3": "x" * 5000 + " [E3]"})
 
     monkeypatch.setattr("careeros.shared.llm.get_llm_client", lambda: Fake())
-    d = k.draft_texts({}, [], "", {}, "u")
+    d, problems = k.draft_texts({}, [], "", {}, "u", ITEMS, SKILLS)
     assert len(d.cover_note.split()) == k.MAX_COVER_WORDS and len(d.answers["q3"]) == k.MAX_ANSWER_CHARS
+    assert "[" not in d.cover_note and problems == {}
+
+
+def test_checker_catches_a_tool_tied_to_the_wrong_job():
+    slip = "As a backend engineer at Boenstitü, I built with Spring Boot, gRPC, Redis and PostgreSQL."
+    issues = k.check_grounding(slip, ITEMS, SKILLS)
+    assert any("gRPC" in i and "Sentropy Engine" in i for i in issues)
+    assert any("PostgreSQL" in i for i in issues)
+    assert not any("Redis" in i or "Spring Boot" in i for i in issues)
+    assert k.check_grounding("Sentropy Engine runs eBPF probes over gRPC [P1].", ITEMS, SKILLS) == []
+
+
+def test_checker_catches_skills_the_evidence_lacks_but_not_admitted_gaps():
+    assert k.check_grounding("I also work with AWS every day.", ITEMS, SKILLS) == ["AWS isn't in your evidence"]
+    assert k.check_grounding("I haven't used AWS yet; that's where I'd ramp up.", ITEMS, SKILLS) == []
+    assert k.check_grounding("I want to go deeper into LLM work.", ITEMS, SKILLS) == []   # "go", LLM implied
+
+
+def test_one_repair_pass_and_leftovers_are_reported(monkeypatch):
+    calls = []
+
+    class Fake:
+        def complete_model(self, prompt, schema, **kw):
+            calls.append(prompt)
+            if len(calls) == 1:
+                return schema(cover_note="At Boenstitü I used gRPC daily [E3].", answers={})
+            assert "PROBLEMS" in prompt and "gRPC" in prompt
+            return schema(cover_note="At Boenstitü I used Redis [E3]. On Sentropy Engine I used gRPC [P1].", answers={})
+
+    monkeypatch.setattr("careeros.shared.llm.get_llm_client", lambda: Fake())
+    d, problems = k.draft_texts({}, [], "", {}, "u", ITEMS, SKILLS)
+    assert len(calls) == 2 and problems == {} and "Sentropy Engine I used gRPC." in d.cover_note
+
+    calls.clear()
+
+    class Stubborn:
+        def complete_model(self, prompt, schema, **kw):
+            calls.append(prompt)
+            return schema(cover_note="At Boenstitü I used gRPC daily [E3].", answers={})
+
+    monkeypatch.setattr("careeros.shared.llm.get_llm_client", lambda: Stubborn())
+    d, problems = k.draft_texts({}, [], "", {}, "u", ITEMS, SKILLS)
+    assert len(calls) == 2 and "gRPC" in problems["cover_note"][0]   # shown to the person as "Check: …"
+
+
+def test_citations_are_removed_for_display():
+    assert k.strip_citations("I used PyTorch at Vefa [E1]. Sentropy ran on K3s [P1][A1].") ==         "I used PyTorch at Vefa. Sentropy ran on K3s."
 
 
 def test_ai_rules_in_the_posting_text_are_noticed():

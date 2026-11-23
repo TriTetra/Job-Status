@@ -31,6 +31,7 @@ export interface Kit {
   ai_policy: boolean;
   questions: KitQuestion[];
   cover_note: string | null;
+  cover_note_check?: string[];
   drafted: boolean;
   created_at: string;
 }

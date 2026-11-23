@@ -165,6 +165,11 @@ function KitPanel({ item, kit, preparing, onPrepare, onApplied, onSkip, busy }: 
                   <p className={LABEL} style={LABEL_STYLE}>Short note</p>
                   {note && <CopyButton text={note} />}
                 </div>
+                {kit.cover_note_check && kit.cover_note_check.length > 0 && (
+                  <p className="mt-2 text-[11px] leading-relaxed" style={{ color: "var(--accent)" }}>
+                    Check: {kit.cover_note_check.join("; ")}
+                  </p>
+                )}
                 {kit.cover_note ? (
                   <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={9}
                             className="mt-2 w-full rounded-lg border bg-transparent p-2.5 text-sm leading-relaxed outline-none focus:border-[var(--accent)]"
