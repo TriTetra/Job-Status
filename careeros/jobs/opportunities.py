@@ -98,14 +98,24 @@ def user_decisions(session: Session, user_id: str) -> Dict[str, dict]:
     }
 
 
+def with_own(top: List[CareerScore], own: List[CareerScore]) -> List[CareerScore]:
+    """The best-first page plus the jobs the person added themselves, which a low score must never
+    push off the list (they chose these): appended after the page, best first."""
+    have = {s.url for s in top}
+    extra = sorted((s for s in own if s.url not in have), key=lambda s: -(s.career_score or 0))
+    return top + extra
+
+
 def list_opportunities(session: Session, user_id: str, recommendation: str = "ALL", limit: int = 200) -> List[CareerScore]:
     """Latest score per job, best first. Scoring classifies opportunities; it never hides them."""
-    return CareerScoreRepository(session).get_top_opportunities(
+    repo = CareerScoreRepository(session)
+    top = repo.get_top_opportunities(
         min_score=None,
         recommendation=None if recommendation == "ALL" else recommendation,
         limit=limit,
         user_id=user_id,
     )
+    return with_own(top, repo.own_added(user_id)) if recommendation == "ALL" else top
 
 
 def count_opportunities(session: Session, user_id: str, recommendation: str = "ALL") -> int:

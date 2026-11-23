@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.3 düzeltme: eklenen ilan listede kalır | Opportunities en iyi 500 ilanı gösteriyordu (canlıda toplam 597); kişinin kendi eklediği düşük puanlı bir ilan listeye girmiyordu. Artık eklenen ilanlar her zaman listenin sonunda | ✅ Tamam | 2026-11-23 |
 | Deploy: 1.1 Adzuna + kota düzeltmesi, 1.2 unvan filtresi, 1.3 ilan ekleme | fcf6e58 canlıda (Coolify 1 dk 7 sn); migration apply_kits_022 → jobs_added_by_023 uygulandı, API hatasız açıldı; "Add a job" canlıda, sunucu okuma yolu denendi (yazma olmadan). Adzuna anahtar girilene kadar kapalı | ✅ Canlı | 2026-11-23 |
 | 1.3 Herhangi Bir İlanı Ekleme | Opportunities'te "Add a job": bağlantı ya da yapıştırılan metin; bilinen iş sistemlerinde resmi API, diğer sitelerde robots.txt'e uyarak sayfa okuma, LinkedIn / Kariyer.net / Indeed / Glassdoor / kununu / XING hiç okunmaz (metin yapıştırılır); ilan puanlanır, yalnız ekleyen görür, kuyruk ve kit için hazır. Migration 023 | ✅ Tamam | 2026-11-23 |
 | 1.2 Unvan Filtresini Genişletme | Ölçüm: 18.975 başlıktan 8.904'ü eleniyordu; ilgili olup kaçanlar (Member of Technical Staff, Researcher, MLOps, Computer Vision, Tech Lead, Cybersecurity, Almanca / Fransızca / İspanyolca / İtalyanca / Hollandaca / Lehçe unvanlar) eklendi: 183 başlık artık içeride, önceden alınan hiçbir başlık kaybolmadı. Meslek adlarında çoğul, tırnaklı terimde tam ifade | ✅ Tamam | 2026-11-23 |
@@ -131,6 +132,17 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.3 Düzeltme: Eklenen İlan Listede Kalır] — 2026-11-23 — Hata ✅
+
+**Bulunduğu yer:** canlı kontrol. Opportunities listesi (`/api/jobs/?limit=500`) en yüksek puandan başlayarak ilk 500 ilanı veriyor; canlıda toplam 597 eşleşme var. Kişinin eklediği bir ilan düşük puan alırsa listeye girmiyordu. "Add a job" sonrası ilanın seçilmesi de bu yüzden çalışmayacaktı.
+
+- **`opportunities.with_own`**: liste, kişinin kendi eklediği açık ilanlarla tamamlanıyor (sayfanın sonuna, en iyiden kötüye). Bunlar kişinin kendi seçtiği ilanlar; düşük puan onları gizlememeli.
+- **`CareerScoreRepository.own_added`**: kişinin eklediği açık ilanların puanları.
+- Ayrıca canlı loglara göre kullanıcının ilk ekleme denemesi sunucuya hiç ulaşmamış (deploydan beri tek `POST /api/jobs/add` isteği var, o da bizim example.com denemesi). Muhtemelen tarayıcıdaki kontrol durdurdu (LinkedIn bağlantısıyla 200 karakterden kısa metin).
+- 784 test (yeni: kendi ilanları sayfanın sonuna eklenir, aynısı iki kez gelmez), ruff temiz.
 
 ---
 

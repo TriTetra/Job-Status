@@ -184,3 +184,13 @@ def test_a_link_on_a_known_job_system_is_read_from_its_api(monkeypatch):
     shared = Job(url="https://job-boards.greenhouse.io/acme/jobs/111", title="Data Engineer", company="Acme", added_by=None)
     again = added.add_job(_Session([shared]), "u1", "https://boards.greenhouse.io/acme/jobs/111", http=http)
     assert again is shared                                                  # the same job under its board's link
+
+
+def test_own_added_jobs_stay_on_the_opportunities_list():
+    from types import SimpleNamespace as S
+
+    from careeros.jobs.opportunities import with_own
+
+    top = [S(url="a", career_score=90), S(url="b", career_score=80)]
+    own = [S(url="b", career_score=80), S(url="mine-low", career_score=3), S(url="mine-mid", career_score=40)]
+    assert [s.url for s in with_own(top, own)] == ["a", "b", "mine-mid", "mine-low"]

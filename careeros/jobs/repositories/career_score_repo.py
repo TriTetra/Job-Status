@@ -49,6 +49,12 @@ class CareerScoreRepository(BaseRepository[CareerScore]):
             .where(CareerScore.user_id == user_id, Job.closed_at.is_(None))
         )
 
+    def own_added(self, user_id: str) -> List[CareerScore]:
+        """Scores of the open jobs this person added themselves (careeros/jobs/added.py)."""
+        stmt = (select(CareerScore).join(Job, Job.url == CareerScore.url)
+                .where(CareerScore.user_id == user_id, Job.added_by == user_id, Job.closed_at.is_(None)))
+        return list(self.session.execute(stmt).scalars().all())
+
     def get_top_opportunities(
         self,
         min_score: Optional[float] = 60.0,
