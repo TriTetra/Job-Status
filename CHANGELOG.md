@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Kişi Hafızası: Araştırma + Tasarım | Kişiselleştirme denetimi; 4 alanda literatür araştırması (kişi modeli ve beceriler, geri bildirimden öğrenme, hafıza mimarisi, beceri gelişimi ve CV sonuçları); tek olay günlüğü + projeksiyonlar tasarımı ve 7 fazlı yol haritası (docs/v1/PERSON_MEMORY.md); kod değişmedi | ✅ Tamam | 2026-11-23 |
 | Search + What People Say | Yeni Search sayfası (tüm açık ilanlar; ülke, çalışma şekli, şirket büyüklüğü, tarih, maaş, kaynak, vize, güvenilirlik filtreleri; sonuçlar arama sırasında v8 ile puanlanır, kaydedilmez); okuyucuda ve Companies'te "What people say" bağlantıları (Glassdoor, Reddit, Blind, kununu, Ekşi Sözlük); dil kontrolü hızlandırıldı | ✅ Tamam | 2026-11-23 |
 | Scoring v8: Research-Based Model | Researched hiring evidence (5 areas, report in reports/); new model: hard gates, calibrated chance of an interview × value of the job, ranked by expected surplus (Bied et al. 2026); explained in "How it's calculated"; Scoring settings become value weights + effort | ✅ Tamam | 2026-11-23 |
 | Scoring v7: Trust, Location, Size, Currency + Small-Company Logos | Score now uses your target countries, company size from the whole board, salaries in any currency, skill demand from real postings; employer trust check (agency / ghost / scam) with "Only reliable employers" on by default; logos for small companies | ✅ Tamam | 2026-11-23 |
@@ -116,6 +117,32 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Kişi Hafızası: Araştırma + Tasarım] — 2026-11-23 — Aplio seni nasıl tanımalı ✅
+
+**Neden:** Kullanıcı: sistem kişiyi sağlam bir hafızayla tanısın; başvurular, CV, beceriler, öğrenme git ağacı gibi kayıt tutsun; beyin fırtınası ve literatür taramasıyla kişiyi tanıma ve modüllerin birbiriyle ilişkisi sağlam kurulsun.
+
+### Denetim (kod)
+- Kişi bilgisi altı yere dağılmış (`users.profile_data`, `users.goals`, `user_settings`, `career_preferences`, `evidence_items`, `career_graph_nodes`); puanlama iki doğruluk kaynağından birini seçiyor.
+- Beceri var/yok olarak kullanılıyor (kanıt gücü ve zaman yok); 136 kenarlı beceri aktarım grafiği hiç kullanılmıyor.
+- Unvan eşleşmesi hatası: hedef "Backend Engineer" iken her "… Engineer" ilanı yakın rol sayılıyor ("Cryogenics Engineer" 79 / Strong).
+- Kararlar (Shortlist / Skip / Applied) ve başvuru sonuçları hiçbir modeli değiştirmiyor; gönderilen CV kaydedilmiyor; kariyer grafiği onboarding'den sonra güncellenmiyor.
+- Menüdeki Evidence / Learning / Resume sayfaları web'de yok (404).
+- Test DB: açık ilanların %3'ü LLM ile okunmuş; ortanca beceri karşılama %20.
+
+### Araştırma (`reports/Kişi hafızası ve kariyer modeli.md`, notlar `research_notes/Kişi hafızası ve kariyer modeli/`)
+- Kişi modeli: LinkedIn Skills Graph, ESCO / O*NET; LLM beceri çıkarımı sıkı eşleşmede zayıf (SkillSpan'de GPT-4 27,8'e karşı denetimli 62,6); GitHub'dan rol iyi (precision 0,88), düzey zayıf (F 0,56); öz-değerlendirme–performans r≈.29; kullanılmayan becerinin kazanımının yarısı 6,5–13 ayda gidiyor (2025 Psych. Bulletin).
+- Geri bildirim: XING RecSys 2017 etiket ağırlıkları (tık +1, kaydet / başvur +5, işveren ilgisi +20, sil −10); LinkedIn GLMix (genel model + kişi sapması); küçük veride Beta-Binomial → Bayesian Platt kalibrasyon; yanıtsız başvuru sansürlü gözlem.
+- Hafıza: "olay + projeksiyon" (Azure: profil tam event sourcing'e değmez), iki saatli gerçekler (Graphiti), Generative Agents getirme (yenilik 0,995, önem 1–10, reflection eşiği 150), Mem0 / Zep sayıları (satıcı ölçümü), EDPB 02/2025 silme.
+- Beceri gelişimi ve CV: AI becerisi primi ~%21 (Stephany & Teutloff 2024); LinkedIn'de görünür sertifika yeni işi %6 artırdı (Athey & Palikot); algoritmik CV yardımı işe alımı ~%8 artırdı; AI ön yazı aracı sonrası uyarlamanın sinyal değeri %51 düştü; sıradaki rol tahmini ilk 10'da %43.
+
+### Tasarım (`docs/v1/PERSON_MEMORY.md`)
+- Tek `person_events` günlüğü (niyet + `actor` + iki saat), aynı transaction'da projeksiyonlar: `person_facts`, `skill_beliefs` (log-odds, güvenilirlik, sönüm, grafik kısmi kredi), tercih sapması (GLMix, değere en fazla ±0,15), şans kalibrasyonu, git tarzı CV (`cv_blobs / commits / refs`, başvuruda commit etiketi), `job_impressions`.
+- Her modülün okuduğu ve yazdığı olaylar tablosu; modüller birbirinin tablosuna yazmıyor.
+- 7 faz: 0 temizlik (unvan hatası, tek doğruluk kaynağı, kırık menü, 50 ilanlık değerlendirme seti) → 1 kayıt (olay günlüğü, gösterimler, Skip nedenleri, CV etiketi) → 2 beceri inancı → 3 öğrenen sıralama → 4 CV git + Resume → 5 Learning → 6 "Aplio seni nasıl tanıyor" + zaman çizelgesi.
+- Not: katsayıların çoğu kanıtla sınırlanmış tasarım tercihi; KVKK incelenmedi; üretimdeki Postgres sürümü doğrulanmalı.
 
 ---
 
