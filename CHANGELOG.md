@@ -144,6 +144,7 @@ Sıralama: en yeniden en eskiye.
 - Tarayıcıda: "Why 78?" penceresi (×0,59 beceri, ×0,27 rekabet, %1,1 şans, değer 58), Scoring ayarları.
 - 674 test (yeni `test_scoring_v8.py`: beceri eğrisi, unvan ailesi ve Türkçe unvanlar, deneyim, zaman ve hayalet ilan, rekabet, ülke kuralları ve engeller, maaş eğrisi ve taban, Γ sıralaması, emek, diller, girdiler), ruff, tsc, eslint, `next build` temiz.
 - **Not:** çarpanların çoğu kanıta dayalı tasarım tercihi, ölçülmüş etki değil; başvuru sonuçları (Applications geçmişi) biriktikçe "herhangi bir yanıt" üzerinden kalibre edilmeli.
+- **Yayında:** `8e0a5ef` push edildi, Coolify'da dağıtıldı (Finished). API 07:57'de hatasız açıldı; zamanlayıcının ilk döngüsü panoları okuyup herkesi v8 ile yeniden puanlıyor (kontrol anında pano okuması sürüyordu). Canlıda `/api/settings/weights` ve `/api/jobs/` oturumsuz 401.
 
 ---
 
