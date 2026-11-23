@@ -52,16 +52,19 @@ def matches_message(items: list[dict]) -> str:
 
 
 def reminders_message(items: list[dict]) -> str:
-    lines = [f"• <b>{_esc(a['title'])}</b> · {_esc(a.get('company') or '')} · {a.get('days_in_status')} days" for a in items]
+    lines = []
+    for a in items:
+        link = _app_link("/applications?open=" + quote(a["url"], safe=""))
+        step = "last check-in" if a.get("due") == 2 else "follow-up"
+        lines.append(f"• <b>{_esc(a['title'])}</b> · {_esc(a.get('company') or '')} · {a.get('days_waiting')} days · "
+                     f"<a href=\"{_esc(link)}\">{step} draft</a>")
     return ("⏰ <b>Waiting for an answer</b>\n\n" + "\n".join(lines)
-            + "\n\nA short, specific follow-up to the recruiter often gets one. "
-            + f"<a href=\"{_esc(_app_link('/applications'))}\">Your applications</a>")
+            + "\n\nA short, specific follow-up often gets one. Each has a draft from your evidence: "
+            + "you send it, then mark it sent.")
 
 
 def notify_user(session: Session, user_id: str, now: Optional[datetime] = None) -> int:
     """Send what's new to this user's Telegram; returns how many messages went out."""
-    from careeros.applications.pipeline import pipeline
-
     row = session.get(TelegramLink, user_id)
     if not (row and row.chat_id and telegram.available()):
         return 0
@@ -75,9 +78,13 @@ def notify_user(session: Session, user_id: str, now: Optional[datetime] = None) 
         if new:
             messages.append((matches_message(new), [m["url"] for m in new]))
     if prefs.get("reminders"):
-        stale = [a for a in pipeline(session, user_id, now) if a["stale"] and f"remind:{a['url']}" not in seen][:MAX_REMINDERS]
-        if stale:
-            messages.append((reminders_message(stale), [f"remind:{a['url']}" for a in stale]))
+        from careeros.applications.followup import due
+
+        def key(a):  # one reminder per follow-up step
+            return f"remind:{a['url']}" if a["due"] == 1 else f"remind{a['due']}:{a['url']}"
+        waiting = [a for a in due(session, user_id, now) if key(a) not in seen][:MAX_REMINDERS]
+        if waiting:
+            messages.append((reminders_message(waiting), [key(a) for a in waiting]))
 
     if prefs.get("report"):
         from careeros.applications.report import daily_report, report_text

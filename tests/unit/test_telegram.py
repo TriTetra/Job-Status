@@ -96,15 +96,18 @@ def test_notify_sends_only_whats_new_once(monkeypatch, sent):
     monkeypatch.setattr(notify, "strong_matches", lambda sess, uid, limit=50: [
         {"url": "https://jobs/old", "title": "Old", "company": "X", "score": 70, "where": ""},
         {"url": "https://jobs/new", "title": "New", "company": "Y", "score": 68, "where": "Berlin"}])
-    import careeros.applications.pipeline as pipeline_mod
-    monkeypatch.setattr(pipeline_mod, "pipeline", lambda sess, uid, now=None: [
-        {"url": "https://jobs/app", "title": "Waiting", "company": "Z", "stale": True, "days_in_status": 16},
-        {"url": "https://jobs/fresh", "title": "Fresh", "company": "Z", "stale": False, "days_in_status": 2}])
+    import careeros.applications.followup as followup_mod
+    waiting = [{"url": "https://jobs/app", "title": "Waiting", "company": "Z", "due": 1, "days_waiting": 16}]
+    monkeypatch.setattr(followup_mod, "due", lambda sess, uid, now=None: waiting)
 
     assert notify.notify_user(s, "u1") == 2
     assert "New" in sent[0][1] and "Old" not in sent[0][1]
-    assert "Waiting" in sent[1][1] and "Fresh" not in sent[1][1]
+    assert "Waiting" in sent[1][1] and "follow-up draft" in sent[1][1]
+    assert "/applications?open=https%3A%2F%2Fjobs%2Fapp" in sent[1][1]   # opens the draft
     assert notify.notify_user(s, "u1") == 0                     # nothing new the second time
+    waiting[0] = {**waiting[0], "due": 2, "days_waiting": 22}       # the last check-in is a new reminder
+    assert notify.notify_user(s, "u1") == 1 and "last check-in draft" in sent[-1][1]
+    assert notify.notify_user(s, "u1") == 0
     row.prefs = {"matches": False, "reminders": False, "report": False}
     assert notify.notify_user(s, "u1") == 0
 

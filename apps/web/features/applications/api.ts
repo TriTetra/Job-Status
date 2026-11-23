@@ -37,6 +37,31 @@ export interface Application {
   application_url: string;
   score: number | null;
   recommendation: string | null;
+  /** careeros/applications/followup.py::state */
+  follow_up?: FollowUpState | null;
+}
+
+export interface FollowUpState {
+  /** 1: the first follow-up (14 days), 2: the last check-in (21 days), null: nothing due */
+  due: 1 | 2 | null;
+  sent: number;
+  skipped: boolean;
+  last_sent_at: string | null;
+  draft_id: number | null;
+  days_waiting: number | null;
+}
+
+export interface FollowUpDraft {
+  id: number;
+  url: string;
+  step: 1 | 2;
+  subject: string;
+  body: string;
+  generated_at: string | null;
+  sent_at: string | null;
+  /** claims the evidence doesn't support */
+  check: string[];
+  drafted_by: "llm" | "template" | null;
 }
 
 /** GET /api/applications/analytics (careeros/applications/pipeline.py::analytics). */
@@ -89,4 +114,10 @@ export const applicationsApi = {
     }),
 
   remove: (url: string) => apiFetch<void>(path(url), { method: "DELETE" }),
+
+  followUpDraft: (url: string, refresh = false) =>
+    apiFetch<FollowUpDraft>("/api/applications/follow-ups/draft", { method: "POST", body: JSON.stringify({ url, refresh }) }),
+  followUpSent: (id: number) => apiFetch<FollowUpDraft>(`/api/applications/follow-ups/${id}/sent`, { method: "POST" }),
+  followUpSkip: (url: string) =>
+    apiFetch<void>("/api/applications/follow-ups/skip", { method: "POST", body: JSON.stringify({ url }) }),
 };

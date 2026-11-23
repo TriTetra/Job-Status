@@ -1,13 +1,14 @@
-﻿"""Applications router — CRUD for the application pipeline."""
+"""Applications router — CRUD for the application pipeline."""
 
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.application import ApplicationCreate, ApplicationResponse, ApplicationUpdate
-from careeros.applications import pipeline
+from careeros.applications import followup, pipeline
 from careeros.applications.repositories.application_repo import STATUSES, ApplicationRepository
 
 router = APIRouter()
@@ -59,6 +60,42 @@ def create_application(
         notes=data.notes or None,
     )
     return ApplicationResponse.model_validate(app)
+
+
+class FollowUpIn(BaseModel):
+    url: str = Field(..., min_length=1, max_length=2048)
+    refresh: bool = False
+
+
+@router.get("/follow-ups", summary="Applications with a follow-up due now")
+def follow_ups_due(user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)) -> List[dict]:
+    return followup.due(session, user_id)
+
+
+@router.post("/follow-ups/draft", summary="The draft for the follow-up that is due (from your evidence)")
+def follow_up_draft(body: FollowUpIn, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    try:
+        return followup.draft(session, user_id, body.url, refresh=body.refresh)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.post("/follow-ups/{email_id}/sent", summary="You sent this follow-up")
+def follow_up_sent(email_id: int, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    try:
+        return followup.mark_sent(session, user_id, email_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+
+@router.post("/follow-ups/skip", status_code=204, summary="Don't suggest follow-ups for this application")
+def follow_up_skip(body: FollowUpIn, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    try:
+        followup.skip(session, user_id, body.url)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
 def _check_status(status: Optional[str]) -> None:

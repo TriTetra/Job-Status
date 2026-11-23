@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
@@ -44,7 +45,11 @@ export function ApplicationsView({ initialApps }: { initialApps: Application[] }
   const [apps, setApps] = useState<Application[]>(initialApps);
   const [view, setView] = useState<View>("board");
   const [query, setQuery] = useState("");
-  const [openUrl, setOpenUrl] = useState<string | null>(null);
+  // ?open=<url> (from Telegram reminders) opens that application
+  const wanted = useSearchParams().get("open");
+  const [openUrl, setOpenUrl] = useState<string | null>(
+    () => (wanted && initialApps.some((a) => a.url === wanted) ? wanted : null),
+  );
   const [adding, setAdding] = useState(false);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<ApplicationStatus | null>(null);

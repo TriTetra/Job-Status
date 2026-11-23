@@ -18,6 +18,8 @@ EXPECTED_PATHS = {
     "/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/password", "/api/auth/setup",
     "/api/auth/invites", "/api/auth/invites/check", "/api/auth/invites/accept", "/api/auth/invites/{invite_id}",
     "/api/applications/", "/api/applications/summary", "/api/applications/analytics", "/api/applications/{url}",
+    "/api/applications/follow-ups", "/api/applications/follow-ups/draft",
+    "/api/applications/follow-ups/{email_id}/sent", "/api/applications/follow-ups/skip",
     "/api/companies/", "/api/companies/hiring", "/api/companies/track",
     "/api/companies/boards", "/api/companies/boards/{key}", "/api/companies/logo/{key}", "/api/companies/logo-job",
     "/api/companies/{name}", "/api/companies/{name}/memory",

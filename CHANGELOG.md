@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.8 Takip Mesajları | 14. günde ilk takip, 21. günde son kontrol (ilkinden en az bir hafta sonra), sonra bir daha sorulmaz. Taslak yalnız kanıttan (kit'in kanıt kontrolüyle) ya da sade şablondan; kişi gönderir, "I sent it" ile işaretler, "Don't follow up" ile durdurur. Telegram hatırlatması doğrudan taslağı açar | ✅ Tamam | 2026-11-23 |
 | 1.7 Sonucu E-postadan Görme | Settings → Connections → Mailbox: uygulama şifresiyle IMAP (salt okunur, şifre şifreli). Yalnız başvurulan şirketlerin e-postaları okunur; LLM red / mülakat / teklif / bilgi isteği / alındı diye sınıflandırır; eminse başvuruyu ilerletir (OutcomeObserved, agent:mail), değilse Applications'ta sorar. "Disconnect and forget" her şeyi siler. Migration 024 | ✅ Tamam | 2026-11-23 |
 | Deploy: eklenen ilan listede kalır | 9c70841 canlıda (Coolify 27 sn), API yanıt veriyor (toplam 603 eşleşme). Adzuna: kullanıcı ücretli plan seçmedi, hesap 25 deneme çağrısında; anahtar girilirse ADZUNA_MAX_CALLS=5 önerildi | ✅ Canlı | 2026-11-23 |
 | 1.3 düzeltme: eklenen ilan listede kalır | Opportunities en iyi 500 ilanı gösteriyordu (canlıda toplam 597); kişinin kendi eklediği düşük puanlı bir ilan listeye girmiyordu. Artık eklenen ilanlar her zaman listenin sonunda | ✅ Tamam | 2026-11-23 |
@@ -134,6 +135,36 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.8 Takip Mesajları] — 2026-11-23 — İş akışı ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.8. Cevap gelmeyen başvurular için yalnız "takip etmek iyi olur" yazıyordu: taslak yoktu, gönderilip gönderilmediği bilinmiyordu, hatırlatma tek seferlikti.
+
+### Ne zaman (`careeros/applications/followup.py`)
+- Başvuru hâlâ **applied** durumundaysa ve cevap gelmediyse:
+  - **14. gün:** ilk takip;
+  - **21. gün:** son kısa kontrol. İlk takip gönderildikten en az bir hafta sonra.
+- Ardından **bir daha sorulmaz**. "Don't follow up" ile o başvuru için hemen durur. Gelen bir cevap (e-postadan 1.7 ile ya da panodaki bir hareketle) başvuruyu listeden kendiliğinden çıkarır.
+- Durum Applications satırlarında `follow_up` alanı olarak geliyor: `due`, `sent`, `last_sent_at`, `draft_id`, `days_waiting`.
+
+### Taslak
+- **Yapay zekâyla:** yalnız kişinin kanıtından yazılır. Kit'in kuralları geçerli: kimlikli kanıt maddeleri, bir araç yalnız onu listeleyen işe bağlanabilir, `check_grounding` ve tek bir düzeltme turu. İçerik: rol, başvuru tarihi, kanıttan **tek** somut uyum, takvim sorusu, yardım teklifi. İlk takip en fazla 110 kelime, son kontrol en fazla 70. "Hello," ile başlar, kişinin adıyla biter.
+- **Yapay zekâ yoksa:** sade şablon. Yalnız kişinin gösterdiği ve ilanın istediği becerileri anar, desteklenmeyen hiçbir şey söylemez.
+- Taslak `emails` tablosunda saklanır (follow_up_1 / follow_up_2). Her açılışta yeniden yazılmaz; "Rewrite" ile aynı satırda yenilenir. Kanıtla çelişen bir iddia kalırsa "Check before sending" uyarısı gösterilir.
+- **Aplio göndermez:** "Copy", "Open in mail" (konu ve metin dolu, alıcı boş) ve "I sent it". Gönderilince hafızaya `FollowUpSent` yazılır. "Don't follow up" `follow_up_skipped` satırı olarak tutulur.
+
+### Telegram
+- "Waiting for an answer" hatırlatması artık her adım için bir kez geliyor (`remind:` ve `remind2:`). Her satırda "follow-up draft" ya da "last check-in draft" bağlantısı var; bağlantı `/applications?open=<url>` ile doğrudan o başvurunun panelini açıyor.
+
+### Arayüz
+- Başvuru paneli: "No answer for N days…" yazısı ve "Draft a follow-up" / "Draft the check-in" düğmesi. Taslak açılınca konu, düzenlenebilir metin, "Copy", "Open in mail", "I sent it", "Rewrite" ve "Don't follow up" var. Gönderdikten sonra "You followed up 23 Nov. Aplio suggests one last check-in a week later…" yazar.
+- Applications sayfası `?open=` parametresini destekliyor.
+
+### Doğrulama
+- 806 test (yeni: zamanlama kuralları (erken, 14 gün, bir hafta arası, 21 gün, üçüncü yok, durdurma, cevap gelince), şablonun desteklenmeyen bir şey söylememesi, kelime sınırında paragrafların korunması, taslağın bir kez yazılıp yeniden kullanılması, "Rewrite"ın aynı satırda yenilemesi, "I sent it" ile olay yazılması, başkasının taslağına dokunulamaması, "Don't follow up"; Telegram: taslak bağlantısı, adım başına bir hatırlatma), ruff, tsc, eslint, `next build` temiz.
+- Önizleme (atılabilir DB, bir başvuru 16 gün önceye alındı): `?open=` bağlantısı paneli doğrudan açtı. "Draft a follow-up" şablon taslağı üretti (rol, 7 Kasım, yalnız gösterilen iki beceri). "I sent it" sonrası panel "You followed up 23 Nov…" dedi. Veritabanında `follow_up_1` gönderildi olarak işaretlendi ve `FollowUpSent` olayı yazıldı.
 
 ---
 

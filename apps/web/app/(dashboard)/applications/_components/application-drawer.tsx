@@ -7,6 +7,7 @@ import { CompanyLogo } from "@/components/shared/company-logo";
 import { safeHttpUrl } from "@/lib/utils";
 import { applicationsApi, type Application, type ApplicationStatus } from "@/features/applications/api";
 import { companyOf, REC_COLOR, STAGES, STATUS_LABEL, shortDate } from "@/features/applications/format";
+import { FollowUp } from "./follow-up";
 
 const LABEL = "text-[11px] uppercase tracking-[0.08em]";
 const LABEL_STYLE = { color: "var(--text-muted)", fontFamily: "var(--font-display)" } as const;
@@ -133,7 +134,9 @@ export function ApplicationDrawer({ app, onClose, onMove, onChanged, onRemoved }
                 </>
               )}
             </div>
-            {app.stale && (
+            {app.follow_up ? (
+              <FollowUp app={app} onChanged={onChanged} />
+            ) : app.stale && (
               <p className="mt-4 text-sm" style={{ color: "var(--text-secondary)" }}>
                 No answer for {app.days_in_status} days. A short, specific follow-up to the recruiter often gets one.
               </p>

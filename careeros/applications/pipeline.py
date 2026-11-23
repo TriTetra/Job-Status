@@ -90,6 +90,9 @@ def pipeline(session: Session, user_id: str, now: Optional[datetime] = None) -> 
     apps = [a for a in _apps(session, user_id) if a.status != "skipped"]
     jobs = _jobs(session, (a.url for a in apps))
     scores = _scores(session, user_id, (a.url for a in apps))
+    from careeros.applications.followup import states
+
+    follow = states(session, user_id, apps, now)
     out = []
     for a in apps:
         job, score = jobs.get(a.url), scores.get(a.url)
@@ -114,6 +117,7 @@ def pipeline(session: Session, user_id: str, now: Optional[datetime] = None) -> 
             "application_url": (job.application_url or job.url) if job else a.url,
             "score": round(score.career_score) if score and score.career_score is not None else None,
             "recommendation": (score.recommendation or "").split(" - ")[0].upper() if score else None,
+            "follow_up": follow.get(a.url),
         })
     return out
 

@@ -30,7 +30,7 @@ EVENT_TYPES = {
     # applications over time
     "ApplicationStageChanged", "OutcomeObserved",
     # what Aplio prepared for them
-    "KitPrepared",
+    "KitPrepared", "FollowUpSent",
 }
 ACTORS = ("user", "agent:", "import:", "system")
 
