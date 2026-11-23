@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "8.1"  # 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
+SCORER_VERSION = "8.2"  # 8.2: locations (USA, states, cities; unknown ≠ free pass), on-site vs hybrid, implied skills · 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -61,12 +61,9 @@ def build_profile_from_evidence(user_id: str) -> Optional[UserProfile]:
         name = " ".join(x for x in [profile_data.get("first_name"), profile_data.get("last_name")] if x) or "Candidate"
         # total_years lives in profile_data JSONB; years_in_role is the column fallback
         years = float(profile_data.get("total_years") or years_in_role or DEFAULT_YEARS_EXPERIENCE)
-        profile = UserProfile(
-            name=name,
-            email=email or "",
-            years_experience=years,
-            skills=[Skill(a["skill_name"], skill_level_for(a["aggregated_confidence"])) for a in aggregated],
-        )
+        skills = [Skill(a["skill_name"], skill_level_for(a["aggregated_confidence"])) for a in aggregated]
+        skills += implied_skills(aggregated)
+        profile = UserProfile(name=name, email=email or "", years_experience=years, skills=skills)
 
         prefs = s.execute(
             sa.text("SELECT requires_sponsorship, work_arrangements, preferred_country_codes, salary_min, salary_max, salary_currency "
@@ -75,6 +72,19 @@ def build_profile_from_evidence(user_id: str) -> Optional[UserProfile]:
         apply_preferences(profile, prefs)
         apply_identity(profile, profile_data, s, user_id)
         return profile
+
+
+def implied_skills(aggregated: list[dict]) -> list[Skill]:
+    """Broader skills the evidence implies (PyTorch → Deep Learning → Machine Learning), at the
+    confidence of the skill they come from, slightly lowered."""
+    from careeros.knowledge.skill_names import canonical, implied_by, key
+
+    conf = {key(a["skill_name"]): a["aggregated_confidence"] for a in aggregated}
+    out = []
+    for target, source in implied_by(a["skill_name"] for a in aggregated).items():
+        conf[target] = conf.get(source, 0.6) * 0.9
+        out.append(Skill(canonical(target), skill_level_for(conf[target])))
+    return out
 
 
 def apply_identity(profile: UserProfile, profile_data: dict, session, user_id: str) -> None:
@@ -234,6 +244,8 @@ def job_fields(r: JobRow) -> dict:
         "salary_currency": r.salary_currency or "USD",
         "summary": None,
         "extracted_by": "keywords",
+        # what the posting says about where you work; None = not stated (keyword reading can't tell)
+        "workplace": "remote" if r.remote else None,
     }
     if not facts:
         return fields
@@ -251,6 +263,7 @@ def job_fields(r: JobRow) -> dict:
     if workplace in ("remote", "hybrid", "onsite"):
         fields["remote"] = workplace == "remote"
         fields["hybrid"] = workplace == "hybrid"
+        fields["workplace"] = workplace
     if facts.get("remote_regions"):
         fields["remote_region"] = facts["remote_regions"][0]
     if facts.get("visa_sponsorship") in _VISA:
@@ -386,6 +399,7 @@ def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] =
             "company": r.company or "",
             "location": r.location or "",
             "remote": f["remote"],
+            "workplace": f["workplace"],
             "remote_region": f["remote_region"],
             "sponsors_visa": f["sponsors_visa"],
             "salary_min": f["salary_min"],

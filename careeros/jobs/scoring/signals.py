@@ -142,6 +142,7 @@ def build_signals(*, title: str, fields: dict, regions: list[str], location: str
         seniority=seniority,
         remote=bool(fields.get("remote")),
         hybrid=bool(fields.get("hybrid")),
+        workplace=fields.get("workplace"),
         regions=regions,
         countries=countries,
         offer_usd=offer,

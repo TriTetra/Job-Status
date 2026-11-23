@@ -50,7 +50,10 @@ def job_skills(job: Job) -> list[str]:
 
 
 def user_skill_keys(session: Session, user_id: str) -> set[str]:
-    return {skill_key(s["skill_name"]) for s in aggregate_user_skills(user_id, session)}
+    """What the person shows, including the broader skills their evidence implies."""
+    from careeros.knowledge.skill_names import with_implied
+
+    return with_implied(skill_key(s["skill_name"]) for s in aggregate_user_skills(user_id, session))
 
 
 def _seed_profiles(session: Session) -> dict[str, Company]:

@@ -81,6 +81,7 @@ class Signals:
     seniority: Optional[str] = None       # junior | mid | senior | staff | principal | lead…
     remote: bool = False
     hybrid: bool = False
+    workplace: Optional[str] = None       # remote | hybrid | onsite when the posting says; None = not stated
     regions: list[str] = field(default_factory=list)   # who may take a remote job
     countries: list[str] = field(default_factory=list)  # where the job is (codes)
     offer_usd: Optional[int] = None       # expected offer, a year
@@ -326,7 +327,12 @@ def market(sig: Signals, me: Seeker, gates: list[str]) -> tuple[float, str]:
             return 0.1, "Remote only for residents of other countries"
         return 1.0, "Remote"
     if not sig.countries:
-        return 1.0, ""
+        # Where it is isn't known: not a free pass. Someone who needs a visa can't assume it's reachable.
+        if not me.residence:
+            return 1.0, ""
+        if me.needs_sponsorship:
+            return 0.4, "Location unclear: check where it's based"
+        return 0.8, "Location unclear"
     best = max(_country_factor(c, sig, me, gates) for c in sig.countries)
     note = "" if best >= 0.9 else "Needs a work visa" if best > 0 else ""
     return best, note
@@ -337,11 +343,13 @@ def gates_for(sig: Signals, me: Seeker) -> list[str]:
     if sig.trust == "risk":
         out.append("Posting shows scam warning signs")
     if not sig.remote:
-        onsite_only = not sig.hybrid
-        if onsite_only and not me.onsite_ok and not me.hybrid_ok:
-            out.append("On-site role; you only want remote")
+        if sig.workplace == "onsite" and not me.onsite_ok:
+            # the posting says on-site: accepting hybrid doesn't mean accepting the office every day
+            out.append("On-site role; you want remote or hybrid" if me.hybrid_ok else "On-site role; you only want remote")
         elif sig.hybrid and not (me.hybrid_ok or me.onsite_ok):
             out.append("Hybrid role; you only want remote")
+        elif not sig.hybrid and sig.workplace is None and not me.onsite_ok and not me.hybrid_ok:
+            out.append("Not remote; you only want remote")
     missing = [lang for lang in sig.languages_required if me.languages and lang not in me.languages]
     if missing:
         out.append(f"Requires {', '.join(missing).upper()} you haven't listed")
@@ -374,7 +382,9 @@ def value(sig: Signals, me: Seeker, c_must: float) -> tuple[float, dict]:
         style = 1.0 if me.remote_ok else 0.6
     elif sig.hybrid:
         style = 1.0 if me.hybrid_ok else (0.6 if me.remote_ok or me.onsite_ok else 0.2)
-    else:
+    elif sig.workplace == "onsite":
+        style = 1.0 if me.onsite_ok else 0.2
+    else:  # not remote, arrangement not stated: could be on-site or hybrid
         style = 1.0 if me.onsite_ok else (0.6 if me.hybrid_ok else 0.2)
     parts["work_style"] = style
     weights = {k: max(0.0, float(me.value_weights.get(k, w))) for k, w in VALUE_WEIGHTS.items()}

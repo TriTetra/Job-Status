@@ -21,7 +21,47 @@ _EXTRA_ALIASES = {
     "react.js": "react", "reactjs": "react", "vue.js": "vue", "next": "next.js", "nextjs": "next.js",
     "amazon web services": "aws", "google cloud": "gcp", "google cloud platform": "gcp",
     "ml": "machine learning", "dl": "deep learning", "large language models": "llm", "llms": "llm",
+    "large language model (llm)": "llm", "restful apis": "rest api", "restful api": "rest api", "rest apis": "rest api",
+    "rest api design": "rest api", "git/github": "git", "github": "git", "ci/cd pipelines": "ci/cd",
+    "natural language processing (nlp)": "nlp", "retrieval-augmented generation": "rag",
+    "retrieval augmented generation (rag)": "rag",
 }
+
+# Evidence of one skill is evidence of a broader one (a PyTorch project is deep learning,
+# an LLM-agent project is LLM work). Full credit for the broader skill, never the other way.
+_IMPLIES = {
+    "pytorch": ["deep learning"], "tensorflow": ["deep learning"], "keras": ["deep learning"], "jax": ["deep learning"],
+    "deep learning": ["machine learning"], "scikit-learn": ["machine learning"], "xgboost": ["machine learning"],
+    "computer vision": ["machine learning"], "nlp": ["machine learning"], "mlops": ["machine learning"],
+    "opencv": ["computer vision"], "object detection": ["computer vision"], "yolov8": ["object detection"],
+    "hugging face": ["deep learning"], "transformers": ["deep learning"],
+    "transformer architectures": ["deep learning"], "llm agents": ["llm"], "langchain": ["llm"],
+    "openai api": ["llm"], "rag": ["llm"], "prompt engineering": ["llm"], "llamaindex": ["llm"],
+    "k3s": ["kubernetes"], "kubernetes": ["docker"], "spring boot": ["java"], "fastapi": ["python"],
+    "django": ["python"], "flask": ["python"], "next.js": ["react"], "react": ["javascript"],
+    "typescript": ["javascript"], "supabase": ["postgresql"], "microservices": ["rest api"],
+}
+
+
+def implied_by(names: Iterable[str]) -> dict[str, str]:
+    """{broader skill key: the skill it comes from} for skills the given ones imply (not already given)."""
+    have = {key(n) for n in names}
+    out: dict[str, str] = {}
+    frontier = list(have)
+    while frontier:
+        k = frontier.pop()
+        for target in _IMPLIES.get(k, []):
+            t = key(target)
+            if t not in have and t not in out:
+                out[t] = k
+                frontier.append(t)
+    return out
+
+
+def with_implied(keys: Iterable[str]) -> set[str]:
+    """Skill keys plus every broader skill they imply."""
+    keys = set(keys)
+    return keys | set(implied_by(keys))
 
 
 @lru_cache(maxsize=1)

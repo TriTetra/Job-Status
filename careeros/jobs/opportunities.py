@@ -130,6 +130,23 @@ def _decision_prefs(session: Session, user_id: str) -> dict:
     }
 
 
+def _person_facts(session: Session, user_id: str) -> dict:
+    """Who the person is, for the deeper read to check a job against: where they live, what
+    they want, how experienced they are."""
+    from careeros.identity.models.user import User
+
+    facts = _decision_prefs(session, user_id)
+    p = CareerPreferencesRepository(session).get_by_user_id(user_id)
+    if p is not None:
+        facts["salary_currency"] = p.salary_currency
+    user = session.get(User, user_id)
+    if user is not None:
+        data = user.profile_data or {}
+        facts.update(country=data.get("country"), years=data.get("total_years") or user.years_in_role,
+                     level=user.career_level)
+    return facts
+
+
 def get_or_create_reasoning(session: Session, user_id: str, url: str) -> Optional[dict]:
     """The opportunity's decision with its reasoning (LLM, template fallback), cached on the score row.
 
@@ -157,7 +174,7 @@ def get_or_create_reasoning(session: Session, user_id: str, url: str) -> Optiona
         )
 
     if not decision.get("reasoning"):
-        text, source = reasoning_for(explanation, decision, matched, gaps, user_id)
+        text, source = reasoning_for(explanation, decision, matched, gaps, user_id, _person_facts(session, user_id))
         decision.update(reasoning=text, reasoning_source=source, generated_at=datetime.utcnow().isoformat())
         explanation["decision"] = decision
         score.explanation = explanation

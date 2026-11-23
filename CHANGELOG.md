@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Fix Pack A: Live Test Findings | Canlı hesapta test; konum tanıma (USA, eyaletler, şehirler; bilinmeyen konum artık "engel yok" değil), on-site / hybrid ayrımı, beceri eş anlamlıları ve kapsadığı beceriler, deeper read ham bilgileri kontrol ediyor | ✅ Tamam | 2026-11-23 |
 | CLI: CAREER_OS_EMAIL | `career-os jobs scan / eval / eval-sheet` e-posta yazılmazsa hesabı `.env`'deki `CAREER_OS_EMAIL`'den alıyor | ✅ Tamam | 2026-11-23 |
 | Kişi Hafızası Faz 0 + 1 | Unvan eşleşmesi hatası düzeltildi; tek profil kaynağı; kırık menü "Soon"; sıralama değerlendirmesi (`jobs eval`); `person_events` olay günlüğü ve tüm yazma yollarından olaylar; gösterim kaydı; "Not for me" nedenleri; başvuruya gönderilen CV etiketi | ✅ Tamam | 2026-11-23 |
 | Kişi Hafızası: Araştırma + Tasarım | Kişiselleştirme denetimi; 4 alanda literatür araştırması (kişi modeli ve beceriler, geri bildirimden öğrenme, hafıza mimarisi, beceri gelişimi ve CV sonuçları); tek olay günlüğü + projeksiyonlar tasarımı ve 7 fazlı yol haritası (docs/v1/PERSON_MEMORY.md); kod değişmedi | ✅ Tamam | 2026-11-23 |
@@ -119,6 +120,31 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Fix Pack A: Live Test Findings] — 2026-11-23 — Yanlış işleri üste koyan hatalar ✅
+
+**Neden:** Kullanıcı sistemin yapay zekâ omurgasını kendi hesabıyla test etmemi istedi. Canlıda (salt okuma + 2 deeper read) ilk öneri Zscaler'in Santa Clara'daki Staff ilanıydı (87, apply): Özbekistan'da yaşayan, sponsorluk gereken ve yalnız remote / hybrid isteyen biri için. Kullanıcı önce bu düzeltmeleri seçti ("Yes, start with A").
+
+### Testte bulunanlar
+- İyi: LLM ilk 500 eşleşmenin %100'ünü okumuş; CV'den 54 beceri, 3 deneyim, 2 proje, 3 başarı; Briefing gelişim önerileri veriyor; deeper read ~4 sn.
+- Hatalar: (1) "USA", "California", "IND", Nieuwegein gibi konumlar tanınmıyor, ülkesi bilinmeyen iş "engel yok" (×1,0) sayılıyordu; (2) hybrid kabul etmek tamamen on-site işi de kabul etmek sayılıyordu (hem eleme hem "Your priorities"); (3) beceri adları: "LLM Agents" ≠ LLM, "RESTful APIs" ≠ REST API, PyTorch / Transformer bilgisi Deep Learning sayılmıyordu (Market: "LLM 275 eşleşmende eksik"); (4) deeper read yalnız Aplio'nun kendi özetini görüp yanlışlarını akıcı biçimde tekrar ediyordu ("on-site tercihine uyuyor", "konum belirtilmemiş").
+- Hata değil: "Meets your minimum" doğruydu (minimum €40.000 tanımlı); ilk raporda yanlış söylemiştim.
+
+### Düzeltmeler
+- **Konum (`careeros/jobs/geo.py`):** tam kelime eşleşmesi (Indiana artık India değil), yerel ve kısa adlar (USA, UK, Deutschland, Nederland…), 3 harfli kodlar yalnız büyük harfle (IND, GBR; "join us" ülke değil), 50 ABD eyaleti, Kanada eyaletleri, ~200 teknoloji şehri, Körfez ve diğer eksik ülkeler; "Atlanta, Georgia" ABD.
+- **Bilinmeyen konum:** sponsorluk gereken biri için ×0,4 "Location unclear: check where it's based" (gerekmiyorsa ×0,8); "Your priorities"te ilanın yazdığı yer gösteriliyor.
+- **Çalışma şekli:** yeni `workplace` sinyali (LLM'in okuduğu remote / hybrid / onsite; yazmıyorsa boş). İlan on-site diyorsa ve on-site seçmediysen elenir ("On-site role; you want remote or hybrid"); yazmıyorsa elenmez ama değeri düşer; "Your priorities" on-site / hybrid / belirtilmemiş diye ayrı yazar.
+- **Beceriler (`careeros/knowledge/skill_names.py`):** yeni eş anlamlılar (RESTful APIs → REST API, Git/GitHub → Git…) ve kapsama kuralı: kanıtın daha geniş beceriyi de gösterir (PyTorch → Deep Learning → Machine Learning, LLM Agents / LangChain / RAG → LLM, K3s → Kubernetes → Docker, YOLOv8 → Computer Vision…), tersi asla. Puanlama profiline biraz düşük seviyeyle ekleniyor; Market ve Companies'teki "you show" da kullanıyor.
+- **Deeper read:** artık ilanın ham bilgilerini (konum ve tanınan ülke, çalışma şekli, maaş, vize, deneyim notu, eşleşen ve eksik beceriler) ve kişinin bilgilerini (yaşadığı ülke, sponsorluk, istediği çalışma şekli, hedef ülkeler, yıl, seviye, minimum maaş) yan yana görüyor; kurallar: yalnız verilen bilgileri kullan, çelişki varsa önce onu söyle.
+- SCORER_VERSION 8.2: bir sonraki döngüde herkes yeniden puanlanır.
+
+### Doğrulama
+- Canlı ilk 30'un kayıtlı verisiyle (yalnız konum etkisi): ABD işleri 70–87'den 0–19'a (Zscaler Santa Clara 86,9 → 19,4), Zscaler Bangalore 80,5 → 69,1, PostHog "Hybrid (UK)" 73 → 34, Squid Support Nieuwegein 84,3 → 77,3; üstte AB ve dünya çapı remote işler. Tamamen on-site olanlar ayrıca elenecek.
+- Atılabilir DB'de tam yeniden puanlama hatasız (323 iş).
+- 725 test (yeni `test_fix_pack_a.py`: 27 test), ruff temiz.
+- Açık: profilde ikamet ülkesi "Uzbekistan"; doğruysa vize hesapları ona göre.
 
 ---
 
