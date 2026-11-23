@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Deploy: Faz 1 tamam (1.4–1.8) | cd7c479 canlıda (Coolify 1 dk 7 sn); migration 024 (mail_signals) ve 025 (company_facts) uygulandı; zamanlayıcı "due boards every 15 min, everything every 6.0 h". Taban tazelik ölçümü: medyan 84 saat (976 ilan, eski 6 saatlik düzen + yeni panoların ilk okuması) | ✅ Canlı | 2026-11-24 |
 | 1.6 Tazelik | Zamanlayıcı 15 dakikalık tiklere geçti: yeni ilan ekleyen ucuz panolar saatlik, sakin ya da pahalı panolar 3–6 saatte, hatalı panolar 6 saat bekler; feed'ler kendi kotasında. Yeni ilan gelince hemen LLM okuması, yeniden puanlama ve Telegram'a yeni güçlü eşleşme; posta kutusu saatlik. Gecikme ölçümü `/api/jobs/freshness` ve Opportunities başlığında | ✅ Tamam | 2026-11-23 |
 | 1.5 Şirket Verisi | Okuyucuda ve Companies'te "On the public record" kartı: Wikidata (yalnız web sitesi eşleşirse; benzer isimli başka şirket asla gösterilmez), Companies House (UK, anahtar girilince), okunan haberlerde işten çıkarma / yatırım; Hacker News'te "çalışanlar ne diyor" özeti, her madde yorum bağlantısıyla. Kapanmış şirket, iflas, yakın işten çıkarma güven kontrolüne girer. Migration 025 | ✅ Tamam | 2026-11-23 |
 | 1.4 Maaş Verisi (Adzuna'sız) | Market'te ülke × rol ailesi maaşları, yerel para biriminde, yalnız işverenin yazdığı maaştan, kaç ilana dayandığı yazılı; doğrulanmış resmî rakam (BLS) kaynak bağlantısıyla. Puandaki maaş referansı da para birimi tahmin edilen tutarları artık kullanmıyor (scorer 8.4). UK / DE resmî rakamları okunamadı, eklenmedi | ✅ Kısmen | 2026-11-23 |
@@ -138,6 +139,19 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Deploy: Faz 1 tamam (1.4, 1.5, 1.6, 1.7, 1.8)] — 2026-11-24 — Canlı ✅
+
+- **Push:** `814bab1..cd7c479`. 1.7 e-posta cevapları (821cfbc), 1.8 takip taslakları (4c1906f), 1.4 maaş (bffb80e), 1.5 şirket kartı (5a2a53f), 1.6 tazelik (cd7c479).
+- **Coolify:** redeploy 1 dk 7 sn. API logu: `jobs_added_by_023 -> mail_signals_024`, `mail_signals_024 -> company_facts_025`, ardından `Job scheduler on: due boards every 15 min, everything every 6.0 h` ve `Application startup complete`.
+- **Canlı kontrol (yalnız okuma; şirket kartı önbelleğe yazdığı için denenmedi):**
+  - `/api/jobs/freshness` → 976 ilan, 132 pano, **medyan 84,2 saat, %90 128 saat**. Bu taban ölçüm eski 6 saatlik düzenin ve yeni eklenen panoların ilk okumasının (Türkiye panolarındaki eski ilanlar dün "ilk kez görüldü") karışımı; yeni düzenin etkisi birkaç gün içinde ölçülecek.
+  - `/api/market/pay` → Birleşik Krallık 21 ilan, medyan £132.5k (ML / AI £146k, Software £136k). ABD 4.180 ilan, medyan $222k, resmî BLS satırıyla. Kanada 47, İrlanda 10. Almanya ve Türkiye için yeterli maaş yazan ilan yok.
+  - `/api/mail` → bağlı değil. `/api/applications/follow-ups` → şu an vadesi gelen yok.
+- **İyileştirme notu:** tazelik ölçümü, bir panonun ilk okumasında bulunan eski ilanları da sayıyor; bunları dışarıda bırakmak ölçümü netleştirir.
+- **Kullanıcıdan beklenen:** posta kutusunu bağlamak (uygulama şifresi; Settings → Connections → Mailbox). İsteğe bağlı: `COMPANIES_HOUSE_API_KEY`.
 
 ---
 
