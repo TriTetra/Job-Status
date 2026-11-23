@@ -129,6 +129,7 @@ Sıralama: en yeniden en eskiye.
 - Yeni ayar `CAREER_OS_EMAIL` (`careeros/shared/config.py` → `cli_user_email`; `.env.example`'a örnek satır eklendi).
 - `career-os jobs scan`, `jobs eval` ve `jobs eval-sheet`'te e-posta artık isteğe bağlı: yazılmazsa bu ayar kullanılıyor; ikisi de yoksa "Give an e-mail, or set CAREER_OS_EMAIL in .env" der. E-posta kontrolü veritabanına bağlanmadan önce yapılıyor.
 - Doğrulama: atılabilir DB'de yalnız ayarla `jobs eval` çalıştı; yeni test (ayar yoksa çıkış, boşluklar kırpılıyor); smoke testleri ve ruff temiz.
+- **Yayında:** `d0d25ef` push edildi, Coolify'da dağıtıldı (Finished, 28 sn); API 10:46'da hatasız açıldı. Canlıda kullanmak için `CAREER_OS_EMAIL` Coolify ortam değişkenlerine eklenmeli (henüz eklenmedi).
 
 ---
 
