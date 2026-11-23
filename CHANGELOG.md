@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Deploy: 1.1 Adzuna + kota düzeltmesi, 1.2 unvan filtresi, 1.3 ilan ekleme | fcf6e58 canlıda (Coolify 1 dk 7 sn); migration apply_kits_022 → jobs_added_by_023 uygulandı, API hatasız açıldı; "Add a job" canlıda, sunucu okuma yolu denendi (yazma olmadan). Adzuna anahtar girilene kadar kapalı | ✅ Canlı | 2026-11-23 |
 | 1.3 Herhangi Bir İlanı Ekleme | Opportunities'te "Add a job": bağlantı ya da yapıştırılan metin; bilinen iş sistemlerinde resmi API, diğer sitelerde robots.txt'e uyarak sayfa okuma, LinkedIn / Kariyer.net / Indeed / Glassdoor / kununu / XING hiç okunmaz (metin yapıştırılır); ilan puanlanır, yalnız ekleyen görür, kuyruk ve kit için hazır. Migration 023 | ✅ Tamam | 2026-11-23 |
 | 1.2 Unvan Filtresini Genişletme | Ölçüm: 18.975 başlıktan 8.904'ü eleniyordu; ilgili olup kaçanlar (Member of Technical Staff, Researcher, MLOps, Computer Vision, Tech Lead, Cybersecurity, Almanca / Fransızca / İspanyolca / İtalyanca / Hollandaca / Lehçe unvanlar) eklendi: 183 başlık artık içeride, önceden alınan hiçbir başlık kaybolmadı. Meslek adlarında çoğul, tırnaklı terimde tam ifade | ✅ Tamam | 2026-11-23 |
 | 1.1 Adzuna: kota ve anahtar güvenliği | Adzuna kotası doldu ya da anahtar etkin değil (401/403/429) yanıtında okuma duruyor, o ana kadar gelen ilanlar korunuyor; hata mesajları ve loglar artık anahtarı içeren URL'yi yazmıyor; okuma başına istek sayısı `ADZUNA_MAX_CALLS` ile ayarlanabiliyor (varsayılan 40) | ✅ Tamam | 2026-11-23 |
@@ -130,6 +131,17 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Deploy: 1.1 + 1.2 + 1.3] — 2026-11-23 — Canlı ✅
+
+- **Push:** `c3839f3..fcf6e58`. Plan (6cbc49f), Adzuna kaynağı (a4d68d2), Adzuna kota ve anahtar güvenliği (9ea5b5c), unvan filtresi (d551a30), ilan ekleme (fcf6e58).
+- **Coolify:** redeploy 1 dk 7 sn'de bitti. API logu: `Running upgrade apply_kits_022 -> jobs_added_by_023`, ardından `Application startup complete`, Traceback yok.
+- **Canlı kontrol (veri yazmadan):** Opportunities'te "Add a job" görünüyor. Sunucu, ilan olmayan bir sayfayı (example.com) robots.txt kontrolüyle okuyup doğru mesajla reddetti (422).
+- **Adzuna:** `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` girilene kadar kapalı. Hesap onayı bekleniyor; onaydan önce `ADZUNA_MAX_CALLS=5` önerildi.
+- **Unvan filtresi:** yeni başlıklar panoların bir sonraki okumasında (6 saatte bir) kendiliğinden geliyor.
+- **Bekleyen:** kullanıcının yapıştırdığı bir LinkedIn ilanının canlıda puanlanıp kit alması (planın 1.3 "bitti" ölçütü).
 
 ---
 
