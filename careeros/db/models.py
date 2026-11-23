@@ -40,6 +40,7 @@ from careeros.market.models.market_skill import MarketSkill
 from careeros.memory.models import JobImpression, PersonEvent
 from careeros.applications.models.apply_kit import ApplyKit
 from careeros.applications.models.mail_signal import MailSignal
+from careeros.companies.models.company_facts import CompanyFacts
 
 __all__ = [
     "Base",
@@ -56,6 +57,7 @@ __all__ = [
     "Application",
     "Email",
     "MailSignal",
+    "CompanyFacts",
     "ScanHistory",
     "Evidence",
     "Job",

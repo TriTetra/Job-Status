@@ -17,6 +17,7 @@ import { WhyModal } from "./why-modal";
 import { PlaceBadge } from "./place-badge";
 import { AdzunaBadge, isAdzuna } from "./adzuna-badge";
 import { WhatPeopleSay } from "./what-people-say";
+import { CompanyCard } from "./company-card";
 
 interface OpportunityDetailPanelProps {
   opp: Opportunity;
@@ -363,6 +364,8 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
             </section>
           )}
 
+          <CompanyCard key={company} company={company} domain={typeof ex.company_domain === "string" ? ex.company_domain : null}
+                       uk={(ex.countries ?? []).includes("GB")} />
           <WhatPeopleSay company={company} location={`${ex.location ?? ""} ${(ex.remote_regions ?? []).join(" ")}`} />
 
           {criteria.length > 0 && (

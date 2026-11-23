@@ -12,6 +12,8 @@ export interface BoardCompany {
   key: string;
   name: string;
   ats: string;
+  /** the company website (board, else its postings): the company card matches public records on it */
+  domain?: string | null;
   open_roles: number;
   new_this_week: number;
   new_last_week: number;

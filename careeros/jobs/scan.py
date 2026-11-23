@@ -353,9 +353,11 @@ def remote_regions(r: JobRow, facts: Optional[dict]) -> list[str]:
 def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] = None,
                      preferred_countries: Optional[list[str]] = None,
                      now: Optional[datetime] = None,
-                     market_medians: Optional[dict[str, int]] = None) -> tuple[list[Job], dict[str, dict]]:
+                     market_medians: Optional[dict[str, int]] = None,
+                     public: Optional[dict[str, dict]] = None) -> tuple[list[Job], dict[str, dict]]:
     """Stored job rows → (Job objects to score, per-URL metadata the Job type doesn't carry)."""
     from careeros.jobs.geo import location_match
+    from careeros.companies.facts import key_of
     from careeros.jobs.trust import assess
 
     open_counts = open_counts or {}
@@ -366,7 +368,8 @@ def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] =
         where = location_match(r.location, regions, preferred_countries or [], f["remote"])
         trust = assess(company=r.company or "", description=r.description or r.full_description or "",
                        ats=r.ats, company_domain=r.company_domain,
-                       salary_stated=bool(f["salary_min"] or f["salary_max"]), posted_at=r.posted_at, now=now)
+                       salary_stated=bool(f["salary_min"] or f["salary_max"]), posted_at=r.posted_at, now=now,
+                       public=(public or {}).get(key_of(r.company or "")))
         size = company_size_of(r, open_counts)
         from careeros.jobs.scoring.signals import build_signals
 
@@ -457,6 +460,9 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
             order = {u: i for i, u in enumerate(urls)}
             loaded.sort(key=lambda r: order[r.url])
             open_counts = company_open_counts(s)
+            from careeros.companies.facts import cached as public_facts
+
+            public = public_facts(s, list({r.company for r in loaded if r.company}))
             demand = market_demand(loaded)
             medians = pool_medians(loaded)
             # The market (what these jobs ask for) is part of what a score depends on
@@ -469,7 +475,7 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         job.update(status="scoring", progress=60)
         if rows:
             job.log("Scoring against your career graph…")
-            jobs, meta = to_scoring_input(rows, open_counts, profile.preferences.preferred_locations,
+            jobs, meta = to_scoring_input(rows, open_counts, profile.preferences.preferred_locations, public=public,
                                           market_medians=medians)
             service.set_market_demand(demand)
             result = service.run_pipeline(jobs, profile, weights=weights, semantic=False, job_meta=meta,

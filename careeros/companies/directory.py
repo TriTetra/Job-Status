@@ -87,6 +87,8 @@ def _summary(board, jobs: list[Job], all_recent: list[Job], scores: dict[str, Ca
         "key": board.key,
         "name": board.name,
         "ats": board.ats,
+        # the company's website: the board's, else the one its postings give (the company card matches on it)
+        "domain": board.domain or next((j.company_domain for j in jobs if j.company_domain), None),
         "open_roles": len(open_jobs),
         "new_this_week": new_this,
         "new_last_week": new_last,

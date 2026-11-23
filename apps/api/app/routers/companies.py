@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
 from ..schemas.company import CompanyMemoryResponse, CompanyResponse
-from careeros.companies import logos
+from careeros.companies import facts, logos
 from careeros.companies.directory import company_detail, company_directory
 from careeros.companies.employers import directory as employers_directory
 from careeros.companies.repositories.company_repo import CompanyMemoryRepository, CompanyRepository
@@ -81,6 +81,24 @@ def board_company(key: str, user_id: str = Depends(get_user_id), session: Sessio
     if detail is None:
         raise HTTPException(status_code=404, detail="Company not found")
     return detail
+
+
+@router.get("/card", summary="Public facts about an employer, each with its source")
+def company_card(name: str = Query(..., min_length=1, max_length=200), domain: Optional[str] = Query(None, max_length=255),
+                 uk: bool = Query(False, description="Has jobs in the UK: also read the UK company register"),
+                 user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    """Wikidata (matched by website), Companies House (UK), news Aplio reads; cached."""
+    out = facts.card(session, name, domain, uk=uk)
+    session.commit()
+    return out
+
+
+@router.post("/card/people", summary="What people on Hacker News say about working there (LLM, sourced)")
+def company_people(name: str = Query(..., min_length=1, max_length=200), domain: Optional[str] = Query(None, max_length=255),
+                   user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
+    out = facts.card(session, name, domain, with_people=True)
+    session.commit()
+    return out
 
 
 @router.get("/{name}/memory", response_model=CompanyMemoryResponse)

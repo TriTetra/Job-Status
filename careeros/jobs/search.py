@@ -212,16 +212,21 @@ def _content_key(r: JobRow) -> tuple:
     return (r.url, r.content_hash, r.llm_facts_hash, r.closed_at is None)
 
 
-def prepare(rows: list[JobRow], open_counts: dict, preferred: list[str], now: datetime) -> tuple[list, dict]:
+def prepare(rows: list[JobRow], open_counts: dict, preferred: list[str], now: datetime,
+            public: Optional[dict] = None) -> tuple[list, dict]:
     """to_scoring_input for these rows, reusing what was read today for the same posting.
     Pay references (market medians) are left out here and set per search."""
     from careeros.jobs.scan import company_size_of, to_scoring_input
 
     pref = tuple(sorted(preferred or []))
-    keys = {r.url: (*_content_key(r), company_size_of(r, open_counts), pref, now.date()) for r in rows}
+    from careeros.companies.facts import key_of
+
+    public = public or {}
+    keys = {r.url: (*_content_key(r), company_size_of(r, open_counts), pref, now.date(),
+                    str(public.get(key_of(r.company or "")))) for r in rows}
     missing = [r for r in rows if keys[r.url] not in _prepared]
     if missing:
-        jobs, meta = to_scoring_input(missing, open_counts, list(pref), now=now, market_medians={})
+        jobs, meta = to_scoring_input(missing, open_counts, list(pref), now=now, market_medians={}, public=public)
         for j in jobs:
             _remember(_prepared, keys[j.url], (j, meta[j.url]))
     jobs, meta = [], {}
@@ -257,7 +262,10 @@ def search(session: Session, user_id: str, f: SearchFilters, now: Optional[datet
 
     profile, weights, prefs = _viewer(user_id)
     preferred = profile.preferences.preferred_locations if profile else []
-    jobs, meta = prepare(rows, company_open_counts(session), preferred, now)
+    from careeros.companies.facts import cached as public_facts
+
+    public = public_facts(session, list({r.company for r in rows if r.company}))
+    jobs, meta = prepare(rows, company_open_counts(session), preferred, now, public)
     # Pay is judged against what similar roles (this search's postings) pay in the same country
     medians = pool_medians(rows)  # stated pay only (careeros/market/pay.py)
     kept = with_pay_reference([j for j in jobs if keeps(j, meta[j.url], f)], medians)

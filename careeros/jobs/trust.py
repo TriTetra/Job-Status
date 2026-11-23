@@ -54,7 +54,9 @@ class Trust:
 
 
 def assess(*, company: str, description: str, ats: Optional[str], company_domain: Optional[str],
-           salary_stated: bool, posted_at: Optional[datetime], now: Optional[datetime] = None) -> Trust:
+           salary_stated: bool, posted_at: Optional[datetime], now: Optional[datetime] = None,
+           public: Optional[dict] = None) -> Trust:
+    """`public`: what the public record says about the company (careeros/companies/facts.py::cached)."""
     now = now or datetime.now(timezone.utc)
     text = description or ""
     good, concerns, risks = [], [], []
@@ -79,6 +81,10 @@ def assess(*, company: str, description: str, ats: Optional[str], company_domain
             concerns.append(f"Open for {days // 30} months: may not be actively hiring")
         elif days <= 30:
             good.append("Posted in the last month")
+
+    if public:
+        good += public.get("good") or []
+        concerns += public.get("concerns") or []
 
     for rx, why in _SCAM:
         if rx.search(text):

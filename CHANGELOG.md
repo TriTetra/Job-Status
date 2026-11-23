@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| 1.5 Şirket Verisi | Okuyucuda ve Companies'te "On the public record" kartı: Wikidata (yalnız web sitesi eşleşirse; benzer isimli başka şirket asla gösterilmez), Companies House (UK, anahtar girilince), okunan haberlerde işten çıkarma / yatırım; Hacker News'te "çalışanlar ne diyor" özeti, her madde yorum bağlantısıyla. Kapanmış şirket, iflas, yakın işten çıkarma güven kontrolüne girer. Migration 025 | ✅ Tamam | 2026-11-23 |
 | 1.4 Maaş Verisi (Adzuna'sız) | Market'te ülke × rol ailesi maaşları, yerel para biriminde, yalnız işverenin yazdığı maaştan, kaç ilana dayandığı yazılı; doğrulanmış resmî rakam (BLS) kaynak bağlantısıyla. Puandaki maaş referansı da para birimi tahmin edilen tutarları artık kullanmıyor (scorer 8.4). UK / DE resmî rakamları okunamadı, eklenmedi | ✅ Kısmen | 2026-11-23 |
 | 1.8 Takip Mesajları | 14. günde ilk takip, 21. günde son kontrol (ilkinden en az bir hafta sonra), sonra bir daha sorulmaz. Taslak yalnız kanıttan (kit'in kanıt kontrolüyle) ya da sade şablondan; kişi gönderir, "I sent it" ile işaretler, "Don't follow up" ile durdurur. Telegram hatırlatması doğrudan taslağı açar | ✅ Tamam | 2026-11-23 |
 | 1.7 Sonucu E-postadan Görme | Settings → Connections → Mailbox: uygulama şifresiyle IMAP (salt okunur, şifre şifreli). Yalnız başvurulan şirketlerin e-postaları okunur; LLM red / mülakat / teklif / bilgi isteği / alındı diye sınıflandırır; eminse başvuruyu ilerletir (OutcomeObserved, agent:mail), değilse Applications'ta sorar. "Disconnect and forget" her şeyi siler. Migration 024 | ✅ Tamam | 2026-11-23 |
@@ -136,6 +137,37 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [1.5 Şirket Verisi] — 2026-11-23 — Zenginleştirme ✅
+
+**Neden:** Plan (`docs/v1/GAPS_ROADMAP.md`) madde 1.5. Okuyucuda işverene dair yalnız ilanın kendisi ve inceleme sitelerine bağlantılar vardı. Şirketin ne zaman kurulduğu, ne kadar büyük olduğu, hâlâ faaliyette olup olmadığı ve yakın zamanda işten çıkarma yapıp yapmadığı görünmüyordu.
+
+### Kaynaklar ve kurallar (`careeros/companies/facts.py`)
+- **Wikidata (CC0):** kuruluş yılı, çalışan sayısı (yılıyla), merkez, ülke, sektör, borsa, ana şirket, kapanış. İsimle aranır ama **yalnız resmî web sitesi (P856) şirketin alan adıyla eşleşirse** kabul edilir; benzer isimli başka bir şirket asla gösterilmez. Alan adı bilinmiyorsa eşleştirme yapılmaz. Wikimedia kuralı gereği User-Agent'ta bir iletişim bağlantısı (`WEB_APP_URL`) var, istekler sırayla gönderiliyor, `maxlag` kullanılıyor.
+- **Companies House (Birleşik Krallık şirket sicili):** durum (aktif, tasfiyede, kapandı), kuruluş tarihi, tür. Yalnız UK'de ilanı olan şirketler için ve yalnız aynı isimde tek bir aktif şirket varsa; birden çoksa tahmin edilmez. Ücretsiz anahtar `COMPANIES_HOUSE_API_KEY` (`.env.example`, `docker-compose.prod.yml`); anahtar yoksa okunmaz. Sınır: 5 dakikada 600 istek.
+- **Haberler:** Market'in zaten okuduğu TechCrunch ve Hacker News sinyallerinden, son bir yılda şirketi anan işten çıkarma, yatırım ve satın alma haberleri.
+- **Hacker News "çalışanlar ne diyor":** yalnız istenince (LLM çağrısı gerektirdiği için). Son üç yıldan, şirket adını ve çalışmakla ilgili ifadeleri ("worked at", kültür, mülakat, işten çıkarma, maaş, yönetim…) içeren en fazla 20 yorum, HN Algolia aramasıyla ilgi sırasına göre alınır. LLM en fazla 4 madde yazar; **her madde dayandığı yorumlara bağlanır**, kaynaksız madde atılır. 3 yorumdan azsa özet yapılmaz. LLM yoksa yorum bağlantıları listelenir. İnceleme sitelerinden (Glassdoor, kununu…) veri toplanmıyor.
+- **Önbellek:** `company_facts` tablosu (migration `company_facts_025`). Wikidata ve Companies House 30 günde, HN 14 günde bir yeniden okunur. "Acme GmbH" ve "ACME" aynı kartı paylaşır. Bir kaynak çökerse eskisi tutulur.
+
+### Güven kontrolüne etkisi
+- `trust.assess(public=…)` şunları dikkate alıyor:
+  - **Olumsuz:** "Dissolved in 2023 (Wikidata)", "UK register status: liquidation (Companies House)", "Layoffs reported 2026-10-01 (techcrunch)" (son 120 gün).
+  - **Olumlu:** "Founded in 2014 (Wikidata)", "Registered in the UK since 2016 (Companies House)".
+  - Olumsuz bir kayıt güven seviyesini "caution"a indiriyor.
+- Tarama ve arama yalnız önbellekteki bilgiyi okur (ağa çıkmaz). Bilgi kart açıldıkça birikir.
+
+### Arayüz
+- **"On the public record" kartı** ilan okuyucuda ve Companies panelinde, "What people say" bölümünün üstünde. Wikidata satırı ve bağlantısı, UK sicil satırı, haberler (işten çıkarma kırmızı), güveni düşüren kayıtlar. Altında **"On Hacker News"**: "What do people there say about working at it?" düğmesi, özet maddeleri ve her maddenin yorum bağlantıları, "Search them yourself".
+- Companies panelinde şirketin web sitesi artık panoya ya da ilanlarına göre geliyor (`domain`).
+
+### Doğrulama
+- **Gerçek kaynaklarla, yalnız okuma:** Cloudflare (2009, 2.440 çalışan (2021), San Francisco, NYSE), Delivery Hero (2011, Berlin, Frankfurt), Trendyol (2010, İstanbul), Getir, Datadog doğru eşleşti. Sahte alan adlı şirket için boş döndü. HN araması Cloudflare ve Datadog için 20 yorum, Trendyol için 0 buldu.
+- **İlk HN filtresi fazla genişti** ("team", "pay" işle ilgisiz yorumları da alıyordu), daraltıldı. Arama "en yeniler" yerine konu başına ilgi sırasına çevrildi.
+- **Heredoc'tan gelen backspace karakterleri** iki dosyada yakalandı ve `chr(92)` ile düzeltildi; kaynak dosyalarda 0.
+- **Önizleme:** Nift (web sitesi yok) için "No website known…". Cloudflare panelinde Wikidata satırı ve bağlantısı. HN düğmesi LLM kapalıyken yorum bağlantılarını listeledi.
+- 820 test (yeni: isim ve alan adı, Wikidata'nın web sitesiyle eşleşmesi ve benzer isimlinin reddedilmesi, alan adı yokken tahmin yapılmaması, Companies House'ta tek ve tam eşleşme, güven notları ve `assess`, HN özetinde yalnız kaynaklı maddeler, önbellek), ruff, tsc, eslint, `next build` temiz.
 
 ---
 

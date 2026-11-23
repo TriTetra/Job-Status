@@ -126,6 +126,8 @@ class Settings:
     adzuna_app_id: Optional[str]
     adzuna_app_key: Optional[str]
     adzuna_max_calls: int  # requests per feed read (about two reads a day); the plan caps calls per day and month
+    # UK company register (developer.company-information.service.gov.uk, free key): unset = not read
+    companies_house_api_key: Optional[str]
 
     # Auth
     session_cookie_secure: bool
@@ -186,6 +188,7 @@ def get_settings() -> Settings:
         adzuna_app_id=(os.getenv("ADZUNA_APP_ID") or "").strip() or None,
         adzuna_app_key=(os.getenv("ADZUNA_APP_KEY") or "").strip() or None,
         adzuna_max_calls=max(0, _int("ADZUNA_MAX_CALLS", 40)),
+        companies_house_api_key=(os.getenv("COMPANIES_HOUSE_API_KEY") or "").strip() or None,
         # Secure cookies also work on http://localhost in current browsers; set false only for odd dev setups
         session_cookie_secure=_bool("SESSION_COOKIE_SECURE", True),
         token_encryption_key=os.getenv("TOKEN_ENCRYPTION_KEY") or None,

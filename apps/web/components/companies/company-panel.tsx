@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight, Check, X } from "lucide-react";
 import { CompanyLogo } from "@/components/shared/company-logo";
 import { WhatPeopleSay } from "@/components/ui/what-people-say";
+import { CompanyCard } from "@/components/ui/company-card";
 import { safeHttpUrl } from "@/lib/utils";
 import type { BoardCompanyDetail } from "@/features/companies/board-types";
 import { TREND, profileLine, weekLine } from "@/features/companies/format";
@@ -133,6 +134,8 @@ export function CompanyPanel({ c }: { c: BoardCompanyDetail }) {
             </ul>
           </div>
           )}
+          <CompanyCard key={c.key} company={c.name} domain={c.domain}
+                       uk={c.roles.some((r) => /\b(UK|United Kingdom|London|England|Scotland)\b/i.test(r.location ?? ""))} />
           <WhatPeopleSay company={c.name} location={c.roles.map((r) => r.location ?? "").join(" ")} />
         </aside>
       </div>
