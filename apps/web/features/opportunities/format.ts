@@ -5,6 +5,19 @@ import { tierOf } from "./tier";
 
 export type Chance = "high" | "medium" | "low";
 
+/** One-tap reasons on "Not for me" (careeros/memory/events.py SKIP_REASONS): Aplio learns from them. */
+export const SKIP_REASONS = [
+  { id: "role", label: "Not my kind of role" },
+  { id: "skills", label: "Skills don't fit" },
+  { id: "seniority", label: "Wrong level" },
+  { id: "pay", label: "Pay too low" },
+  { id: "location", label: "Location or visa" },
+  { id: "work_style", label: "Remote / on-site doesn't suit me" },
+  { id: "company", label: "Not this company" },
+  { id: "applied", label: "Already applied elsewhere" },
+] as const;
+export type SkipReason = (typeof SKIP_REASONS)[number]["id"];
+
 /** Acceptance is stored 0–100; the score asks "is it good", chance asks "can I get it". */
 export function chanceOf(o: Opportunity): Chance {
   const a = o.acceptance_probability ?? 0;

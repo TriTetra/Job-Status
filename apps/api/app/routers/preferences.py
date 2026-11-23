@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from ..dependencies import get_db_session, get_user_id
 from careeros.identity.repositories.career_preferences_repo import CareerPreferencesRepository
 from careeros.identity.role_titles import role_titles
+from careeros.memory.events import remember
 
 router = APIRouter(prefix="/api/preferences", tags=["preferences"])
 
@@ -142,5 +143,8 @@ def patch_preferences(
             )
 
     prefs.updated_at = datetime.utcnow()
+    changed = data.model_dump(exclude_unset=True)
+    if changed:
+        remember(session, user_id, "PreferenceChanged", {"changed": changed})
     session.commit()
     return _to_response(prefs)

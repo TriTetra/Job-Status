@@ -1,6 +1,6 @@
 # Kişi hafızası — tasarım ve yol haritası
 
-**Durum:** öneri (2026-11-23). Araştırma: [`reports/Kişi hafızası ve kariyer modeli.md`](../../reports/Kişi%20hafızası%20ve%20kariyer%20modeli.md); puanlama modeli: [`reports/İş puanlama algoritması araştırması.md`](../../reports/İş%20puanlama%20algoritması%20araştırması.md).
+**Durum:** Faz 0 ve Faz 1 yapıldı (2026-11-23); Faz 2–6 öneri. Kodda kişi kimliği `user_id` (tasarımdaki `person_id`). Araştırma: [`reports/Kişi hafızası ve kariyer modeli.md`](../../reports/Kişi%20hafızası%20ve%20kariyer%20modeli.md); puanlama modeli: [`reports/İş puanlama algoritması araştırması.md`](../../reports/İş%20puanlama%20algoritması%20araştırması.md).
 
 **Amaç:** Aplio kişiyi tek bir yerden, zamanla birlikte tanısın. CV, beceri, başvuru, karar, öğrenme — her değişiklik git gibi geçmişiyle saklansın. Bütün modüller aynı hafızadan okusun ve oraya yazsın. Puan, kararlarından ve sonuçlarından öğrensin.
 
@@ -115,8 +115,8 @@ Sıra mantığı: **geri dönüp üretilemeyen veri önce** — gösterim, karar
 
 | Faz | İçerik | Bitti sayılır |
 |---|---|---|
-| **0. Temizlik** | Unvan eşleşmesi hatası (genel kelimeler tek başına eşleşmesin); tek doğruluk kaynağı: puanlama yalnız web profilini okusun, `user_settings` beceri/profil emekliye; kırık menü bağlantıları (sayfalar yapılana kadar gizle); 50 ilanlık etiketli değerlendirme seti + "ilk 10'un kaçı iyi" ölçümü | Cryogenics örneği düşüyor; değerlendirme betiği çalışıyor |
-| **1. Kayıt** | `person_events` + `memory.record()`; mevcut yazma yollarından olay (karar, başvuru durumu, CV yükleme, kanıt, tercih, ağırlık); `job_impressions` (Opportunities + Search, sıra ile); Skip neden çipleri; başvuruya CV sürümü etiketi | Her karar ve gösterim günlükte; testler |
+| **0. Temizlik** ✅ | Unvan eşleşmesi hatası (genel kelimeler tek başına eşleşmesin); tek doğruluk kaynağı: puanlama yalnız web profilini okusun, `user_settings` beceri/profil emekliye; kırık menü bağlantıları (sayfalar yapılana kadar gizle); 50 ilanlık etiketli değerlendirme seti + "ilk 10'un kaçı iyi" ölçümü | Cryogenics örneği düşüyor; değerlendirme betiği çalışıyor |
+| **1. Kayıt** ✅ | `person_events` + `memory.record()`; mevcut yazma yollarından olay (karar, başvuru durumu, CV yükleme, kanıt, tercih, ağırlık); `job_impressions` (Opportunities + Search, sıra ile); Skip neden çipleri; başvuruya CV sürümü etiketi | Her karar ve gösterim günlükte; testler |
 | **2. Beceri inancı** | `skill_beliefs` projeksiyonu (güvenilirlik + sönüm + grafik kısmi kredi); v8 sürekli kapsama; profil zayıflık uyarısı (Briefing + Settings) | Değerlendirme setinde ilk 10 iyileşiyor |
 | **3. Öğrenen sıralama** | Tercih sapması (GLMix, ±0,15), günlük Thompson + keşif yuvası; şans kalibrasyonu (Beta-Binomial, "insan yanıtı"); sessizlik sansürü 21/45 gün; "Neden üstte?" açıklamasına kişisel katkı satırı | 30+ karardan sonra görünür değişim, açıklanabilir |
 | **4. CV git + Resume sayfası** | `cv_blobs/commits/refs`; ana CV + rol dalları; diff görünümü; kanıt kapısı; başvuruda commit etiketi | Her başvurunun gönderdiği CV bilinir |
@@ -124,6 +124,18 @@ Sıra mantığı: **geri dönüp üretilemeyen veri önce** — gösterim, karar
 | **6. Hafızanın yüzü** | "Aplio seni nasıl tanıyor": beyan vs çıkarım, düzelt / unut; git ağacı gibi zaman çizelgesi (CV, beceri, başvuru); Briefing'de kaynaklı reflection'lar (önem toplamı 150'yi geçince); LLM bağlam kurucu | Kullanıcı her çıkarımın kaynağını görebilir |
 
 Gizlilik baştan: her satır `person_id` ile; hesap silme = sert silme; seçici "unut" = `MemoryForgotten` olayı + önceki payload'ların temizlenmesi; kripto-parçalama yalnız yedekler ve CV PDF'leri için. KVKK ayrıca incelenmedi.
+
+
+### Yapılanlar (Faz 0 + 1)
+- `model_v8.title_match`: genel kelimeler (Engineer, Developer, Kıdemli…) eşleşme sayılmıyor; rol aileleri (software, ml, data, frontend, devops, mobile, security) ve yakın aileler (0,4). SCORER_VERSION 8.1.
+- `scan.load_profile`: web profili tek kaynak; CLI `user_settings` profili yalnız kanıtı olmayan hesaplar için yedek.
+- Menüde Evidence / Learning / Resume "Soon"; komut paletindeki kırık "Generate Resume" kaldırıldı.
+- `careeros/jobs/evaluation.py` + `career-os jobs eval <e-posta> [--labels sheet.csv]` ve `career-os jobs eval-sheet`: kararlar (Shortlist / Applied = iyi, Skip = kötü) ve isteğe bağlı etiket tablosuyla AUC ve ilk 10'daki iyi oranı.
+- `careeros/memory/`: `person_events` + `job_impressions` (migration 021); `record()` / `remember()` (savepoint: günlük hatası kişinin işlemini bozmaz; akış başına advisory lock).
+- Olay yazan yollar: karar (Shortlist / Applied / Skip + nedenler + o anki inanç: kayıtlı puan ya da ekranda gösterilen), başvuru aşaması ve sonuç (OutcomeObserved), CV yükleme ve CV'den okunanlar, GitHub / portfolyo / profil kanıtları ve silinmeleri, tercihler (onboarding dahil), ağırlıklar, kimlik değişiklikleri.
+- Gösterim kaydı: Opportunities ve Search listelerinin ilk 50'si, günde bir satır (en iyi sıra, kaç kez).
+- "Not for me" tek dokunuşluk neden menüsü (8 neden + "Just skip").
+- Başvuru "applied" olduğunda o anki CV etiketlenir (`applications.resume_version = doc:<id>@v<sürüm>`, olayda da).
 
 ---
 

@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Kişi Hafızası Faz 0 + 1 | Unvan eşleşmesi hatası düzeltildi; tek profil kaynağı; kırık menü "Soon"; sıralama değerlendirmesi (`jobs eval`); `person_events` olay günlüğü ve tüm yazma yollarından olaylar; gösterim kaydı; "Not for me" nedenleri; başvuruya gönderilen CV etiketi | ✅ Tamam | 2026-11-23 |
 | Kişi Hafızası: Araştırma + Tasarım | Kişiselleştirme denetimi; 4 alanda literatür araştırması (kişi modeli ve beceriler, geri bildirimden öğrenme, hafıza mimarisi, beceri gelişimi ve CV sonuçları); tek olay günlüğü + projeksiyonlar tasarımı ve 7 fazlı yol haritası (docs/v1/PERSON_MEMORY.md); kod değişmedi | ✅ Tamam | 2026-11-23 |
 | Search + What People Say | Yeni Search sayfası (tüm açık ilanlar; ülke, çalışma şekli, şirket büyüklüğü, tarih, maaş, kaynak, vize, güvenilirlik filtreleri; sonuçlar arama sırasında v8 ile puanlanır, kaydedilmez); okuyucuda ve Companies'te "What people say" bağlantıları (Glassdoor, Reddit, Blind, kununu, Ekşi Sözlük); dil kontrolü hızlandırıldı | ✅ Tamam | 2026-11-23 |
 | Scoring v8: Research-Based Model | Researched hiring evidence (5 areas, report in reports/); new model: hard gates, calibrated chance of an interview × value of the job, ranked by expected surplus (Bied et al. 2026); explained in "How it's calculated"; Scoring settings become value weights + effort | ✅ Tamam | 2026-11-23 |
@@ -117,6 +118,30 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Kişi Hafızası Faz 0 + 1] — 2026-11-23 — Temizlik, ölçüm ve olay günlüğü ✅
+
+**Neden:** Kullanıcı tasarımın Faz 0 ve Faz 1'ini onayladı ("Evet, Faz 0 + 1"). Sıra mantığı: geriye dönük üretilemeyen kayıt (gösterim, karar, gönderilen CV) önce.
+
+### Faz 0 — temizlik ve ölçüm
+- **Unvan eşleşmesi:** yalnız "Engineer / Developer / Kıdemli" gibi genel kelimeyi paylaşan roller artık ilgili sayılmıyor. Rol aileleri (software, ml, data, frontend, devops, mobile, security): aynı rol 1,0, aynı aile 0,6, yakın aile 0,4, ilgisiz 0,25. "Cryogenics Engineer" ve "Mechanical Engineer" backend / ML hedefi için 0,25 (önce 0,6 idi; Search'te 79 / Strong görünüyordu). SCORER_VERSION 8.1, herkes yeniden puanlanır.
+- **Tek profil kaynağı:** puanlama artık web profilini (kanıt, tercihler, kimlik) okuyor; eski CLI `user_settings` profili yalnız hiç kanıtı olmayan hesaplar için yedek.
+- **Kırık menü:** Evidence / Learning / Resume sayfaları web'de yoktu (404); menüde "Soon" olarak duruyorlar, komut paletindeki "Generate Resume" kaldırıldı.
+- **Değerlendirme:** `career-os jobs eval <e-posta> [--labels sheet.csv]`: kararların (Shortlist / Applied / sonraki aşamalar = iyi, Skip = kötü) ve isteğe bağlı etiket tablosunun mevcut puanlarla ne kadar iyi sıralandığı: AUC (iyi bir işin kötüden yüksek puan alma olasılığı) ve ilk 10'daki iyi oranı. `career-os jobs eval-sheet` 50 ilanlık etiket tablosu yazar (yarısı en üsttekiler, yarısı rastgele).
+
+### Faz 1 — kayıt (`careeros/memory/`, migration `person_memory_021`)
+- **`person_events`:** eklenen, hiç değiştirilmeyen olay günlüğü; niyet taşır, `actor` (kişi / ajan / içe aktarma) ve iki saat (`valid_from`, `recorded_at`); akış başına sürüm (advisory lock ile çakışmasız). `remember()` savepoint içinde yazar: günlükteki bir hata kişinin işlemini asla bozmaz.
+- **Olay yazan yollar:** Shortlist / Applied / Skip (nedenler, nereden yapıldığı, o anki inanç: kayıtlı puan, şans, değer; Search'te anlık puanlanan ilan için ekranda gösterilen), başvuru aşamaları ve işverenin cevabı (`OutcomeObserved`: mülakat / teklif / ret), CV yükleme ve CV'den okunanlar, GitHub / portfolyo / herkese açık profil kanıtları ve silinmeleri, tek kanıt silme (düzeltme), tercihler (onboarding dahil), puanlama ağırlıkları, kimlik değişiklikleri (yalnız değişen alanlar).
+- **`job_impressions`:** Opportunities ve Search listelerinin ilk 50 ilanı, günde bir satır (en iyi sıra, skor, kaç kez). "Görmedi" ile "istemedi" artık ayırt edilebilir.
+- **"Not for me" nedenleri:** okuyucuda tek dokunuşluk menü: Not my kind of role · Skills don't fit · Wrong level · Pay too low · Location or visa · Remote / on-site doesn't suit me · Not this company · Already applied elsewhere · Just skip.
+- **Gönderilen CV:** başvuru "applied" olduğunda o anki birincil CV etiketlenir (`applications.resume_version = doc:<id>@v<sürüm>`, olayda da). Faz 4'te git tarzı commit'e dönüşecek.
+
+### Doğrulama
+- Atılabilir Postgres'te migration uygulandı; tarayıcıda: "Not for me" → "Pay too low" (olay: nedenler, puan 77,7, şans %1,15, Opportunities), Search'ten "I applied" ve "Shortlist" (ekranda gösterilen puan 76,4 olayda "shown" olarak), sahte bir CV kaydıyla başvuruya `doc:1@v2` etiketi; gösterimler (Opportunities ve Search, 50'şer); menüde "Soon"; Search'te Cryogenics ilanı artık üstte değil. `jobs eval` ve `jobs eval-sheet` çalışıyor (test DB'deki rastgele kararlarla AUC anlamsız).
+- 697 test (yeni: `test_person_memory.py`, `test_ranking_evaluation.py`, unvan aileleri), ruff, tsc, eslint, `next build` temiz.
+- Not: geliştirme sunucusunun önbelleği (`.next/dev`) üretim build'iyle bozulup her sayfayı 404 yapıyordu; yalnız önizleme için silinip yeniden kuruldu.
 
 ---
 

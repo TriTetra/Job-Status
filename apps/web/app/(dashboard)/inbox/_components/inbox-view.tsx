@@ -9,6 +9,7 @@ import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact
 import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel";
 import { ScanOverlay } from "@/components/ui/scan-overlay";
 import { opportunitiesApi } from "@/features/opportunities/api";
+import type { SkipReason } from "@/features/opportunities/format";
 import { toScanJob } from "@/features/opportunities/tier";
 import { byRank, companyOf, hasConflict, isUnreliable, inView, rulesSentence, type View } from "@/features/opportunities/format";
 import type { InboxData, Opportunity, ScanJob } from "@/features/opportunities/types";
@@ -130,12 +131,12 @@ export function InboxView({ initial }: { initial: InboxData }) {
   const selected = shown.find((j) => j.url === selectedUrl) ?? shown[0] ?? null;
 
   // ── decisions ──
-  const handleDecision = async (url: string, status: "to_apply" | "applied" | "skipped") => {
+  const handleDecision = async (url: string, status: "to_apply" | "applied" | "skipped", reasons: SkipReason[] = []) => {
     setDecisionError(null);
     setBusy(true);
     const idx = shown.findIndex((j) => j.url === url);
     try {
-      await opportunitiesApi.decide(url, status);
+      await opportunitiesApi.decide(url, status, { reasons, surface: "inbox", shown: jobs.find((j) => j.url === url) });
       await refresh();
       // Skipping moves on to the next job in the list
       if (status === "skipped") setSelectedUrl(shown[idx + 1]?.url ?? shown[idx - 1]?.url ?? null);
@@ -276,7 +277,7 @@ export function InboxView({ initial }: { initial: InboxData }) {
                 busy={busy}
                 onApply={() => handleDecision(selected.url, "applied")}
                 onShortlist={() => handleDecision(selected.url, "to_apply")}
-                onSkip={() => handleDecision(selected.url, "skipped")}
+                onSkip={(reasons) => handleDecision(selected.url, "skipped", reasons)}
               />
             )}
           </div>

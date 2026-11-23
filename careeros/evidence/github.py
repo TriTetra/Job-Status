@@ -221,6 +221,11 @@ def create_github_evidence(user_id: str, repos: list[dict], session: Session) ->
             },
         ))
 
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "EvidenceImported", {
+        "source": "github", "skills": sorted(language_agg)[:40], "projects": projects_created,
+    }, stream="evidence", actor="import:github")
     session.commit()
     logger.info("GitHub evidence: %d skills, %d projects", len(language_agg), projects_created)
     return {"skills_created": len(language_agg), "projects_created": projects_created}

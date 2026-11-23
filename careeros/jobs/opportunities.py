@@ -33,17 +33,44 @@ class UnknownJob(LookupError):
     """The job URL isn't in the jobs table."""
 
 
-def record_decision(session: Session, user_id: str, url: str, status: str) -> dict:
+DECISION_EVENTS = {"to_apply": "JobShortlisted", "applied": "JobApplied", "skipped": "JobSkipped"}
+
+
+def _belief_at_decision(session: Session, user_id: str, url: str, shown: Optional[dict] = None) -> dict:
+    """What Aplio believed when the person decided (the label for learning, with its context):
+    the saved score, else what the screen showed (a search result scored on the fly)."""
+    try:
+        score = CareerScoreRepository(session).get_latest_score(url=url, user_id=user_id)
+    except Exception:
+        score = None
+    if score is not None:
+        model = (getattr(score, "explanation", None) or {}).get("model") or {}
+        return {"score": getattr(score, "career_score", None), "p_interview": model.get("p_effective"),
+                "value": model.get("value"), "belief": "saved"}
+    shown = {k: v for k, v in (shown or {}).items() if v is not None}
+    return {**shown, "belief": "shown"} if shown else {}
+
+
+def record_decision(session: Session, user_id: str, url: str, status: str, reasons: Optional[List[str]] = None,
+                    surface: Optional[str] = None, shown: Optional[dict] = None) -> dict:
     """Shortlist / Apply / Skip an opportunity: create its application row if needed
-    (title and company from the posting), then move it to `status`.
+    (title and company from the posting), then move it to `status`. The decision, with the
+    person's reasons for a skip and where it was made, goes to their memory log.
 
     Returns the new user decision {"status", "decided_at"}.
     """
+    from careeros.memory.events import SKIP_REASONS, job_stream, remember
+
     if status not in DECIDABLE_STATUSES:
         raise ValueError(f"status must be one of {', '.join(DECIDABLE_STATUSES)}")
     job = session.get(Job, url)
     if job is None:
         raise UnknownJob(url)
+    remember(session, user_id, DECISION_EVENTS[status], {
+        "url": url, "title": job.title, "company": job.company, "surface": surface,
+        "reasons": [r for r in (reasons or []) if r in SKIP_REASONS] if status == "skipped" else [],
+        **_belief_at_decision(session, user_id, url, shown),
+    }, stream=job_stream(url))
     repo = ApplicationRepository(session)
     app = repo.upsert(url=url, title=job.title or "Untitled role", company=job.company or None,
                       status=status, user_id=user_id)

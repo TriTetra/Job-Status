@@ -456,6 +456,12 @@ def save_profile(session: Session, user_id: str, source_id: str, profile: Profil
     account.is_active = True
     account.sync_status = "synced"
     account.last_synced_at = datetime.utcnow()
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "EvidenceImported", {
+        "source": source_id, "handle": profile.handle, "skills": sorted(v[0] for v in best.values())[:40],
+        "items": len(profile.items),
+    }, stream="evidence", actor=f"import:{source_id}")
     session.commit()
     return {"status": "connected", "source": source_id, "handle": profile.handle, "url": profile.url,
             "summary": profile.summary, "skills_found": len(best), "items_found": len(profile.items)}
@@ -472,4 +478,7 @@ def disconnect_profile(session: Session, user_id: str, source_id: str) -> None:
         ConnectedAccount.user_id == user_id, ConnectedAccount.provider == source_id,
     ).delete()
     session.query(EvidenceItem).filter(EvidenceItem.user_id == user_id, EvidenceItem.source == source_id).delete()
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "EvidenceRemoved", {"source": source_id}, stream="evidence")
     session.commit()

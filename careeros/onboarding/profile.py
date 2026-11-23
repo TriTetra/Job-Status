@@ -116,6 +116,10 @@ def get_identity(session: Session, user_id: str) -> dict:
     }
 
 
+IDENTITY_KEYS = ("first_name", "last_name", "country", "current_role_title", "total_years", "languages",
+                 "education_level")
+
+
 def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> str:
     """Persist the identity step, record the role in history, advance the state. Returns new state."""
     user = require_user(session, user_id)
@@ -125,6 +129,8 @@ def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> s
 
     role_changed = (str(user.current_role_id or ""), str(user.current_custom_role_id or "")) != (
         str(role_id or ""), str(custom_role_id or ""))
+    before = {k: (user.profile_data or {}).get(k) for k in IDENTITY_KEYS}
+    before.update(years_in_role=user.years_in_role, career_level=user.career_level)
     user.current_role_id = role_id
     user.current_custom_role_id = custom_role_id
     user.years_in_role = identity["years_in_role"]
@@ -147,6 +153,14 @@ def save_identity(session: Session, user_id: str, identity: dict[str, Any]) -> s
     today = date.today()
     if role_changed:
         _record_role(session, user_id, role_id, custom_role_id, today)
+
+    after = {k: user.profile_data.get(k) for k in IDENTITY_KEYS}
+    after.update(years_in_role=user.years_in_role, career_level=user.career_level)
+    changed = {k: v for k, v in after.items() if v != before.get(k)}
+    if changed:  # what the person said about themselves, as they said it
+        from careeros.memory.events import remember
+
+        remember(session, user_id, "ProfileStated", {"changed": changed, "role_changed": role_changed})
 
     if user.onboarding_state in (OnboardingState.NOT_STARTED.value, OnboardingState.IDENTITY.value):
         user.onboarding_state = OnboardingState.GOALS.value
@@ -186,6 +200,9 @@ def save_goals(session: Session, user_id: str, goals: dict[str, Any]) -> str:
     """Persist career preferences and advance GOALS → EVIDENCE. Returns new state."""
     validate_goals(goals)
     CareerPreferencesRepository(session).upsert(user_id=user_id, **goals)
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "PreferenceChanged", {"changed": goals, "step": "onboarding"})
 
     user = require_user(session, user_id)
     if user.onboarding_state == OnboardingState.GOALS.value:

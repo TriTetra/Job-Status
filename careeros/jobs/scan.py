@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "8"  # 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
+SCORER_VERSION = "8.1"  # 8.1: title families (generic words don't match), one profile source · 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -150,17 +150,19 @@ def normalize_weights(raw: dict) -> dict:
 
 
 def load_profile(user_id: str) -> Optional[UserProfile]:
-    """CLI-era user_settings profile if it has skills, else the web (evidence-based) profile."""
+    """The web profile (evidence, preferences, identity) — one source of truth for who the person is.
+    The CLI-era user_settings profile is only a fallback for accounts that have no evidence at all."""
+    profile = build_profile_from_evidence(user_id)
+    if profile is not None:
+        return profile
     from careeros.identity.profile_service import ProfileService
 
     try:
-        profile = ProfileService(user_id=user_id).get_profile()
+        legacy = ProfileService(user_id=user_id).get_profile()
     except Exception as e:
-        logger.info("No user_settings profile for %s (%s); using evidence", user_id, e)
-        profile = None
-    if profile is None or not getattr(profile, "skills", []):
-        profile = build_profile_from_evidence(user_id)
-    return profile
+        logger.info("No profile for %s (%s)", user_id, e)
+        return None
+    return legacy if legacy is not None and getattr(legacy, "skills", []) else None
 
 
 def profile_fingerprint(profile: UserProfile, prefs: dict, weights: Optional[dict] = None) -> str:

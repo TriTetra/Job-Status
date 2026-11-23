@@ -49,9 +49,19 @@ def run_extraction(job: BackgroundJob, file_path: Path, user_id: str, filename: 
             session.add(resume_doc)
             session.commit()
             session.refresh(resume_doc)
+            from careeros.memory.events import remember
+
+            remember(session, user_id, "CvUploaded", {"document_id": resume_doc.id, "version": resume_doc.version,
+                                                      "filename": filename}, stream="cv")
+            session.commit()
 
             job.update(status="parsing", progress=15)
             summary = process_resume(resume_doc, session, log=job.log)
+            remember(session, user_id, "EvidenceImported", {
+                "source": "resume", "document_id": resume_doc.id, "skills": summary["skills_count"],
+                "experience": summary["experience_count"], "projects": summary["projects_count"],
+                "items": summary["evidence_items"],
+            }, stream="evidence", actor="import:resume", source_ref={"resume_document_id": resume_doc.id})
 
             job.progress = 90
             job.log("Updating profile state...")

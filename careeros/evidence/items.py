@@ -52,6 +52,12 @@ def delete_item(session: Session, user_id: str, item_id: int) -> bool:
     item = session.query(EvidenceItem).filter(EvidenceItem.id == item_id, EvidenceItem.user_id == user_id).first()
     if not item:
         return False
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "EvidenceRemoved", {
+        "item_id": item_id, "skill": item.skill_name, "source": item.source,
+        "kind": (item.evidence_data or {}).get("type", "skill"),
+    }, stream="evidence")
     session.delete(item)
     session.commit()
     logger.info("User %s deleted evidence item %s", user_id, item_id)

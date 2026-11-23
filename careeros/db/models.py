@@ -37,6 +37,7 @@ from careeros.identity.models.connected_account import ConnectedAccount
 from careeros.onboarding.models.career_graph_node import CareerGraphNode
 from careeros.onboarding.models.goal import Goal
 from careeros.market.models.market_skill import MarketSkill
+from careeros.memory.models import JobImpression, PersonEvent
 
 __all__ = [
     "Base",
@@ -77,4 +78,6 @@ __all__ = [
     "CareerGraphNode",
     "Goal",
     "MarketSkill",
+    "PersonEvent",
+    "JobImpression",
 ]

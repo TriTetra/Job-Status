@@ -5,11 +5,10 @@ import { Command } from "cmdk";
 import { useUIStore } from "@/lib/store";
 import { ALL_NAV_ITEMS } from "@/lib/nav-items";
 import { useRouter } from "next/navigation";
-import { FileText, Plus, Settings, Zap } from "lucide-react";
+import { Plus, Settings, Zap } from "lucide-react";
 import { settingsHref } from "@/features/settings/sections";
 
 const QUICK_ACTIONS = [
-  { label: "Generate Resume", icon: FileText, href: "/resume" },
   { label: "Add Application", icon: Plus, href: "/applications" },
   { label: "Scan for Jobs", icon: Zap, href: "/inbox" },
 ];

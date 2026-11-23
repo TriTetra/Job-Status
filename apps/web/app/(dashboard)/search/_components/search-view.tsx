@@ -7,6 +7,7 @@ import { Loader2, Search } from "lucide-react";
 import { OpportunityCardCompact } from "@/components/ui/opportunity-card-compact";
 import { OpportunityDetailPanel } from "@/components/ui/opportunity-detail-panel";
 import { opportunitiesApi } from "@/features/opportunities/api";
+import type { SkipReason } from "@/features/opportunities/format";
 import {
   COUNTRIES, EMPTY_QUERY, PAGE, fromParams, searchApi, toParams,
   type SearchQuery, type SearchResponse, type SearchResult, type Size, type Work,
@@ -140,11 +141,11 @@ export function SearchView() {
     }
   };
 
-  const handleDecision = async (url: string, status: "to_apply" | "applied" | "skipped") => {
+  const handleDecision = async (url: string, status: "to_apply" | "applied" | "skipped", reasons: SkipReason[] = []) => {
     setDecisionError(null);
     setBusy(true);
     try {
-      const d = await opportunitiesApi.decide(url, status);
+      const d = await opportunitiesApi.decide(url, status, { reasons, surface: "search", shown: jobs.find((j) => j.url === url) });
       setResults((r) => (r.data
         ? { ...r, data: { ...r.data, jobs: r.data.jobs.map((j) => (j.url === url ? { ...j, user_decision: d } : j)) } }
         : r));
@@ -292,7 +293,7 @@ export function SearchView() {
                 scoredNow={!selected.in_opportunities}
                 onApply={() => handleDecision(selected.url, "applied")}
                 onShortlist={() => handleDecision(selected.url, "to_apply")}
-                onSkip={() => handleDecision(selected.url, "skipped")}
+                onSkip={(reasons) => handleDecision(selected.url, "skipped", reasons)}
               />
             )}
           </div>

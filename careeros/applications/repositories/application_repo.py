@@ -10,6 +10,9 @@ from careeros.db.repository import BaseRepository
 
 
 STATUSES = ("to_apply", "applied", "interview", "offer", "rejected", "withdrawn", "skipped")
+# Moves that are the employer's answer: what the chance model will learn from
+OUTCOMES = {"interview": "interview", "offer": "offer", "rejected": "reject"}
+SENT = ("applied", "interview", "offer")
 
 
 def _now() -> datetime:
@@ -38,9 +41,12 @@ class ApplicationRepository(BaseRepository[Application]):
         if existing:
             return existing
         now = _now()
-        return self.create(user_id=user_id, url=url, title=title, company=company, status=status, notes=notes,
-                           applied_at=now if status in ("applied", "interview", "offer") else None,
-                           history=[_event(status, now)])
+        cv = self._cv(user_id) if status in SENT else None
+        app = self.create(user_id=user_id, url=url, title=title, company=company, status=status, notes=notes,
+                          applied_at=now if status in SENT else None, history=[_event(status, now)],
+                          resume_version=cv["ref"] if cv else None)
+        self._remember(app, None, status, cv)
+        return app
 
     def mark_applied(
         self, url: str, applied_at: datetime | None = None, user_id: str = "default"
@@ -78,10 +84,42 @@ class ApplicationRepository(BaseRepository[Application]):
         if status == obj.status:
             return obj
         at = at or _now()
+        before = obj.status
         kwargs: dict = {"status": status, "history": [*(obj.history or []), _event(status, at)]}
-        if status in ("applied", "interview", "offer") and obj.applied_at is None:
+        cv = None
+        user_id = getattr(obj, "user_id", None)
+        if status in SENT and obj.applied_at is None:
             kwargs["applied_at"] = at
-        return self.update(obj, **kwargs)
+            cv = self._cv(user_id) if user_id else None
+            if cv and not getattr(obj, "resume_version", None):
+                kwargs["resume_version"] = cv["ref"]  # the CV that was current when it was sent
+        app = self.update(obj, **kwargs)
+        if user_id:
+            self._remember(app, before, status, cv, at)
+        return app
+
+    def _cv(self, user_id: str) -> dict | None:
+        from careeros.memory.cv import current_cv
+
+        try:
+            return current_cv(self.session, user_id)
+        except Exception:
+            return None
+
+    def _remember(self, app: Application, before: str | None, status: str, cv: dict | None,
+                  at: datetime | None = None) -> None:
+        """One event per move: the employer's answer as OutcomeObserved, anything else as a stage change."""
+        from careeros.memory.events import job_stream, remember
+
+        payload = {"url": app.url, "title": app.title, "company": app.company, "from": before, "to": status}
+        if cv:
+            payload["cv"] = cv
+        if status in OUTCOMES:
+            remember(self.session, app.user_id, "OutcomeObserved", {**payload, "kind": OUTCOMES[status]},
+                     stream=job_stream(app.url), valid_from=at)
+        else:
+            remember(self.session, app.user_id, "ApplicationStageChanged", payload, stream=job_stream(app.url),
+                     valid_from=at)
 
     def get_by_status(self, status: str, user_id: str = "default") -> List[Application]:
         stmt = (

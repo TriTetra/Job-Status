@@ -11,6 +11,7 @@ from careeros.applications.repositories.application_repo import ApplicationRepos
 from careeros.jobs import opportunities
 from careeros.jobs import ingest
 from careeros.jobs import search as job_search
+from careeros.memory.events import log_impressions
 from careeros.jobs.posting import get_posting
 from careeros.jobs.scan import ALL_TIME_HOURS, run_scan, scan_jobs
 from careeros.shared.background import JobForbidden, JobNotFound
@@ -53,19 +54,27 @@ def list_jobs(
     scores = opportunities.list_opportunities(session, user_id, recommendation, limit)
     decisions = opportunities.user_decisions(session, user_id)
     total = opportunities.count_opportunities(session, user_id, recommendation)
+    log_impressions(session, user_id, "inbox", [(s.url, s.career_score) for s in scores])
     return JobListResponse(total=total, jobs=[_serialize(s, decisions.get(s.url)) for s in scores])
 
 
 class DecisionRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
     status: Literal["to_apply", "applied", "skipped"]
+    reasons: list[str] = Field(default_factory=list, max_length=8)   # why "Not for me" (memory.events.SKIP_REASONS)
+    surface: Optional[Literal["inbox", "search", "briefing", "telegram"]] = None
+    # What the screen showed (search results scored on the fly have no saved score)
+    shown_score: Optional[float] = Field(None, ge=0, le=100)
+    shown_p_interview: Optional[float] = Field(None, ge=0, le=1)
+    shown_value: Optional[float] = Field(None, ge=0, le=1)
 
 
 @router.post("/decide", summary="Shortlist / Apply / Skip an opportunity")
 def decide(body: DecisionRequest, user_id: str = Depends(get_user_id), session: Session = Depends(get_db_session)):
     """Records the decision as an application status, creating the application if needed."""
     try:
-        return opportunities.record_decision(session, user_id, body.url, body.status)
+        shown = {"score": body.shown_score, "p_interview": body.shown_p_interview, "value": body.shown_value}
+        return opportunities.record_decision(session, user_id, body.url, body.status, body.reasons, body.surface, shown)
     except opportunities.UnknownJob:
         raise HTTPException(status_code=404, detail="This job is no longer available.")
 
@@ -175,6 +184,8 @@ def search_jobs(
         sizes=_csv(size, job_search.SIZES), reliable=reliable, reachable=reachable, visa=visa,
         min_salary_usd=min_salary or None, source=source, days=days, sort=sort, limit=limit, offset=offset)
     result = job_search.search(session, user_id, f)
+    log_impressions(session, user_id, "search", [(it["url"], it.get("career_score")) for it in result.items],
+                    offset=offset)
     decisions = opportunities.user_decisions(session, user_id)
     jobs = []
     for it in result.items:

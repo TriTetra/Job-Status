@@ -38,7 +38,12 @@ def test_skill_curve_has_no_cliff_and_favours_the_first_requirements():
 def test_title_family():
     assert m.title_match("Senior Machine Learning Engineer", ["Machine Learning Engineer"]) == 1.0
     assert m.title_match("ML Platform Engineer", ["Machine Learning Engineer"]) == 1.0   # ML = machine learning
-    assert m.title_match("Data Engineer", ["Machine Learning Engineer"]) == 0.6
+    assert m.title_match("Data Engineer", ["Machine Learning Engineer"]) == 0.4          # near family
+    assert m.title_match("Applied Scientist", ["Machine Learning Engineer"]) == 0.6      # same family
+    assert m.title_match("Python Developer", ["Backend Engineer"]) == 0.6
+    # sharing only "Engineer" doesn't make roles related
+    assert m.title_match("Cryogenics Engineer", ["Backend Engineer", "ML Engineer"]) == 0.25
+    assert m.title_match("Mechanical Engineer", ["Software Engineer"]) == 0.25
     assert m.title_match("Kıdemli Yazılım Geliştirici", ["Software Engineer"]) == 1.0  # Turkish title, same family
     assert m.title_match("Account Executive", ["Machine Learning Engineer"]) == 0.25
 

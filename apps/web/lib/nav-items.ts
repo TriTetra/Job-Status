@@ -45,9 +45,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "BUILD",
     items: [
-      { label: "Evidence", href: "/evidence", icon: Database },
-      { label: "Learning", href: "/learning", icon: GraduationCap },
-      { label: "Resume", href: "/resume", icon: FileText },
+      { label: "Evidence", href: "/evidence", icon: Database, comingSoon: true },
+      { label: "Learning", href: "/learning", icon: GraduationCap, comingSoon: true },
+      { label: "Resume", href: "/resume", icon: FileText, comingSoon: true },
     ],
   },
   {

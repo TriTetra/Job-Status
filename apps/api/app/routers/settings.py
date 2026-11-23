@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..dependencies import get_db_session, get_user_id
+from careeros.memory.events import remember
 from careeros.identity.repositories.user_settings_repo import UserSettingsRepository
 
 router = APIRouter()
@@ -80,6 +81,8 @@ def update_weights(
     """Update scoring weights (partial — unspecified keys keep defaults)."""
     repo = UserSettingsRepository(session)
     repo.set_weights(user_id=user_id, weights=data.weights)
+    remember(session, user_id, "WeightsChanged", {"weights": data.weights})
+    session.commit()
     return WeightsResponse(user_id=user_id, weights=repo.get_weights(user_id=user_id))
 
 

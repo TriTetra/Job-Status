@@ -172,20 +172,53 @@ def skill_match(must: list[str], nice: list[str], have: set[str]) -> tuple[float
     return _logistic(10 * (c_must - 0.55)) * (0.9 + 0.1 * c_nice), c_must, c_nice
 
 
+# Words every role shares: they say nothing about which role it is ("Cryogenics Engineer" is
+# not a backend role because both titles end in "Engineer")
+_GENERIC = {"engineer", "engineering", "specialist", "expert", "associate", "consultant", "intern", "kıdemli"}
+# Role families by the words that name them; a title can touch several
+_FAMILY_WORDS = {
+    "software": {"software", "backend", "server", "api", "fullstack", "python", "java", "golang", "go", "node",
+                 "ruby", "php", "scala", "kotlin", "rust", "c++", "c#", ".net", "dotnet", "programmer", "sde", "swe"},
+    "ml": {"ml", "ai", "llm", "nlp", "mlops", "genai", "vision", "deep", "scientist", "research"},
+    "data": {"data", "analytics", "analyst", "etl", "bi", "warehouse"},
+    "frontend": {"frontend", "ui", "web", "react", "angular", "vue"},
+    "devops": {"devops", "sre", "reliability", "infrastructure", "cloud", "platform", "kubernetes", "systems"},
+    "mobile": {"mobile", "ios", "android", "flutter"},
+    "security": {"security", "appsec", "pentest", "secops"},
+}
+# Families one step apart: the same skills mostly carry over
+_NEAR_FAMILIES = {frozenset(p) for p in (("ml", "data"), ("software", "devops"), ("software", "frontend"),
+                                         ("software", "ml"), ("software", "mobile"), ("data", "software"))}
+
+
+def _families(words: set[str]) -> set[str]:
+    return {f for f, ws in _FAMILY_WORDS.items() if words & ws}
+
+
 def title_match(title: str, targets: list[str]) -> float:
-    """Same role family 1.0, adjacent 0.6, unrelated 0.25 (titles dominate the first screen)."""
+    """Same role 1.0, same or a near role family 0.6, unrelated 0.25 (titles dominate the first
+    screen). Shared generic words ("Engineer", "Developer") don't make two roles related."""
     if not targets:
         return 0.8
     words = _tokens(title)
-    best = 0.0
+    core = words - _GENERIC
+    fam = _families(core)
+    best = 0.25
     for t in targets:
         tw = _tokens(t)
-        if not tw:
+        tcore = tw - _GENERIC
+        if not tcore:  # the target is only a generic word ("Engineer"): match on it
+            if tw and tw <= words:
+                best = max(best, 0.6)
             continue
-        if tw <= words:
+        if tcore <= core:
             return 1.0
-        best = max(best, len(tw & words) / len(tw))
-    return 1.0 if best >= 0.75 else 0.6 if best >= 0.34 else 0.25
+        tfam = _families(tcore)
+        if len(tcore & core) / len(tcore) >= 0.5 or (fam & tfam):
+            best = max(best, 0.6)
+        elif any(frozenset((a, b)) in _NEAR_FAMILIES for a in fam for b in tfam):
+            best = max(best, 0.4)
+    return best
 
 
 def qualification(sig: Signals, me: Seeker) -> tuple[float, str]:

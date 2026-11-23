@@ -8,7 +8,7 @@ import { CompanyLogo } from "@/components/shared/company-logo";
 import { ScoreRing } from "./score-ring";
 import { tierOf } from "@/features/opportunities/tier";
 import {
-  CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, SIZE_LABEL, TIER_COLOR, TIER_LABEL,
+  CHANCE_COLOR, CHANCE_LABEL, DECISION_LABEL, SIZE_LABEL, SKIP_REASONS, TIER_COLOR, TIER_LABEL, type SkipReason,
   chanceOf, companyOf, postedAgo, salaryOf, whereOf,
 } from "@/features/opportunities/format";
 import { getPosting, type Posting } from "@/features/opportunities/posting";
@@ -20,7 +20,8 @@ interface OpportunityDetailPanelProps {
   opp: Opportunity;
   onApply: () => void;
   onShortlist: () => void;
-  onSkip: () => void;
+  /** "Not for me", with the one-tap reason the person picked (none for "Just skip"). */
+  onSkip: (reasons: SkipReason[]) => void;
   busy?: boolean;
   /** Scored just now for a search, not saved: no deeper read (it needs a saved score). */
   scoredNow?: boolean;
@@ -76,6 +77,19 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
   const [explainError, setExplainError] = useState(false);
   const [posting, setPosting] = useState<Posting | null>(null);
   const [postingError, setPostingError] = useState(false);
+  const [skipOpen, setSkipOpen] = useState(false);
+
+  useEffect(() => {
+    if (!skipOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSkipOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [skipOpen]);
+
+  const skip = (reasons: SkipReason[]) => {
+    setSkipOpen(false);
+    onSkip(reasons);
+  };
 
   useEffect(() => {
     let live = true;
@@ -244,7 +258,7 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
               {[
                 { label: status === "applied" ? "Applied ✓" : "I applied", on: onApply, off: status === "applied", color: "var(--text-primary)" },
                 { label: status === "shortlisted" ? "Saved ✓" : "Shortlist", on: onShortlist, off: status === "shortlisted", color: "var(--text-secondary)" },
-                { label: status === "skipped" ? "Skipped" : "Not for me", on: onSkip, off: status === "skipped", color: "var(--text-muted)" },
+                { label: status === "skipped" ? "Skipped" : "Not for me", on: () => setSkipOpen((v) => !v), off: status === "skipped", color: "var(--text-muted)" },
               ].map((a) => (
                 <button key={a.label} onClick={a.on} disabled={busy || a.off}
                         className="h-9 rounded-lg border disabled:opacity-50 transition-colors hover:bg-[var(--surface-hover)]"
@@ -253,6 +267,24 @@ export function OpportunityDetailPanel({ opp, onApply, onShortlist, onSkip, busy
                 </button>
               ))}
             </div>
+            {skipOpen && (
+              <div role="menu" aria-label="Why is it not for you?" className="menu-pop rounded-xl border p-1.5"
+                   style={{ background: "var(--background)", borderColor: "var(--border-strong)" }}>
+                <p className="px-2.5 pt-1 pb-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>Why not? Aplio learns from it.</p>
+                {SKIP_REASONS.map((r) => (
+                  <button key={r.id} role="menuitem" type="button" onClick={() => skip([r.id])} disabled={busy}
+                          className="block w-full text-left text-sm px-2.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                          style={{ color: "var(--text-secondary)" }}>
+                    {r.label}
+                  </button>
+                ))}
+                <button role="menuitem" type="button" onClick={() => skip([])} disabled={busy}
+                        className="block w-full text-left text-xs px-2.5 py-1.5 mt-0.5 rounded-md hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                        style={{ color: "var(--text-muted)" }}>
+                  Just skip
+                </button>
+              </div>
+            )}
           </div>
 
           </div>

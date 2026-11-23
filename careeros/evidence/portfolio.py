@@ -299,6 +299,12 @@ def sync_portfolio_evidence(user_id: str, url: str, session: Session, crawler: O
         ))
         created += 1
 
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "EvidenceImported", {
+        "source": "portfolio", "url": url, "projects": len(result.get("projects", [])),
+        "technologies": len(result.get("technologies", [])), "items": created,
+    }, stream="evidence", actor="import:portfolio")
     session.commit()
     return {
         "status": "crawled",
@@ -336,4 +342,7 @@ def disconnect_portfolio(session: Session, user_id: str) -> None:
         EvidenceItem.user_id == user_id,
         EvidenceItem.source == "portfolio",
     ).delete()
+    from careeros.memory.events import remember
+
+    remember(session, user_id, "EvidenceRemoved", {"source": "portfolio"}, stream="evidence")
     session.commit()
