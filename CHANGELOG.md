@@ -153,6 +153,7 @@ Sıralama: en yeniden en eskiye.
 - 765 test (yeni `test_employers_directory.py`: temizleme, Türkiye listesinin geçerliliği, logo koruması), ruff, tsc, eslint, `next build` temiz.
 - **Yayında:** `4877746`, `cf94d53`, `9a2261a` push edildi, Coolify'da dağıtıldı (Finished, 1 dk 23 sn). İlk döngüden sonra canlıda: Search Türkiye 59 → **162** sonuç, ilk 100'ün 78'i Türkiye'de bulunan iş (ING 21, Bosch 16, Vodafone 10, Vertigo 7, Trendyol 4…); kutuya "istanbul" yazmak Türkiye filtresine dönüşüyor; rehber 97 işveren, 30'u okunuyor, 25'inin şu an açık işi var; ilk 50 eşleşmenin 45'i yer bilgisini taşıyor (8.3 yeniden puanlama). Açık: rehberde "Mastercard Türkiye 63 open" Mastercard'ın tüm küresel panosunu sayıyor; küresel panolarda yalnız Türkiye işleri sayılmalı.
 - **Düzeltme:** rehberdeki açık iş sayısı artık yalnız **Türkiye'de bulunan** işleri sayıyor (`open_in_country`: konumda Türkiye / şehir adları; küresel bir işverenin tüm panosu değil); etiket "Aplio reads its jobs (N open in Türkiye)".
+- **Yayında:** `9e15f28` push edildi, Coolify'da dağıtıldı (Finished, 1 dk 05 sn). Canlıda: Mastercard Türkiye 63 → 1, Bosch 21 → 16, Insider 14 → 8; yurt dışı ilanları olan Codeway / Peak / Good Job Games listeden düştü; toplam 20 işverende Türkiye'de bulunan 110 açık iş.
 
 ---
 
