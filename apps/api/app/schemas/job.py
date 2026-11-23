@@ -38,4 +38,5 @@ class JobSearchItem(JobWithScore):
 class JobSearchResponse(BaseModel):
     total: int
     capped: bool = False  # more postings matched than one search reads: narrow it
+    country: Optional[str] = None  # the country searched, also when it was typed in the box ("İstanbul")
     jobs: List[JobSearchItem]

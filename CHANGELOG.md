@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Search: Türkiye ve Yer Aramaları | Ülke filtresinde o ülkedeki işler önce okunuyor (remote ilanlar artık dışarı itemiyor); kutuya yazılan yer (İstanbul, Türkiye, Berlin) ülke filtresi oluyor; kelimeler konumda da aranıyor; noktalı İ yazımları | ✅ Tamam | 2026-11-23 |
 | Taslaklar: Kanıta Bağlı ve Denetlenen | Başvuru taslakları her iddiada dayandığı kanıtı gösteriyor; bir aracı yanlış işe bağlayan ya da kanıtta olmayan beceriyi iddia eden cümleler yakalanıyor, bir düzeltme turu, kalanlar "Check:" notu | ✅ Tamam | 2026-11-23 |
 | B: Ready to Apply + Daily Report | Her gün başvurulacak en iyi 5 iş (şirket başına bir), her biri hazırlanmış: formun soruları (Greenhouse'tan gerçek form), profilden cevaplar, kanıttan taslaklar, gönderilecek CV, kısa not; gönderen kişinin kendisi. Günlük rapor: Briefing'de ve Telegram'da | ✅ Tamam | 2026-11-23 |
 | Fix Pack A: Live Test Findings | Canlı hesapta test; konum tanıma (USA, eyaletler, şehirler; bilinmeyen konum artık "engel yok" değil), on-site / hybrid ayrımı, beceri eş anlamlıları ve kapsadığı beceriler, deeper read ham bilgileri kontrol ediyor | ✅ Tamam | 2026-11-23 |
@@ -125,6 +126,28 @@ Sıralama: en yeniden en eskiye.
 
 ---
 
+## [Search: Türkiye ve Yer Aramaları] — 2026-11-23 — "Türkiye yazınca gelmiyor" ✅
+
+**Neden:** Kullanıcı: Search'te Türkiye şirketleri neredeyse yok, Türkiye yazınca gelmiyor.
+
+### Bulunan (canlıda, salt okuma)
+- Ülke filtresi Türkiye: 59 sonuç, neredeyse hepsi remote ("Remote: anywhere", "EMEA"). Bir arama en yeni 600 ilanı okuyor ve ülke ön-filtresi **bütün remote ilanları** da geçiriyordu; remote ilanlar 600'ü doldurup Türkiye'deki işleri dışarı itiyordu.
+- Kutuya "istanbul" yazmak: 0 sonuç; kutu yalnız unvan / şirket / departmanda arıyordu, konumda değil.
+- Coğrafya doğru çalışıyor: şirket adıyla birlikte Türkiye filtresi Trendyol 8, Vodafone Türkiye 10, Insider 10, Dream Games 7, Midas 7 iş buluyor.
+
+### Düzeltmeler (`careeros/jobs/search.py`)
+- Ülke filtresinde önce **o ülkede bulunan** işler okunuyor (en yeni 600'e kadar), kalan yer o ülkeye açık remote işlere.
+- **Kutuya yazılan yer** ("istanbul", "İstanbul engineer", "Türkiye", "data London") tek bir ülkeyi gösteriyorsa ülke filtresi oluyor, kalan kelimeler metin olarak aranıyor; iki ülke yazılırsa ("berlin istanbul") metin olarak kalıyor. Sayfa çözülen ülkeyi gösteriyor ("in or open to Türkiye").
+- Kelimeler artık **konumda da** aranıyor.
+- Veritabanının küçültmediği **noktalı İ** yazımları (İstanbul, İzmir) ve yerel adlar (Türkiye, Turkiye) ülke ön-filtresinde.
+- Kutunun ipucu: "Role, company or place, e.g. machine learning İstanbul".
+
+### Doğrulama
+- Atılabilir DB'de aramalar hatasız (Türkiye 94, Almanya 142); yeni testler: yazılan yer → ülke, Türkçe yazımlar; 759 test, ruff, tsc, eslint temiz.
+- Not: Türkiye'de bulunan ilgili iş sayısı azdır (~45): Türk şirketlerinin herkese açık iş panoları sınırlı; Kariyer.net / LinkedIn kuralları otomatik toplamayı yasaklıyor. Yeni Türk şirketleri (herkese açık Lever / Greenhouse / Workable panosu olan) eklenebilir.
+
+---
+
 ## [Taslaklar: Kanıta Bağlı ve Denetlenen] — 2026-11-23 — Yanlış işe bağlanan araçlar ✅
 
 **Neden:** Canlıdaki ilk kitlerde Alan notu gRPC ve PostgreSQL'i Boenstitü deneyimine bağlamıştı; kanıtta gRPC Sentropy projesinde, PostgreSQL hiçbir işe bağlı değil. Kullanıcı taslakların sıkılaştırılmasını seçti ("Tighten drafts").
@@ -141,6 +164,7 @@ Sıralama: en yeniden en eskiye.
 - Denetleyici gerçek kaymayı yakalıyor (gRPC → Sentropy, PostgreSQL → işe bağlı değil; Redis / Spring Boot doğru diye geçiyor).
 - 757 test (yeni: yanlış işe bağlanan araç, kanıtta olmayan beceri, kabul edilen eksik, düzeltme turu, inatçı taslakta "Check" notu, kimliklerin silinmesi), ruff, tsc, eslint temiz.
 - Gerçek LLM ile yeni taslaklar canlıda, deploy sonrası görülecek.
+- **Yayında:** `93ebf81` push edildi, Coolify'da dağıtıldı (Finished, 1 dk 03 sn); ilk döngüde 5 kit sürüm 2 ile yeniden hazırlandı (12:35–12:37). Hiçbirinde "Check" yok; araçlar doğru işlerde (Boenstitü: Next.js, Spring Boot, Redis; Sentropy: Rust, gRPC, Kubernetes, eBPF). Kalan küçük açık: Theodo notunda "JWT" Boenstitü'ye eklenmiş; "JWT" beceri sözlüğünde tek başına geçmediği için denetleyici görmüyor.
 
 ---
 

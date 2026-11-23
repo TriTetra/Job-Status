@@ -7,6 +7,7 @@ export type SearchResult = Opportunity & { in_opportunities: boolean };
 export interface SearchResponse {
   total: number;
   capped: boolean;
+  country?: string | null;  // the country searched, also when typed in the box ("İstanbul")
   jobs: SearchResult[];
 }
 

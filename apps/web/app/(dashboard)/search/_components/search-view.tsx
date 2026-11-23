@@ -172,7 +172,8 @@ export function SearchView() {
   }, [jobs, selected]);
 
   const isDefault = key === toParams(EMPTY_QUERY).toString();
-  const countryName = COUNTRIES.find((c) => c.code === query.country)?.name;
+  const countryCode = query.country || data?.country || "";
+  const countryName = COUNTRIES.find((c) => c.code === countryCode)?.name ?? (countryCode || undefined);
 
   return (
     <div className="lg:h-full flex flex-col w-full max-w-[1680px] mx-auto px-6 lg:px-8 pt-7 pb-5">
@@ -189,7 +190,7 @@ export function SearchView() {
              style={{ borderColor: "var(--border-strong)" }}>
         <Search className="h-5 w-5 shrink-0" style={{ color: "var(--text-muted)" }} />
         <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={120} autoFocus
-               placeholder="Role or company, e.g. machine learning engineer"
+               placeholder="Role, company or place, e.g. machine learning İstanbul"
                aria-label="Search roles or companies"
                className="flex-1 min-w-0 bg-transparent outline-none font-serif-display text-[24px] leading-tight placeholder:text-[var(--text-muted)]"
                style={{ color: "var(--text-primary)" }} />

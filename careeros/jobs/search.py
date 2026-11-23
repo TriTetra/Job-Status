@@ -51,6 +51,7 @@ class SearchResult:
     total: int
     capped: bool                           # more postings matched the words than were read
     items: list[dict]
+    country: Optional[str] = None          # the country searched (also when it was typed as a place)
 
 
 # ── who is searching (cached briefly: a search is typed, filtered, refined) ──
@@ -88,7 +89,27 @@ def _words(q: str) -> list[str]:
 
 
 def _place_names(code: str) -> list[str]:
-    return [n for n, c in COUNTRY_NAMES if c == code] + [city for city, c in CITIES.items() if c == code]
+    """Every way a location string may name this country (SQL ILIKE, so dotted capitals are added:
+    the database doesn't lower-case "İstanbul" to "istanbul")."""
+    from careeros.jobs.geo import COUNTRY_ALIASES
+
+    names = [n for n, c in COUNTRY_NAMES + COUNTRY_ALIASES if c == code] + [city for city, c in CITIES.items() if c == code]
+    dotted = ["İ" + n[2:] for n in names if n.startswith("i̇")] + [n.replace("i", "İ", 1) for n in names if n.startswith("i") and not n.startswith("i̇")]
+    return list(dict.fromkeys(names + dotted))
+
+
+def place_in_query(q: str) -> tuple[Optional[str], str]:
+    """A place typed in the search box ("İstanbul", "Türkiye", "Berlin") → (its country code, the other words).
+    Only when every place word points to one country; otherwise the words stay as text."""
+    from careeros.jobs.geo import countries_in
+
+    words = (q or "").split()
+    codes = {w: {c for c, _ in countries_in(w)} for w in words if len(w) >= 3}
+    found = {c for cs in codes.values() for c in cs}
+    if len(found) != 1:
+        return None, q
+    rest = [w for w in words if not codes.get(w)]
+    return found.pop(), " ".join(rest)
 
 
 def candidates(session: Session, f: SearchFilters, now: datetime) -> tuple[list[JobRow], bool]:
@@ -96,11 +117,8 @@ def candidates(session: Session, f: SearchFilters, now: datetime) -> tuple[list[
     q = session.query(JobRow).filter(JobRow.closed_at.is_(None))
     for w in _words(f.q):
         like = f"%{w}%"
-        q = q.filter(or_(JobRow.title.ilike(like), JobRow.company.ilike(like), JobRow.department.ilike(like)))
-    if f.country:
-        names = _place_names(f.country)
-        remote = or_(JobRow.remote.is_(True), JobRow.llm_facts["workplace"].astext == "remote")
-        q = q.filter(or_(remote, *[JobRow.location.ilike(f"%{n}%") for n in names]))
+        q = q.filter(or_(JobRow.title.ilike(like), JobRow.company.ilike(like), JobRow.department.ilike(like),
+                         JobRow.location.ilike(like)))
     if f.source == "feed":
         q = q.filter(JobRow.source == "feed")
     elif f.source == "company":
@@ -108,8 +126,18 @@ def candidates(session: Session, f: SearchFilters, now: datetime) -> tuple[list[
     when = func.coalesce(JobRow.posted_at, JobRow.discovered_at)
     if f.days:
         q = q.filter(when >= now - timedelta(days=f.days))
-    rows = q.order_by(when.desc().nullslast()).limit(MAX_CANDIDATES + 1).all()
-    return rows[:MAX_CANDIDATES], len(rows) > MAX_CANDIDATES
+    if not f.country:
+        rows = q.order_by(when.desc().nullslast()).limit(MAX_CANDIDATES + 1).all()
+        return rows[:MAX_CANDIDATES], len(rows) > MAX_CANDIDATES
+    # Jobs located in the country first: remote postings (open to many countries) are far more
+    # numerous and would otherwise fill the read and push them out
+    in_country = or_(*[JobRow.location.ilike(f"%{n}%") for n in _place_names(f.country)])
+    located = q.filter(in_country).order_by(when.desc().nullslast()).limit(MAX_CANDIDATES + 1).all()
+    room = max(0, MAX_CANDIDATES - len(located))
+    remote = or_(JobRow.remote.is_(True), JobRow.llm_facts["workplace"].astext == "remote")
+    far = (q.filter(remote, ~in_country).order_by(when.desc().nullslast()).limit(room + 1).all() if room else [])
+    capped = len(located) > MAX_CANDIDATES or len(far) > room
+    return located[:MAX_CANDIDATES] + far[:room], capped
 
 
 def _workplace(job) -> str:
@@ -218,9 +246,13 @@ def search(session: Session, user_id: str, f: SearchFilters, now: Optional[datet
     from careeros.jobs.scoring_service import ScoringService
 
     now = now or datetime.now(timezone.utc)
+    if not f.country and f.q:
+        code, rest = place_in_query(f.q)
+        if code:  # "istanbul engineer" → country Türkiye, words "engineer"
+            f = replace(f, country=code, q=rest)
     rows, capped = candidates(session, f, now)
     if not rows:
-        return SearchResult(total=0, capped=False, items=[])
+        return SearchResult(total=0, capped=False, items=[], country=f.country)
 
     profile, weights, prefs = _viewer(user_id)
     preferred = profile.preferences.preferred_locations if profile else []
@@ -261,4 +293,4 @@ def search(session: Session, user_id: str, f: SearchFilters, now: Optional[datet
     if f.sort == "score":
         items.sort(key=lambda it: (-(it["career_score"] or 0), order[it["url"]]))
     total = len(items)
-    return SearchResult(total=total, capped=capped, items=items[f.offset:f.offset + f.limit])
+    return SearchResult(total=total, capped=capped, items=items[f.offset:f.offset + f.limit], country=f.country)

@@ -83,3 +83,17 @@ def test_language_check_is_unchanged_by_the_fast_path():
     assert languages_required("Verhandlungssicheres Deutsch", "") == ["de"]
     assert languages_required("Based in Germany, English only.", "") == []
     assert languages_required("Native Turkish speaker, C1", "") == ["tr"]
+
+
+def test_a_place_typed_in_the_box_becomes_the_country():
+    assert s.place_in_query("istanbul") == ("TR", "")
+    assert s.place_in_query("İstanbul engineer") == ("TR", "engineer")
+    assert s.place_in_query("data London") == ("GB", "data")
+    assert s.place_in_query("machine learning") == (None, "machine learning")
+    assert s.place_in_query("berlin istanbul") == (None, "berlin istanbul")      # two countries: left as text
+
+
+def test_place_names_cover_turkish_spellings_the_database_wont_fold():
+    names = s._place_names("TR")
+    assert {"Turkey", "Türkiye", "Turkiye", "İstanbul", "İzmir", "istanbul"} <= set(names)
+    assert not any(n.startswith("İ̇") for n in names)

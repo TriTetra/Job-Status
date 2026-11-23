@@ -196,7 +196,7 @@ def search_jobs(
             decision=explanation.get("decision"),
             user_decision=decisions.get(it["url"]) or opportunities.UNREVIEWED,
         ))
-    return JobSearchResponse(total=result.total, capped=result.capped, jobs=jobs)
+    return JobSearchResponse(total=result.total, capped=result.capped, jobs=jobs, country=result.country)
 
 
 @router.get("/{url:path}", response_model=JobWithScore)
