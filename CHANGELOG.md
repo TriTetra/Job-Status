@@ -145,6 +145,7 @@ Sıralama: en yeniden en eskiye.
 - Atılabilir DB'de tam yeniden puanlama hatasız (323 iş).
 - 725 test (yeni `test_fix_pack_a.py`: 27 test), ruff temiz.
 - Açık: profilde ikamet ülkesi "Uzbekistan"; doğruysa vize hesapları ona göre.
+- **Yayında:** `c25cdc6` push edildi, Coolify'da dağıtıldı (Finished, 28 sn); API 11:28'de hatasız açıldı, ilk döngü 11:32'de panoları okudu (110 pano, 9.661 iş) ve 11:33'te yeniden puanladı (ilk 500'ün 441'i 8.2 ile). Canlıda: Zscaler Santa Clara 86,9 / APPLY → 19 / SKIP ("Needs a work visa", ×0,08); Briefing'in en iyi seçimi artık Clera (dünya çapı remote, 89); listenin başı Paris, Nieuwegein, Münih, Cenevre, Gdańsk; ABD işleri üstten çıktı. Dağılım: 9 APPLY, 54 CONSIDER, 437 SKIP.
 
 ---
 
