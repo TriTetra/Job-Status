@@ -67,9 +67,38 @@ export interface OpportunityExplanation {
   salary_currency?: string;
   /** How far the posting and the company behind it can be trusted (careeros/jobs/trust.py) */
   trust?: Trust;
+  model?: ScoreModel;
   company_size?: "startup" | "midsize" | "large" | "big_tech" | "unknown";
   company_domain?: string;
   [key: string]: unknown;
+}
+
+/** The v8 scoring model's reasoning (careeros/jobs/scoring/model_v8.py Result.explain). */
+export interface ScoreModel {
+  v: number;
+  score: number;
+  recommendation: string;
+  p_interview: number;
+  p_real: number;
+  p_effective: number;
+  value: number;
+  gamma: number;
+  fit: number;
+  gates: string[];
+  chance_factors: {
+    skills: number;
+    must_coverage: number;
+    nice_coverage: number;
+    title: number;
+    experience: number;
+    experience_note: string;
+    timing: number;
+    competition: number;
+    location: number;
+    location_note: string;
+    agency: number;
+  };
+  value_parts: Record<string, number | boolean>;
 }
 
 export interface Trust {

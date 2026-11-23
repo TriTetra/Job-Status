@@ -41,6 +41,8 @@ class UserPreferences:
     min_salary: Optional[int] = None
     max_salary: Optional[int] = None
     salary_currency: str = "USD"
+    residence_country: Optional[str] = None   # ISO code of the country the person lives in
+    languages: List[str] = field(default_factory=list)  # ISO 639-1 codes they work in (B2+)
     preferred_company_sizes: List[str] = field(default_factory=lambda: ["startup", "midsize"])
     preferred_industries: List[str] = field(default_factory=list)
     work_visa_required: bool = True
@@ -60,6 +62,7 @@ class UserProfile:
     preferences: UserPreferences = field(default_factory=UserPreferences)
     target_roles: List[str] = field(default_factory=list)
     target_domains: List[str] = field(default_factory=list)
+    seeker: Optional[object] = None  # v8 model view of this person (careeros/jobs/scoring/signals.py)
     resume_text: str = ""
 
     def get_skill(self, skill_name: str) -> Optional[Skill]:

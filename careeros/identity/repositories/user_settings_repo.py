@@ -10,10 +10,12 @@ from careeros.identity.models.user_custom_skills import UserCustomSkill
 from careeros.db.repository import BaseRepository
 
 _DEFAULT_WEIGHTS = {
-    "fit": 0.30,
-    "acceptance": 0.25,
-    "career_value": 0.25,
-    "market_demand": 0.20,
+    # v8 value weights (careeros/jobs/scoring/model_v8.py) and effort per application (1 quick · 2 normal · 3 tailored)
+    "pay": 0.35,
+    "growth": 0.22,
+    "stability": 0.18,
+    "work_style": 0.13,
+    "effort": 2.0,
 }
 
 

@@ -8,7 +8,8 @@ export type Chance = "high" | "medium" | "low";
 /** Acceptance is stored 0–100; the score asks "is it good", chance asks "can I get it". */
 export function chanceOf(o: Opportunity): Chance {
   const a = o.acceptance_probability ?? 0;
-  return a >= 30 ? "high" : a >= 15 ? "medium" : "low";
+  // v8: the effective chance of an interview, in percent (a cold application is ~5–8%)
+  return a >= 5 ? "high" : a >= 1.5 ? "medium" : "low";
 }
 
 export const CHANCE_LABEL: Record<Chance, string> = { high: "good chance", medium: "fair chance", low: "long shot" };

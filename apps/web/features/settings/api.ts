@@ -7,11 +7,13 @@ export { API_BASE } from "@/lib/api/client";
  * users / career_preferences / user_settings / connected_accounts.
  */
 
+/** v8 value weights (relative) and the effort one application costs: 1 quick · 2 normal · 3 tailored. */
 export interface ScoringWeights {
-  fit: number;
-  acceptance: number;
-  career_value: number;
-  market_demand: number;
+  pay: number;
+  growth: number;
+  stability: number;
+  work_style: number;
+  effort: number;
 }
 
 /** GET/PATCH /api/preferences (apps/api/app/routers/preferences.py: PreferencesOut). */

@@ -31,7 +31,7 @@ scan_jobs = JobStore()
 DEFAULT_YEARS_EXPERIENCE = 2.0
 ALL_TIME_HOURS = 99999
 # Bump when scoring logic changes: every job is rescored on the next scan
-SCORER_VERSION = "7"  # 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus
+SCORER_VERSION = "8"  # 5: work-style prefs, user weights · 6: salary in the explanation · 7: location, trust, company size, currencies, demand from the corpus · 8: chance-weighted surplus
 
 
 def skill_level_for(confidence: float) -> SkillLevel:
@@ -73,7 +73,23 @@ def build_profile_from_evidence(user_id: str) -> Optional[UserProfile]:
                     "FROM career_preferences WHERE user_id = :u"), {"u": user_id}
         ).fetchone()
         apply_preferences(profile, prefs)
+        apply_identity(profile, profile_data, s, user_id)
         return profile
+
+
+def apply_identity(profile: UserProfile, profile_data: dict, session, user_id: str) -> None:
+    """Where the person lives, the languages they work in, the roles they target."""
+    from careeros.jobs.geo import countries_in
+    from careeros.jobs.scoring.signals import language_codes
+    from careeros.jobs.targeting import role_terms
+
+    found = countries_in(profile_data.get("country") or "")
+    profile.preferences.residence_country = found[0][0] if found else None
+    profile.preferences.languages = sorted(language_codes(profile_data.get("languages") or []))
+    try:
+        profile.target_roles = role_terms(session, [user_id]) or [profile_data.get("current_role_title") or ""]
+    except Exception:  # roles are a nicety for title matching, never a reason to fail a scan
+        profile.target_roles = [t for t in [profile_data.get("current_role_title")] if t]
 
 
 def apply_preferences(profile: UserProfile, row) -> None:
@@ -116,14 +132,21 @@ def load_weights(user_id: str) -> dict:
     return normalize_weights(raw)
 
 
-WEIGHT_KEYS = ("fit", "acceptance", "career_value", "market_demand")
+WEIGHT_KEYS = ("pay", "growth", "stability", "work_style")  # v8 value weights; "effort" 1–3 rides along
 
 
 def normalize_weights(raw: dict) -> dict:
-    """Scoring weights scaled to sum to 1; {} (scorer defaults) if nothing usable."""
-    values = {k: max(0.0, float(raw.get(k, 0) or 0)) for k in WEIGHT_KEYS}
+    """Value weights scaled to sum to 1 (defaults when unusable), plus the effort setting."""
+    from careeros.jobs.scoring.model_v8 import VALUE_WEIGHTS
+
+    values = {k: max(0.0, float(raw.get(k, VALUE_WEIGHTS[k]) or 0)) for k in WEIGHT_KEYS}
     total = sum(values.values())
-    return {k: round(v / total, 4) for k, v in values.items()} if total > 0 else {}
+    out = {k: round(v / total, 4) for k, v in values.items()} if total > 0 else dict(VALUE_WEIGHTS)
+    try:
+        out["effort"] = min(3.0, max(1.0, float(raw.get("effort", 2) or 2)))
+    except (TypeError, ValueError):
+        out["effort"] = 2.0
+    return out
 
 
 def load_profile(user_id: str) -> Optional[UserProfile]:
@@ -283,6 +306,19 @@ def market_demand(rows: list[JobRow]) -> dict[str, float]:
     return {skill: round(0.3 + 0.7 * n / top, 3) for skill, n in counts.items()}
 
 
+def pool_medians(rows: list[JobRow]) -> dict[str, int]:
+    """Typical expected offer per country among the user's matching jobs (pay reference)."""
+    from careeros.jobs.geo import countries_in
+    from careeros.jobs.scoring.signals import market_medians, offer_usd
+
+    pairs = []
+    for r in rows:
+        f = job_fields(r)
+        pairs.append(([c for c, _ in countries_in(r.location)],
+                      offer_usd(f["salary_min"], f["salary_max"], f["salary_currency"])))
+    return market_medians(pairs)
+
+
 def demand_signature(demand: dict[str, float]) -> str:
     """Coarse view of the market for the profile fingerprint: a real shift rescores, noise doesn't."""
     top = sorted(demand.items(), key=lambda kv: -kv[1])[:15]
@@ -298,7 +334,8 @@ def remote_regions(r: JobRow, facts: Optional[dict]) -> list[str]:
 
 def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] = None,
                      preferred_countries: Optional[list[str]] = None,
-                     now: Optional[datetime] = None) -> tuple[list[Job], dict[str, dict]]:
+                     now: Optional[datetime] = None,
+                     market_medians: Optional[dict[str, int]] = None) -> tuple[list[Job], dict[str, dict]]:
     """Stored job rows → (Job objects to score, per-URL metadata the Job type doesn't carry)."""
     from careeros.jobs.geo import location_match
     from careeros.jobs.trust import assess
@@ -313,6 +350,13 @@ def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] =
                        ats=r.ats, company_domain=r.company_domain,
                        salary_stated=bool(f["salary_min"] or f["salary_max"]), posted_at=r.posted_at, now=now)
         size = company_size_of(r, open_counts)
+        from careeros.jobs.scoring.signals import build_signals
+
+        signals = build_signals(
+            title=r.title or "", fields=f, regions=regions, location=r.location or "",
+            description=r.description or r.full_description or "", discovered_at=r.discovered_at,
+            posted_at=r.posted_at, company_size=size, trust=trust, market_medians=market_medians or {},
+            now=now, seniority=(current_facts(r) or {}).get("seniority"))
         jobs.append(Job(
             id=r.url,
             title=r.title or "",
@@ -333,6 +377,7 @@ def to_scoring_input(rows: list[JobRow], open_counts: Optional[dict[str, int]] =
             source=r.source or "unknown",
             trust=trust.level,
             location_match=where,
+            signals=signals,
         ))
         meta[r.url] = {
             "title": r.title or "",
@@ -376,6 +421,9 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         job.log(f"✓ Profile: {len(profile.skills)} skills, {profile.years_experience}y")
         service = ScoringService(user_id=user_id)
         weights = load_weights(user_id)
+        from careeros.jobs.scoring.signals import seeker_for
+
+        profile.seeker = seeker_for(profile, weights)
 
         job.update(status="scanning", progress=30)
         job.log("Picking open jobs that match your roles…")
@@ -389,6 +437,7 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
             loaded.sort(key=lambda r: order[r.url])
             open_counts = company_open_counts(s)
             demand = market_demand(loaded)
+            medians = pool_medians(loaded)
             # The market (what these jobs ask for) is part of what a score depends on
             fingerprint = profile_fingerprint(profile, {**service.load_prefs(), "_market": demand_signature(demand)},
                                               weights)
@@ -399,7 +448,8 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         job.update(status="scoring", progress=60)
         if rows:
             job.log("Scoring against your career graph…")
-            jobs, meta = to_scoring_input(rows, open_counts, profile.preferences.preferred_locations)
+            jobs, meta = to_scoring_input(rows, open_counts, profile.preferences.preferred_locations,
+                                          market_medians=medians)
             service.set_market_demand(demand)
             result = service.run_pipeline(jobs, profile, weights=weights, semantic=False, job_meta=meta,
                                           input_hashes=hashes)

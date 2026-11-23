@@ -29,6 +29,7 @@ class Job:
     sponsors_visa: Optional[bool] = None  # None = the posting doesn't say
     trust: str = "unknown"                # verified | ok | caution | risk (careeros/jobs/trust.py)
     location_match: Optional[bool] = None  # in / open to a target country (careeros/jobs/geo.py)
+    signals: Optional[object] = None      # v8 model inputs (careeros/jobs/scoring/signals.py)
     posted_date: Optional[datetime] = None
     source: str = "unknown"
     fit_score: Optional[float] = None

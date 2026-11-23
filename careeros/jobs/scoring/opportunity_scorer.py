@@ -67,6 +67,9 @@ class OpportunityScorer:
             OpportunityScore with all metrics
         """
 
+        if job.signals is not None and getattr(user, "seeker", None) is not None:
+            return self._score_v8(job, user)
+
         # Component 1: Fit Score (from semantic matcher)
         if self.matcher:
             match_result = self.matcher.match(user, job)
@@ -115,6 +118,23 @@ class OpportunityScorer:
             career_score=career_score,
             expected_value=expected_value,
             recommendation=recommendation
+        )
+
+    def _score_v8(self, job: Job, user: UserProfile) -> OpportunityScore:
+        """Chance-weighted surplus (careeros/jobs/scoring/model_v8.py)."""
+        from careeros.jobs.scoring.model_v8 import evaluate
+
+        r = evaluate(job.signals, user.seeker)
+        return OpportunityScore(
+            job=job,
+            fit_score=r.fit * 100,
+            acceptance_probability=r.p_effective * 100,
+            career_value=r.value * 100,
+            market_demand=self._calculate_market_demand(job) * 100,
+            career_score=r.score,
+            expected_value=r.gamma * 1000,
+            recommendation=r.recommendation,
+            model=r.explain(),
         )
 
     def rank_opportunities(

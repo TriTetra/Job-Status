@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Scoring v8: Research-Based Model | Researched hiring evidence (5 areas, report in reports/); new model: hard gates, calibrated chance of an interview × value of the job, ranked by expected surplus (Bied et al. 2026); explained in "How it's calculated"; Scoring settings become value weights + effort | ✅ Tamam | 2026-11-23 |
 | Scoring v7: Trust, Location, Size, Currency + Small-Company Logos | Score now uses your target countries, company size from the whole board, salaries in any currency, skill demand from real postings; employer trust check (agency / ghost / scam) with "Only reliable employers" on by default; logos for small companies | ✅ Tamam | 2026-11-23 |
 | Telegram Notifications | Connect Telegram in Settings → Connections (one tap in the bot); new strong matches and follow-up reminders after each refresh, each job once | ✅ Tamam | 2026-11-23 |
 | Eightfold Reader + Vodafone Türkiye | Big-company career sites on Eightfold, read through the search their robots.txt allows; Vodafone Türkiye added (Turkey jobs only); other big TR portals checked and why they can't be read | ✅ Tamam | 2026-11-23 |
@@ -114,6 +115,35 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Scoring v8: Research-Based Model] — 2026-11-23 — Chance × value, from the evidence ✅
+
+**Neden:** Kullanıcı: puanlama internetten, diğer kaynaklardan ve İK kriterlerinden kapsamlı araştırılıp ona göre baştan bir algoritma / formül geliştirilsin.
+
+### Araştırma
+- 5 alan paralel araştırıldı (iş-kişi uyumu ve eleme, zamanlama / rekabet / hayalet ilanlar, vize ve remote engelleri, iş kalitesi ve kariyer değeri, sıralama yöntemleri); kaynaklı rapor: **`reports/İş puanlama algoritması araştırması.md`**, notlar `research_notes/`.
+- Ana bulgular: işe alımcı ilk taramada ~7 sn harcıyor, algılanan iş uyumu işe alma niyetiyle .67 ilişkili (Kristof-Brown 2005); soğuk başvurudan mülakata ~%8; "%60 / %100 kuralı"nın doğrulanabilir kaynağı yok; dünya çapı remote ilanlar ortalamanın 8,8 katı başvuru alıyor, remote ilanların yalnız ~%2–4'ü gerçekten "her yerden"; ilanların %18–22'si işe alım niyeti taşımıyor (Greenhouse); İngiltere sponsorluğu £41.700 tabanı ve £1.320/yıl işveren harcı, Almanya Blue Card BT eşiği €45.934, İsviçre AB dışı kotası 8.500; maaş memnuniyeti log ölçekte (Killingsworth 2023); sıralama için en iyi kanıt: Fransız kamu istihdam kurumuyla iki rastgele saha deneyi (Bied et al. 2026) — "beğenilen" ile "alınabilen"i birlikte tartan indeks tek başına ikisini de geçiyor.
+
+### Yeni model (`careeros/jobs/scoring/model_v8.py`, SCORER_VERSION 8 — herkes yeniden puanlanır)
+1. **Kesin engeller** (iş tümden elenir, nedeni yazılır): dolandırıcılık işaretleri; reddettiğin çalışma şekli; bilmediğin zorunlu dil (Almanca yazılmış ilan dahil; profilindeki B2+ diller); sponsorluk gerekirken "sponsorluk yok"; İngiltere'de £41.700 altı maaş.
+2. **Mülakat şansı** = %8 × beceri kapsamı (lojistik, orta nokta %55, önce listelenen beceriler daha ağır, "olsa iyi"ler hafif) × unvan ailesi (aynı 1,0 / yakın 0,6 / alakasız 0,25; ML = machine learning, Yazılım Geliştirici = software engineer…) × deneyim (her eksik yıl ×0,75; iki seviye fazlası ×0,7) × tazelik (4 günden sonra günlük ×0,88, taban 0,3) × rekabet (dünya çapı 0,27 / bölge 0,42 / ülke 0,85; ünlü büyük şirket ×0,6) × **senin için konum** (Türkiye'den: ev 1,0; Almanya Blue Card 0,7 (eşik altı 0,3); İngiltere sponsorluk yazıyorsa 0,8 / sessizse 0,25; İsviçre 0,05–0,35; İspanya 0,6; ABD 0,08–0,3; EMEA remote 0,6; başka ülke sakinlerine remote 0,1; yeri belirtilmemiş remote 0,35) × ajans ×0,8; en fazla %60. Sonra × **ilanın gerçek olma olasılığı** (yaşına göre 0,9 → 0,3; "talent pool" ×0,5).
+3. **İşin değeri** = ağırlıklı: maaş (referansa göre log; düşüşler iki kat sert; referans = senin minimumun ya da o ülkedeki eşleşen ilanların medyanı), gelişim (ölçek, 1–3 yeni beceri, bir seviye yukarı), istikrar (şirket büyüklüğü, güven), çalışma şekli; minimumunun altındaki maaş değeri 0,3'te tavanlar.
+4. **Sıra** = Γ = P · σ · softplus((V − v0 − c/P)/σ): düşük şanslı iş, öne çıkmak için çok daha iyi olmalı; c = bir başvurunun emeği. 0–100 skor Γ'nın log ölçeği; Apply ≥ 75 ve şans ≥ %1, Consider ≥ 58.
+- Gerçek kullanıcı verisiyle kalibre edildi (rapordaki sabitler ~%5 şans varsayıyordu; gerçek soğuk şans ~%0,5–2, emek maliyeti buna göre ölçeklendi).
+- Web profilinde hedef roller hiç yüklenmiyordu (unvan eşleşmesi çalışmıyordu) — düzeltildi; yaşadığın ülke ve dillerin de modele giriyor.
+
+### Arayüz
+- **"How it's calculated"** yeniden yazıldı: mülakat şansı (her çarpan ve nedeni), ilanın gerçek olma olasılığı, değerin parçaları, engeller.
+- Şans etiketleri yeni ölçekte (≥%5 good chance, ≥%1,5 fair chance).
+- **Settings → Scoring:** "işin değeri" ağırlıkları (Pay / Growth / Stability / Work style) ve **bir başvurunun emeği** (Quick / Normal / Tailored — uzak ihtimallere ne kadar şans verileceği). Eski dört ağırlık (fit / acceptance / …) yok sayılıyor.
+
+### Doğrulama
+- Atılabilir Postgres'te gerçekçi bir profille (Türkiye'de yaşıyor, İngilizce C1 + Türkçe, sponsorluk gerekli, hedef TR / DE / GB / ES / CH): 323 eşleşme v8 ile yeniden puanlandı; Almanca / Fransızca zorunlu 16 ilan ve "sponsorluk yok" diyen 8 ilan elendi; başka ülke sakinlerine remote 100 ilan ve yeri belirsiz remote ilanlar geriye düştü; üstte Avrupa / EMEA ve dünya çapı remote, ulaşılabilir roller.
+- Tarayıcıda: "Why 78?" penceresi (×0,59 beceri, ×0,27 rekabet, %1,1 şans, değer 58), Scoring ayarları.
+- 674 test (yeni `test_scoring_v8.py`: beceri eğrisi, unvan ailesi ve Türkçe unvanlar, deneyim, zaman ve hayalet ilan, rekabet, ülke kuralları ve engeller, maaş eğrisi ve taban, Γ sıralaması, emek, diller, girdiler), ruff, tsc, eslint, `next build` temiz.
+- **Not:** çarpanların çoğu kanıta dayalı tasarım tercihi, ölçülmüş etki değil; başvuru sonuçları (Applications geçmişi) biriktikçe "herhangi bir yanıt" üzerinden kalibre edilmeli.
 
 ---
 

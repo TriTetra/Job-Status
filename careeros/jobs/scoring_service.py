@@ -166,6 +166,8 @@ class ScoringService:
                     }
                     if profile:
                         explanation.update(self._build_explanation(opp, profile))
+                    if getattr(opp, "model", None):
+                        explanation["model"] = opp.model
 
                     # ── Decision Contract v1 ──
                     job_meta_data = (job_dicts or {}).get(opp.job.url, {})

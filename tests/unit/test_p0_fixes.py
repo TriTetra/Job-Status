@@ -40,10 +40,15 @@ def test_saved_arrangements_map_to_scorer_preferences(arrangements, expected):
 
 
 def test_weights_are_normalised_and_bad_input_falls_back_to_defaults():
-    assert scan.normalize_weights({"fit": 3, "acceptance": 1, "career_value": 0, "market_demand": 0}) == {
-        "fit": 0.75, "acceptance": 0.25, "career_value": 0.0, "market_demand": 0.0}
-    assert scan.normalize_weights({}) == {}
-    assert scan.normalize_weights({"fit": -1}) == {}
+    # v8 value weights: scaled to sum to 1, effort (1–3) kept and clamped
+    assert scan.normalize_weights({"pay": 3, "growth": 1, "stability": 0, "work_style": 0, "effort": 5}) == {
+        "pay": 0.75, "growth": 0.25, "stability": 0.0, "work_style": 0.0, "effort": 3.0}
+    defaults = scan.normalize_weights({})
+    assert abs(sum(v for k, v in defaults.items() if k != "effort") - 1) < 1e-3 and defaults["effort"] == 2.0
+    # old (v7) keys are ignored, not misread
+    assert scan.normalize_weights({"fit": 1, "acceptance": 1})["pay"] == defaults["pay"]
+    assert scan.normalize_weights({"pay": 0, "growth": 0, "stability": 0, "work_style": 0})["pay"] == 0.35
+    assert scan.normalize_weights({"pay": -1, "growth": "x" == "y"})["stability"] > 0  # negatives / junk can't zero it
 
 
 def test_weights_change_the_fingerprint_so_jobs_get_rescored():

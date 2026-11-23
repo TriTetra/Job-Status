@@ -1,5 +1,6 @@
 ﻿"""Opportunity scoring domain entity."""
 
+from typing import Optional
 from dataclasses import dataclass
 
 from careeros.jobs.domain.job import Job
@@ -17,6 +18,7 @@ class OpportunityScore:
     career_score: float
     expected_value: float
     recommendation: str = ""
+    model: Optional[dict] = None   # v8: chance factors, value parts, gates (careeros/jobs/scoring/model_v8.py)
 
     def should_apply(self, threshold: float = 60.0) -> bool:
         return self.career_score >= threshold

@@ -2,18 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { settingsApi, type ScoringWeights } from "@/features/settings/api";
-import { Section, Row, SaveBar } from "./kit";
+import { Section, Row, RadioRow, SaveBar } from "./kit";
 
-const DEFAULTS: ScoringWeights = { fit: 0.3, acceptance: 0.25, career_value: 0.25, market_demand: 0.2 };
+type ValueKey = "pay" | "growth" | "stability" | "work_style";
 
-const META: { key: keyof ScoringWeights; label: string; hint: string; color: string }[] = [
-  { key: "fit", label: "Skill match", hint: "How well your proof covers what the role asks", color: "#FFB162" },
-  { key: "acceptance", label: "Chance of an offer", hint: "How realistic the role is for you", color: "#7FB685" },
-  { key: "career_value", label: "Career value", hint: "The long-term step the move gives you", color: "#6BA5D7" },
-  { key: "market_demand", label: "Market demand", hint: "How in-demand the role is right now", color: "#E6A817" },
+const DEFAULTS: ScoringWeights = { pay: 0.35, growth: 0.22, stability: 0.18, work_style: 0.13, effort: 2 };
+
+const META: { key: ValueKey; label: string; hint: string; color: string }[] = [
+  { key: "pay", label: "Pay", hint: "Against your minimum, or what similar roles pay there", color: "#FFB162" },
+  { key: "growth", label: "Growth", hint: "What you'd learn, the step up, the employer's scale", color: "#6BA5D7" },
+  { key: "stability", label: "Stability", hint: "How likely the company is to be around and hiring", color: "#7FB685" },
+  { key: "work_style", label: "Work style", hint: "Remote, hybrid or on-site, as you prefer", color: "#E6A817" },
 ];
 
-/** Relative importance: the sliders don't have to add up — the scorer normalises them, and so does this view. */
+const EFFORT = [
+  { value: 1, label: "Quick", hint: "One-click applications: long shots are still worth a try" },
+  { value: 2, label: "Normal", hint: "A short note for each: balanced" },
+  { value: 3, label: "Tailored", hint: "A tailored CV for each: only apply where your chance is real" },
+];
+
+/** What a good job means to you (value), and how much an application costs you (the bar for long shots). */
 export function ScoringTab() {
   const [weights, setWeights] = useState<ScoringWeights>(DEFAULTS);
   const [loading, setLoading] = useState(true);
@@ -24,22 +32,30 @@ export function ScoringTab() {
   useEffect(() => {
     settingsApi
       .getWeights()
-      .then((r) => setWeights({ ...DEFAULTS, ...r.weights }))
+      .then((r) => {
+        const w = r.weights as Partial<ScoringWeights>;
+        setWeights({
+          pay: w.pay ?? DEFAULTS.pay, growth: w.growth ?? DEFAULTS.growth, stability: w.stability ?? DEFAULTS.stability,
+          work_style: w.work_style ?? DEFAULTS.work_style, effort: w.effort ?? DEFAULTS.effort,
+        });
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const total = META.reduce((s, m) => s + (weights[m.key] ?? 0), 0);
-  const share = (k: keyof ScoringWeights) => (total > 0 ? (weights[k] ?? 0) / total : 0);
-  const isDefault = META.every((m) => Math.abs(share(m.key) - DEFAULTS[m.key]) < 0.005);
+  const share = (k: ValueKey) => (total > 0 ? (weights[k] ?? 0) / total : 0);
+  const isDefault = META.every((m) => Math.abs(share(m.key) - DEFAULTS[m.key]) < 0.01) && weights.effort === DEFAULTS.effort;
 
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
     setError(null);
     try {
-      // Store the normalised shares, so what you see is what is saved
-      const normalised = Object.fromEntries(META.map((m) => [m.key, Math.round(share(m.key) * 1000) / 1000])) as unknown as ScoringWeights;
+      const normalised = {
+        ...Object.fromEntries(META.map((m) => [m.key, Math.round(share(m.key) * 1000) / 1000])),
+        effort: weights.effort,
+      } as ScoringWeights;
       await settingsApi.saveWeights(normalised);
       setWeights(normalised);
       setSaved(true);
@@ -55,52 +71,50 @@ export function ScoringTab() {
 
   return (
     <div>
-      <Section title="What matters most">
+      <Section title="How the score works">
+        <p className="text-sm leading-relaxed py-2" style={{ color: "var(--text-secondary)" }}>
+          Each role gets a <b style={{ color: "var(--text-primary)" }}>chance of an interview</b> (your skills against what they ask,
+          your experience, how fresh and how crowded the posting is, and whether you can legally take it from where you live) and a{" "}
+          <b style={{ color: "var(--text-primary)" }}>value</b>{" "}if you get it. They are combined so a long shot has to be much better to
+          rank high. Roles you can&apos;t take (a visa they rule out, a language you don&apos;t have, scam signs) are set aside.
+        </p>
+      </Section>
+
+      <Section title="What a good job means to you">
         <div className="mt-2 mb-2 flex h-2.5 rounded-full overflow-hidden gap-[2px]" aria-hidden="true">
           {META.map((m) => (
             <div key={m.key} className="h-full transition-all duration-300" style={{ width: `${share(m.key) * 100}%`, background: m.color }} />
           ))}
         </div>
-        <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
-          Move a slider to make that part count more. The shares always add up to 100%.
-        </p>
-
         {META.map((m) => (
           <Row key={m.key} label={m.label} hint={m.hint}>
             <div className="flex items-center gap-4">
               <span className="h-2 w-2 rounded-full shrink-0" style={{ background: m.color }} />
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={weights[m.key]}
-                aria-label={m.label}
-                onChange={(e) => setWeights({ ...weights, [m.key]: parseFloat(e.target.value) })}
-                className="flex-1 h-1 appearance-none rounded-full cursor-pointer"
-                style={{ background: "var(--surface-hover)", accentColor: m.color }}
-              />
+              <input type="range" min={0} max={1} step={0.05} value={weights[m.key]} aria-label={m.label}
+                     onChange={(e) => setWeights({ ...weights, [m.key]: parseFloat(e.target.value) })}
+                     className="flex-1 h-1 appearance-none rounded-full cursor-pointer"
+                     style={{ background: "var(--surface-hover)", accentColor: m.color }} />
               <span className="text-sm font-semibold tabular-nums w-12 text-right" style={{ color: m.color }}>
                 {Math.round(share(m.key) * 100)}%
               </span>
             </div>
           </Row>
         ))}
+      </Section>
 
+      <Section title="How much effort is one application?">
+        {EFFORT.map((e) => (
+          <RadioRow key={e.value} checked={weights.effort === e.value} onSelect={() => setWeights({ ...weights, effort: e.value })}
+                    label={e.label} hint={e.hint} />
+        ))}
         <div className="pt-4 flex items-center justify-between gap-4 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span>Saving re-ranks your opportunities on the next scan.</span>
-          <button
-            type="button"
-            onClick={() => setWeights(DEFAULTS)}
-            disabled={isDefault}
-            className="underline underline-offset-4 disabled:opacity-40 disabled:no-underline cursor-pointer disabled:cursor-default"
-          >
+          <span>Saving re-ranks your opportunities on the next refresh.</span>
+          <button type="button" onClick={() => setWeights(DEFAULTS)} disabled={isDefault}
+                  className="underline underline-offset-4 disabled:opacity-40 disabled:no-underline cursor-pointer disabled:cursor-default">
             Reset to defaults
           </button>
         </div>
-        {total === 0 && (
-          <p className="text-xs pt-2" style={{ color: "var(--danger)" }}>Give at least one part some weight.</p>
-        )}
+        {total === 0 && <p className="text-xs pt-2" style={{ color: "var(--danger)" }}>Give at least one part some weight.</p>}
         {error && <p className="text-xs pt-2" style={{ color: "var(--danger)" }}>{error}</p>}
       </Section>
 
