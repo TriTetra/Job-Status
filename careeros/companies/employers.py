@@ -70,17 +70,28 @@ def domains(country: str = "tr") -> set[str]:
     return {e["domain"] for e in load(country) if e["domain"]}
 
 
-def directory(session, country: str = "tr") -> dict:
-    """The directory with which employers Aplio reads jobs for, and how many are open now."""
-    from sqlalchemy import func
+def open_in_country(session, keys: set[str], country: str) -> dict[str, int]:
+    """Open jobs per board located in the country (a global employer's board counts only its jobs there)."""
+    from sqlalchemy import func, or_
 
-    from careeros.jobs.boards import load_boards
     from careeros.jobs.models.job import Job
+    from careeros.jobs.search import _place_names
+
+    if not keys:
+        return {}
+    here = or_(*[Job.location.ilike(f"%{n}%") for n in _place_names(country.upper())])
+    return dict(session.query(Job.company_key, func.count()).filter(
+        Job.closed_at.is_(None), Job.company_key.in_(list(keys)), here).group_by(Job.company_key).all())
+
+
+def directory(session, country: str = "tr") -> dict:
+    """The directory with which employers Aplio reads jobs for, and how many are open there now."""
+    from careeros.jobs.boards import load_boards
 
     boards = {b.key: b for b in load_boards().boards}
     by_domain = {b.domain.lower(): b.key for b in boards.values() if b.domain}
-    open_counts = dict(session.query(Job.company_key, func.count()).filter(
-        Job.closed_at.is_(None), Job.company_key.isnot(None)).group_by(Job.company_key).all())
+    keys = {e["board_key"] if e["board_key"] in boards else by_domain.get(e["domain"] or "") for e in load(country)}
+    open_counts = open_in_country(session, {k for k in keys if k}, country)
     items = []
     for e in load(country):
         key = e["board_key"] if e["board_key"] in boards else by_domain.get(e["domain"] or "")

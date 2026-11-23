@@ -79,7 +79,7 @@ export function EmployersDirectoryView({ query, onOpenBoard }: { query: string; 
                         {e.tracked && e.board_key && (
                           <button type="button" onClick={() => onOpenBoard(e.board_key!)} className="ml-1.5 hover:underline underline-offset-2"
                                   style={{ color: "var(--success)" }}>
-                            · Aplio reads its jobs{e.open_roles ? ` (${e.open_roles} open)` : ""}
+                            · Aplio reads its jobs{e.open_roles ? ` (${e.open_roles} open in Türkiye)` : ""}
                           </button>
                         )}
                       </p>
