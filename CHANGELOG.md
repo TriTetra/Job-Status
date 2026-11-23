@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| CLI: CAREER_OS_EMAIL | `career-os jobs scan / eval / eval-sheet` e-posta yazılmazsa hesabı `.env`'deki `CAREER_OS_EMAIL`'den alıyor | ✅ Tamam | 2026-11-23 |
 | Kişi Hafızası Faz 0 + 1 | Unvan eşleşmesi hatası düzeltildi; tek profil kaynağı; kırık menü "Soon"; sıralama değerlendirmesi (`jobs eval`); `person_events` olay günlüğü ve tüm yazma yollarından olaylar; gösterim kaydı; "Not for me" nedenleri; başvuruya gönderilen CV etiketi | ✅ Tamam | 2026-11-23 |
 | Kişi Hafızası: Araştırma + Tasarım | Kişiselleştirme denetimi; 4 alanda literatür araştırması (kişi modeli ve beceriler, geri bildirimden öğrenme, hafıza mimarisi, beceri gelişimi ve CV sonuçları); tek olay günlüğü + projeksiyonlar tasarımı ve 7 fazlı yol haritası (docs/v1/PERSON_MEMORY.md); kod değişmedi | ✅ Tamam | 2026-11-23 |
 | Search + What People Say | Yeni Search sayfası (tüm açık ilanlar; ülke, çalışma şekli, şirket büyüklüğü, tarih, maaş, kaynak, vize, güvenilirlik filtreleri; sonuçlar arama sırasında v8 ile puanlanır, kaydedilmez); okuyucuda ve Companies'te "What people say" bağlantıları (Glassdoor, Reddit, Blind, kununu, Ekşi Sözlük); dil kontrolü hızlandırıldı | ✅ Tamam | 2026-11-23 |
@@ -118,6 +119,16 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [CLI: CAREER_OS_EMAIL] — 2026-11-23 — E-postayı her seferinde yazma ✅
+
+**Neden:** Kullanıcı: e-postamı env'e ekleyeyim, komut oradan alsın.
+
+- Yeni ayar `CAREER_OS_EMAIL` (`careeros/shared/config.py` → `cli_user_email`; `.env.example`'a örnek satır eklendi).
+- `career-os jobs scan`, `jobs eval` ve `jobs eval-sheet`'te e-posta artık isteğe bağlı: yazılmazsa bu ayar kullanılıyor; ikisi de yoksa "Give an e-mail, or set CAREER_OS_EMAIL in .env" der. E-posta kontrolü veritabanına bağlanmadan önce yapılıyor.
+- Doğrulama: atılabilir DB'de yalnız ayarla `jobs eval` çalıştı; yeni test (ayar yoksa çıkış, boşluklar kırpılıyor); smoke testleri ve ruff temiz.
 
 ---
 

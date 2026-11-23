@@ -86,33 +86,14 @@ def boards():
     typer.echo(f"\n{sum(b['open_jobs'] for b in rows)} open postings on {len(rows)} boards")
 
 
-@app.command()
-def scan(
-    email: str = typer.Argument(..., help="Whose opportunities to score"),
-    limit: int = typer.Option(2000, "--limit", help="Max jobs to score in this run"),
-):
-    """Score open jobs for one user (only the ones that changed since their last scan)."""
-    from careeros.db.connection import db
-    from careeros.identity.auth.accounts import normalize_email
-    from careeros.identity.repositories.user_repo import UserRepository
-    from careeros.jobs.scan import ALL_TIME_HOURS, run_scan, scan_jobs
+def _user_id(email: Optional[str]) -> str:
+    """The account for `email`, or for CAREER_OS_EMAIL in .env when none is given."""
+    from careeros.shared.config import get_settings
 
-    with db.session_scope() as s:
-        user = UserRepository(s).get_by_email(normalize_email(email))
-        user_id = user.id if user else None
-    if not user_id:
-        typer.echo(f"✗ No account for {email}", err=True)
+    email = email or get_settings().cli_user_email
+    if not email:
+        typer.echo("✗ Give an e-mail, or set CAREER_OS_EMAIL in .env", err=True)
         raise typer.Exit(1)
-    job = scan_jobs.create(user_id, label="cli scan")
-    run_scan(job, user_id, ALL_TIME_HOURS, limit)
-    for line in job.logs:
-        typer.echo(line["message"])
-    if job.status != "completed":
-        typer.echo(f"✗ {job.error}", err=True)
-        raise typer.Exit(1)
-
-
-def _user_id(email: str) -> str:
     from careeros.db.connection import db
     from careeros.identity.auth.accounts import normalize_email
     from careeros.identity.repositories.user_repo import UserRepository
@@ -125,9 +106,27 @@ def _user_id(email: str) -> str:
         return user.id
 
 
+@app.command()
+def scan(
+    email: Optional[str] = typer.Argument(None, help="Whose opportunities to score (default: CAREER_OS_EMAIL)"),
+    limit: int = typer.Option(2000, "--limit", help="Max jobs to score in this run"),
+):
+    """Score open jobs for one user (only the ones that changed since their last scan)."""
+    from careeros.jobs.scan import ALL_TIME_HOURS, run_scan, scan_jobs
+
+    user_id = _user_id(email)
+    job = scan_jobs.create(user_id, label="cli scan")
+    run_scan(job, user_id, ALL_TIME_HOURS, limit)
+    for line in job.logs:
+        typer.echo(line["message"])
+    if job.status != "completed":
+        typer.echo(f"✗ {job.error}", err=True)
+        raise typer.Exit(1)
+
+
 @app.command("eval")
 def evaluate_ranking(
-    email: str = typer.Argument(..., help="Whose ranking to measure"),
+    email: Optional[str] = typer.Argument(None, help="Whose ranking to measure (default: CAREER_OS_EMAIL)"),
     labels: Optional[Path] = typer.Option(None, "--labels", help="Filled label sheet (CSV with url,label)"),
 ):
     """How well the scores rank jobs this person liked above jobs they didn't (decisions + optional sheet)."""
@@ -150,7 +149,7 @@ def evaluate_ranking(
 
 @app.command("eval-sheet")
 def evaluation_sheet(
-    email: str = typer.Argument(..., help="Whose jobs to put on the sheet"),
+    email: Optional[str] = typer.Argument(None, help="Whose jobs to put on the sheet (default: CAREER_OS_EMAIL)"),
     out: Path = typer.Option(Path("label_sheet.csv"), "--out", help="Where to write the CSV"),
     n: int = typer.Option(50, "--n", help="How many jobs"),
 ):
@@ -162,7 +161,7 @@ def evaluation_sheet(
     with db.session_scope() as s:
         count = export_label_sheet(s, user_id, out, n)
     typer.echo(f"✓ {count} jobs written to {out}. Fill the 'label' column with good / bad, then run "
-               f"`career-os jobs eval {email} --labels {out}`.")
+               f"`career-os jobs eval --labels {out}`" + ("" if email is None else f" (with {email})") + ".")
 
 
 @app.command()
