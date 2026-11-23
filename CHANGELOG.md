@@ -133,6 +133,7 @@ Sıralama: en yeniden en eskiye.
 - Ayrık önizlemede (sahte bot token'ı, gerçek Telegram'a gitmeden): web proxy üzerinden webhook gizli başlık yokken / yanlışken 403, doğruyken 200; `/start <token>` hesabı bağladı (@kullanıcı adı, token temizlendi, mevcut 5 eşleşme / hatırlatma "gönderildi" işaretlendi). Connections'ta bağlı durum, tercih değiştirme ve Disconnect → "Connect Telegram" çalışıyor.
 - 620 test (yeni `test_telegram.py`: bağlanma, süresi geçmiş link, /stop, grup sohbeti yok sayılıyor, gizli başlık, HTML kaçışı ve linkler, her işin bir kez gönderilmesi; rota envanteri, oturum ve CSRF testleri güncel), ruff, tsc, eslint, `next build` temiz.
 - **Kurulum gerekiyor:** gerçek bot token'ı Coolify'a eklenene kadar özellik kapalı ("Not set up on this server yet").
+- **Yayında (bu ve önceki üç bölüm):** `b1550e6`, `a6d9ad3`, `92bb91d`, `f551f05` push edildi, Coolify'da dağıtıldı (Finished). API kaydında migration `discovered_boards_018` ve `telegram_links_019` hatasız; ilk akış okuması 06:21'de: Hacker News 137, Arbeitnow 266, Remotive 7, Himalayas 285, Jobicy 74 yeni ilan, 21 yeni şirket panosu. Canlıda `/api/telegram` oturumsuz 401, webhook gizli başlıksız 403, `/analytics` sign-in'e yönleniyor.
 
 ---
 
