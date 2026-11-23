@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Plan: Kapsam ve İş Akışı Açıkları | Piyasaya göre eksiklerin hepsi iki faza bölündü (docs/v1/GAPS_ROADMAP.md): Faz 1 kapsam ve sonuç döngüsü (resmi ilan API'leri, unvan filtresi, ilan ekleme, maaş ve şirket verisi, tazelik, e-posta ile sonuç, takip mesajı), Faz 2 iş akışı (tarayıcı eklentisi, CV, Evidence, Learning, öğrenen sıralama, mülakat hazırlığı, tanıdıklar, mobil); kod değişmedi | ✅ Tamam | 2026-11-23 |
 | Türkiye İşverenleri Rehberi | Companies → "Türkiye employers": yazılım / veri / yapay zekâ alanında 97 işveren, her biri kendi kariyer sayfasına bağlantıyla, sektöre göre; 30'unun işlerini Aplio okuyor; 10 yeni Türkiye panosu (Çiçeksepeti, Spyke, Good Job Games, Wingie Enuygun, Vertigo, Akinon, Paraşüt, Ruby Game Studio, P&G Türkiye, Ericsson Türkiye) | ✅ Tamam | 2026-11-23 |
 | Yer Rozeti (Bayrak) + Türkiye Kaynakları | Her işte bayrak · şehir · On-site / Hybrid / Remote / Global; Türkiye'ye açık remote işler 🇹🇷 ile; yeni Türkiye kaynakları: ING Hubs Türkiye, AstraZeneca Türkiye (Workday "Istanbul"), Bosch Türkiye (SmartRecruiters country=tr) | ✅ Tamam | 2026-11-23 |
 | Search: Türkiye ve Yer Aramaları | Ülke filtresinde o ülkedeki işler önce okunuyor (remote ilanlar artık dışarı itemiyor); kutuya yazılan yer (İstanbul, Türkiye, Berlin) ülke filtresi oluyor; kelimeler konumda da aranıyor; noktalı İ yazımları | ✅ Tamam | 2026-11-23 |
@@ -125,6 +126,18 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Plan: Kapsam ve İş Akışı Açıkları] — 2026-11-23 — İki faz ✅
+
+**Neden:** Kullanıcı: gösterdiğin eksikliklerin hepsi teker teker, sağlam biçimde sisteme eklensin; eklemeleri iki fazda planla.
+
+- **Plan:** `docs/v1/GAPS_ROADMAP.md`. Her madde: ne yapılacak, ne zaman bitti sayılır, senden ne gerekir. Her madde ayrı ayrı: kod, test, atılabilir DB'de tarayıcı kontrolü, CHANGELOG, commit, onayla deploy, canlıda doğrulama.
+- **Faz 1 (kapsam ve sonuç döngüsü):** 1.1 resmi ilan API'leri (Adzuna, Almanya Federal İş Ajansı, Reed) · 1.2 unvan filtresini genişletme · 1.3 herhangi bir ilanı ekleme (bağlantı ya da metin) · 1.7 e-postadan sonucu otomatik görme · 1.8 takip mesajı taslakları · 1.4 maaş verisi · 1.5 şirket kartı · 1.6 tazelik.
+- **Faz 2 (iş akışı):** 2.1 tarayıcı eklentisi (form doldurma, her siteden kaydetme) · 2.2 CV / Resume sayfası (sürümler, öneriler, PDF) · 2.3 Evidence sayfası · 2.5 öğrenen sıralama · 2.4 Learning sayfası · 2.6 mülakat hazırlığı · 2.7 tanıdıklar ve referans · 2.8 mobil (PWA, bildirim).
+- **Kullanıcıdan:** Adzuna / Reed anahtarları, e-posta uygulama şifresi ya da yönlendirme, eklentiyi yükleme, LinkedIn bağlantılarını dışa aktarma (ilgili madde başlarken).
+- Kod değişmedi.
 
 ---
 
