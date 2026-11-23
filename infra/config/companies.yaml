@@ -9,6 +9,7 @@
 #   workday     <tenant>.wdN.myworkdayjobs.com/<site>   → host, tenant, site
 #   personio    <board>.jobs.personio.de (host for .com) · recruitee <board>.recruitee.com
 #   workable    apply.workable.com/<board> · smartrecruiters jobs.smartrecruiters.com/<board>
+#   eightfold   <host>/careers → host, board (the domain), search: [locations]
 # Boards linked from the job feeds (careeros/jobs/feeds.py) are added automatically
 # to the discovered_boards table; this file is the hand-picked list.
 # Check it with:  career-os jobs sync --company <key> --dry-run
@@ -175,3 +176,5 @@ companies:
   - {key: acegames, name: Ace Games, ats: workable, board: ace-games}
   - {key: picus, name: Picus Security, domain: picussecurity.com, ats: lever, board: picus}
   - {key: iyzico, name: iyzico, domain: iyzico.com, ats: lever, board: iyzico}
+  # Large employers on Eightfold: only their Turkey jobs (the career site's own search, allowed by robots.txt)
+  - {key: vodafone-tr, name: Vodafone Türkiye, domain: vodafone.com.tr, ats: eightfold, host: jobs.vodafone.com, board: vodafone.com, search: [Turkey]}

@@ -207,3 +207,28 @@ def test_discovered_board_already_in_the_list_is_not_read_twice(monkeypatch):
 
     found = boards.discovered_boards(SimpleNamespace(query=lambda *a: Q()))
     assert [b.key for b in found] == ["acme"]
+
+
+def test_eightfold_reads_search_then_details_for_relevant_titles():
+    listing = {"data": {"count": 2, "positions": [
+        {"id": 11, "name": "Cloud Operations Senior Expert", "locations": ["İstanbul, Türkiye"], "postedTs": 1793603336,
+         "positionUrl": "/careers/job/11", "workLocationOption": "hybrid"},
+        {"id": 12, "name": "Telesales Advisor (German)", "locations": ["Türkiye"], "positionUrl": "/careers/job/12"},
+    ]}}
+    detail = {"data": {"id": 11, "jobDescription": "<p>Run the cloud</p>"}}
+    http = _Http({"https://jobs.vodafone.com/api/pcsx/position_details": _Resp(detail),
+                  "https://jobs.vodafone.com/api/pcsx/search": _Resp(listing)})
+    board = Board("vodafone-tr", "Vodafone Türkiye", "eightfold", board="vodafone.com", host="jobs.vodafone.com", search=("Turkey",))
+    r = FETCHERS["eightfold"](board, http, set(), lambda t: "cloud" in t.lower())
+    assert [p.title for p in r.postings] == ["Cloud Operations Senior Expert"]
+    p = r.postings[0]
+    assert p.url == "https://jobs.vodafone.com/careers/job/11" and "Run the cloud" in p.description
+    assert p.location == "İstanbul, Türkiye" and p.posted_at.year == 2026
+    assert len(r.seen_urls) == 2 and r.complete
+
+
+def test_eightfold_board_needs_a_host():
+    from careeros.jobs.boards import BoardConfigError, parse
+
+    with pytest.raises(BoardConfigError, match="eightfold needs host"):
+        parse({"companies": [{"key": "x", "name": "X", "ats": "eightfold", "board": "x.com"}]})

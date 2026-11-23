@@ -84,6 +84,8 @@ def parse(data: dict) -> BoardConfig:
                 raise BoardConfigError(f"{key}: workday needs {', '.join(missing)}")
         elif not entry.get("board"):
             raise BoardConfigError(f"{key}: {ats} needs board")
+        if ats == "eightfold" and not entry.get("host"):
+            raise BoardConfigError(f"{key}: eightfold needs host")
         seen.add(key)
         boards.append(Board(
             key=key, name=entry["name"], ats=ats, board=entry.get("board", ""),

@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Eightfold Reader + Vodafone Türkiye | Big-company career sites on Eightfold, read through the search their robots.txt allows; Vodafone Türkiye added (Turkey jobs only); other big TR portals checked and why they can't be read | ✅ Tamam | 2026-11-23 |
 | Türkiye Sources | 15 Turkish tech / fintech / games boards (Trendyol, Insider One, Dream Games, Midas, Peak, Codeway…), Turkish title terms, Himalayas search for jobs open to Turkey, full remote country lists kept | ✅ Tamam | 2026-11-23 |
 | Job Feeds + Board Discovery | Startups and EU/remote roles: Hacker News Who is hiring, Arbeitnow, Remotive, Himalayas, Jobicy; company boards they link to are found and read from then on; new Personio, Recruitee, Workable, SmartRecruiters and Lever EU readers | ✅ Tamam | 2026-11-23 |
 | Manage: Applications Board + Analytics | Applications is a fixed board with logos, drag and drop, a drawer (stage, notes, history) and stale flags; new Analytics page (funnel, weekly pace, response rate, score vs interviews); Timeline dropped; applications are per user | ✅ Tamam | 2026-11-23 |
@@ -111,6 +112,28 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Eightfold Reader + Vodafone Türkiye] — 2026-11-23 — Big Turkish employers, the ones that can be read properly ✅
+
+**Neden:** Kullanıcı: büyük Türk şirketlerinin ilanları da bir yolu bulunup otomatik ve güvenilir şekilde gelmeli.
+
+### Eklenen
+- **Eightfold okuyucu** (`careeros/jobs/sources/ats/eightfold.py`): büyük şirketlerin kullandığı kariyer platformu. Kariyer sitesinin kendi arama API'si (`/api/pcsx`) okunuyor; bu yol sitenin robots.txt'inde açıkça izinli. Liste açıklamasız: yalnız yeni ve ilgili başlıklar detaylı okunuyor (pano başına 60). `search:` ile ülke sınırlanabiliyor.
+- **Vodafone Türkiye** (`vodafone-tr`, yalnız Türkiye ilanları): kuru çalıştırmada 31 ilan, alanla ilgili 10'u (siber güvenlik, bulut, platform) tam açıklamalarıyla.
+
+### Denenip eklenemeyenler (ve neden)
+- **Garanti BBVA:** robots.txt tüm siteyi yasaklıyor (`Disallow: /`).
+- **Turkcell:** ilan tablosu sayfaya, robots.txt'in yasakladığı yollardan (`/_layouts/`, `/_vti_bin/`) yükleniyor.
+- **Akbank:** ilanlar bankanın kendi sitesine hizmet eden iç API'den geliyor, herkese açık bir API değil; sitenin kimliğine bürünerek çağırmak doğru değil, eklenmedi.
+- **Getir, sahibinden, BtcTurk:** otomatik erişimi engelliyor (403); engeli aşmaya çalışılmıyor.
+- **Aselsan, Sabancı, Migros, Hepsiburada:** kariyer sayfalarında okunabilir ilan listesi bulunamadı.
+- **Kariyer.net, LinkedIn:** kullanım şartları otomatik toplamayı yasaklıyor.
+
+### Doğrulama
+- Vodafone arama + detay gerçek API'ye karşı (kuru çalıştırma): 31 ilan, 10 ilgili, açıklamalar 5–7 bin karakter.
+- 609 test (yeni: Eightfold okuyucu yalnız ilgili başlıkların detayını okuyor; eightfold panosu host istiyor), ruff temiz.
 
 ---
 
