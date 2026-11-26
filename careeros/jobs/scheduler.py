@@ -88,6 +88,9 @@ def run_cycle() -> Optional[dict]:
     from careeros.jobs.llm_extract import enrich_jobs
     from careeros.jobs.scan import run_scan, scan_jobs
 
+    # Counted as run when it starts: a run that fails halfway waits for its next interval instead
+    # of being repeated (every board, LLM reads and drafts) on every worker tick.
+    mark_run(TASK_CYCLE)
     refresh_feeds()
     try:
         summary = sync_all()
@@ -115,7 +118,6 @@ def run_cycle() -> Optional[dict]:
     prepare_all(user_ids)  # today's ready-to-apply kits (LLM drafts, a few per user a day)
     notify_all(user_ids)
     refresh_market_news()
-    mark_run(TASK_CYCLE)
     return summary.totals
 
 

@@ -160,6 +160,7 @@ Sıralama: en yeniden en eskiye.
 - Posta kontrolünün saatte bir (`_last_mail`) ve piyasa haberlerinin günde bir (`_last_market_news`) yapılmasını tutan sayaçlar süreç belleğindeydi; ayrı süreçlerde her turda sıfırlanırdı. Artık `job_board_runs` tablosunda `task:mail`, `task:market_news`, `task:cycle` satırları olarak tutuluyorlar (aynı tablo `feed:` satırları için zaten böyle kullanılıyordu).
 - `run_auto()` tam turun vadesini bu satırdan okuyor. Yeniden başlatma ya da yeni deploy tam turu tekrarlatmıyor.
 - `freshness.lag()` pano sayısına `task:` ve `feed:` satırlarını katmıyor.
+- **Tam tur başlarken işaretleniyor (düzeltme, inceleme sonrası):** `run_cycle` `task:cycle` satırını önce turun sonunda yazıyordu; tur ortada hata verirse (ör. bildirimler) işaret hiç atılmıyor ve worker her 15 dakikada yeniden tam tur yapıyordu (tüm panolar, 300 ilanın LLM okuması, başvuru taslakları). Artık tur başlarken yazılıyor, hata veren tur bir sonraki aralığını bekliyor (eski thread zamanlayıcısı da böyleydi). Test: `test_full_refresh_is_marked_when_it_starts_so_a_failure_is_not_repeated_every_tick` (düzeltme olmadan düşüyor).
 
 ### Bellek ayarı ve tepe noktası
 - **`MALLOC_ARENA_MAX=2`** artık imajda (`ENV`) ve compose'da (API ve worker için ortak). Coolify'da elle eklenen değişkene bağımlı değil.

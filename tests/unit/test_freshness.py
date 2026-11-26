@@ -152,3 +152,29 @@ def test_worker_commands(monkeypatch):
     runner = CliRunner()
     assert "tick: {'boards': 2, 'new': 0}" in runner.invoke(cli.app, ["run"]).output
     assert "skipped, another sync is running" in runner.invoke(cli.app, ["tick"]).output
+
+
+def test_full_refresh_is_marked_when_it_starts_so_a_failure_is_not_repeated_every_tick(monkeypatch):
+    import pytest
+
+    from careeros.applications import queue
+    from careeros.applications.mail import sync as mail_sync
+    from careeros.jobs import ingest, llm_extract, scheduler
+    from careeros.notifications import notify
+
+    marks = []
+    monkeypatch.setattr(scheduler, "mark_run", lambda task, now=None: marks.append(task))
+    monkeypatch.setattr(scheduler, "refresh_feeds", lambda: 0)
+    monkeypatch.setattr(ingest, "sync_all", lambda keys=None: ingest.SyncSummary())
+    monkeypatch.setattr(llm_extract, "enrich_jobs", lambda n: None)
+    monkeypatch.setattr(scheduler, "_active_users", lambda: [])
+    monkeypatch.setattr(mail_sync, "check_all", lambda users: None)
+    monkeypatch.setattr(queue, "prepare_all", lambda users: None)
+
+    def broken(users, report=True):
+        raise RuntimeError("notifications down")
+
+    monkeypatch.setattr(notify, "notify_all", broken)
+    with pytest.raises(RuntimeError):
+        scheduler.run_cycle()
+    assert marks[0] == "task:cycle"                          # recorded before anything could fail
