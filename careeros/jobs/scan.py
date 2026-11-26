@@ -454,9 +454,14 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
         with db.session_scope() as s:
             urls = candidate_urls(s, user_id, hours)
             known = CareerScoreRepository(s).input_hashes(user_id)
+            # Without the posting texts (the largest columns): demand, pay and what changed don't need
+            # them. They are read below only for the jobs that will be scored (keeps the peak low).
+            from sqlalchemy.orm import defer, undefer
+
             loaded = []
             for i in range(0, len(urls), 500):
-                loaded += s.query(JobRow).filter(JobRow.url.in_(urls[i:i + 500])).all()
+                loaded += (s.query(JobRow).options(defer(JobRow.description), defer(JobRow.full_description))
+                           .filter(JobRow.url.in_(urls[i:i + 500])).all())
             order = {u: i for i, u in enumerate(urls)}
             loaded.sort(key=lambda r: order[r.url])
             open_counts = company_open_counts(s)
@@ -469,7 +474,12 @@ def run_scan(job: BackgroundJob, user_id: str, hours: int = ALL_TIME_HOURS, limi
             fingerprint = profile_fingerprint(profile, {**service.load_prefs(), "_market": demand_signature(demand)},
                                               weights)
             rows, hashes, unchanged = pick_changed(loaded, known, fingerprint, limit)
+            picked = [r.url for r in rows]
+            for i in range(0, len(picked), 500):   # the texts, for the jobs being scored only
+                (s.query(JobRow).options(undefer(JobRow.description), undefer(JobRow.full_description))
+                 .filter(JobRow.url.in_(picked[i:i + 500])).execution_options(populate_existing=True).all())
             s.expunge_all()
+            del loaded
         job.log(f"✓ {len(urls)} matching open jobs · {len(rows)} to score · {unchanged} unchanged")
 
         job.update(status="scoring", progress=60)

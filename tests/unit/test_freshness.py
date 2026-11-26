@@ -87,12 +87,68 @@ def test_tick_reads_due_boards_then_rescores_and_notifies_only_when_something_is
 
     summary = ingest.SyncSummary(boards=[ingest.BoardResult(key="acme", name="Acme", ats="greenhouse", new=2)])
     monkeypatch.setattr(ingest, "sync_all", lambda keys=None: calls.append(("sync", tuple(keys))) or summary)
-    monkeypatch.setattr(scheduler, "_last_mail", float("-inf"))
+    marks, due_tasks = [], {"task:mail"}
+    monkeypatch.setattr(scheduler, "is_due", lambda task, every, now=None: task in due_tasks)
+    monkeypatch.setattr(scheduler, "mark_run", lambda task, now=None: marks.append(task) or due_tasks.discard(task))
     assert scheduler.run_tick() == {"boards": 1, "new": 2}
     assert calls == [("sync", ("acme",)), ("enrich", scheduler.ENRICH_PER_TICK), ("scan", "u1"),
                      ("notify", False), ("mail",)]          # matches now; the daily report waits for its pace
+    assert marks == ["task:mail"]                            # when mail was checked is kept in the database
 
     calls.clear()
     monkeypatch.setattr(ingest, "sync_all", lambda keys=None: calls.append(("sync", tuple(keys))) or ingest.SyncSummary())
     assert scheduler.run_tick() == {"boards": 1, "new": 0}
     assert calls == [("sync", ("acme",))]                    # nothing new: no LLM, no rescore; mail checked an hour ago
+
+
+def test_run_auto_does_the_full_refresh_only_when_due(monkeypatch):
+    from careeros.jobs import scheduler
+
+    monkeypatch.setattr(scheduler, "run_cycle", lambda: {"cycle": True})
+    monkeypatch.setattr(scheduler, "run_tick", lambda: {"tick": True})
+    monkeypatch.setattr(scheduler, "full_every", lambda: 6 * H)
+    monkeypatch.setattr(scheduler, "last_run", lambda task: None)
+    assert scheduler.run_auto() == ("cycle", {"cycle": True})                 # never ran: full refresh
+    monkeypatch.setattr(scheduler, "last_run", lambda task: datetime.now(timezone.utc) - 2 * H)
+    assert scheduler.run_auto() == ("tick", {"tick": True})                   # ran 2 h ago: a tick
+    monkeypatch.setattr(scheduler, "last_run", lambda task: datetime.now(timezone.utc) - 7 * H)
+    assert scheduler.run_auto()[0] == "cycle"
+
+
+def test_timers_survive_processes(monkeypatch):
+    """When a paced task last ran is read back from the database row it was written to."""
+    from careeros.jobs import scheduler
+    from careeros.jobs.models.board_run import JobBoardRun
+
+    rows = {}
+
+    class S:
+        def get(self, model, key):
+            return rows.get(key)
+
+        def execute(self, stmt):
+            v = stmt.compile().params
+            rows[v["company_key"]] = JobBoardRun(company_key=v["company_key"], last_run_at=v["last_run_at"])
+
+    @contextmanager
+    def scope():
+        yield S()
+
+    monkeypatch.setattr(scheduler.db, "session_scope", scope)
+    assert scheduler.is_due("task:mail", H)                                     # never ran
+    scheduler.mark_run("task:mail", NOW)
+    assert scheduler.last_run("task:mail") == NOW
+    assert not scheduler.is_due("task:mail", H, now=NOW + timedelta(minutes=30))
+    assert scheduler.is_due("task:mail", H, now=NOW + timedelta(minutes=61))
+
+
+def test_worker_commands(monkeypatch):
+    from typer.testing import CliRunner
+
+    from careeros.jobs import cli, scheduler
+
+    monkeypatch.setattr(scheduler, "run_auto", lambda: ("tick", {"boards": 2, "new": 0}))
+    monkeypatch.setattr(scheduler, "run_tick", lambda: None)
+    runner = CliRunner()
+    assert "tick: {'boards': 2, 'new': 0}" in runner.invoke(cli.app, ["run"]).output
+    assert "skipped, another sync is running" in runner.invoke(cli.app, ["tick"]).output

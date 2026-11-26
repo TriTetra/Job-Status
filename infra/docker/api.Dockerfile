@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # CareerOS API (FastAPI + `career-os` CLI). Build context: repository root.
+# The same image runs the worker (docker-compose.prod.yml: entrypoint `worker`).
 #
 #   deps     → a virtualenv with requirements.txt only (cached until it changes)
 #   runtime  → slim Python + that venv + the source; no compilers, no pip caches
@@ -20,6 +21,8 @@ ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     SEED_ON_START=true
+# glibc keeps a malloc arena per thread; two keep a threaded Python process much smaller
+ENV MALLOC_ARENA_MAX=2
 WORKDIR /app
 
 RUN useradd --create-home --uid 10001 careeros
@@ -34,6 +37,7 @@ COPY apps/cli ./apps/cli
 COPY infra/config ./infra/config
 COPY infra/seeds ./infra/seeds
 COPY --chmod=755 infra/docker/api-entrypoint.sh /usr/local/bin/api-entrypoint
+COPY --chmod=755 infra/docker/worker.sh /usr/local/bin/worker
 COPY --chmod=755 <<'EOF' /usr/local/bin/career-os
 #!/bin/sh
 exec python -m apps.cli.main "$@"

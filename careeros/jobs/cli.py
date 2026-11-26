@@ -64,6 +64,37 @@ def feeds(
     typer.echo("  [dry run]" if dry_run else "")
 
 
+def _scheduled(kind: str, result) -> None:
+    if result is None:
+        typer.echo(f"{kind}: skipped, another sync is running")
+    else:
+        typer.echo(f"{kind}: {result}")
+
+
+@app.command()
+def tick():
+    """The 15-minute pace: boards and feeds that are due; new postings are read, rescored and sent to Telegram."""
+    from careeros.jobs.scheduler import run_tick
+
+    _scheduled("tick", run_tick())
+
+
+@app.command()
+def cycle():
+    """The full refresh: every board, rescoring, mailboxes, kits, notifications with the daily report, news."""
+    from careeros.jobs.scheduler import run_cycle
+
+    _scheduled("cycle", run_cycle())
+
+
+@app.command()
+def run():
+    """Whatever is due: the full refresh when its interval has passed, else a tick (the worker's command)."""
+    from careeros.jobs.scheduler import run_auto
+
+    _scheduled(*run_auto())
+
+
 @app.command()
 def boards():
     """Configured boards with the outcome of their last sync."""

@@ -9,6 +9,7 @@ Sıralama: en yeniden en eskiye.
 
 | Phase | İçerik | Durum | Tarih |
 |---|---|---|---|
+| Bellek: işler ayrı worker sürecinde | Sunucu incelemesi: API'nin belleğini arka plandaki iş turu şişiriyordu (Python büyüdüğü belleği geri vermiyor). Turlar artık ayrı `worker` servisinde, her biri kısa ömürlü bir süreç (`career-os jobs run`); API'de zamanlayıcı kapalı. Posta / haber / tam tur sayaçları veritabanında; `MALLOC_ARENA_MAX=2` imajda ve compose'da; puanlamada metinler yalnız puanlanan ilanlar için | ✅ Tamam | 2026-11-26 |
 | Deploy: Faz 1 tamam (1.4–1.8) | cd7c479 canlıda (Coolify 1 dk 7 sn); migration 024 (mail_signals) ve 025 (company_facts) uygulandı; zamanlayıcı "due boards every 15 min, everything every 6.0 h". Taban tazelik ölçümü: medyan 84 saat (976 ilan, eski 6 saatlik düzen + yeni panoların ilk okuması) | ✅ Canlı | 2026-11-24 |
 | 1.6 Tazelik | Zamanlayıcı 15 dakikalık tiklere geçti: yeni ilan ekleyen ucuz panolar saatlik, sakin ya da pahalı panolar 3–6 saatte, hatalı panolar 6 saat bekler; feed'ler kendi kotasında. Yeni ilan gelince hemen LLM okuması, yeniden puanlama ve Telegram'a yeni güçlü eşleşme; posta kutusu saatlik. Gecikme ölçümü `/api/jobs/freshness` ve Opportunities başlığında | ✅ Tamam | 2026-11-23 |
 | 1.5 Şirket Verisi | Okuyucuda ve Companies'te "On the public record" kartı: Wikidata (yalnız web sitesi eşleşirse; benzer isimli başka şirket asla gösterilmez), Companies House (UK, anahtar girilince), okunan haberlerde işten çıkarma / yatırım; Hacker News'te "çalışanlar ne diyor" özeti, her madde yorum bağlantısıyla. Kapanmış şirket, iflas, yakın işten çıkarma güven kontrolüne girer. Migration 025 | ✅ Tamam | 2026-11-23 |
@@ -139,6 +140,40 @@ Sıralama: en yeniden en eskiye.
 | Phase 4C | Service Extraction: `identity_service`, `job_intelligence` | ✅ Tamam | 2026-07-14 |
 | Phase 4D | Unified CLI: `career-os` launcher, 4 native + 4 sub-groups (Typer) | ✅ Tamam | 2026-07-14 |
 | Docs v1 | `docs/v1/` versioned layout; Phase 1/2/3 Architecture Reports | ✅ Tamam | 2026-07-14 |
+
+---
+
+## [Bellek: İşler Ayrı Worker Sürecinde] — 2026-11-26 — Altyapı ✅
+
+**Neden:** Kullanıcının sunucu incelemesi (yalnız okuma). 13:55'teki kapanış çökme değil, dışarıdan yapılmış sert bir yeniden başlatmaydı. Bellekte en büyük süreç CareerOS'tu. Belleği, web API'siyle aynı Python sürecinde çalışan arka plan iş turu (panolar, puanlama, Hacker News, e-posta, bildirimler) şişiriyordu: Python büyüdüğü belleği süreç bitene kadar geri vermiyor. Kullanıcı geçici olarak Coolify'a `MALLOC_ARENA_MAX=2` ekledi; tur sonrası bellek 716–768 MB'tan 409 MB'a indi. Bu değişiklik kalıcı çözüm.
+
+### Turlar ayrı süreçte
+- **`worker` servisi** (`docker-compose.prod.yml`): API ile aynı imaj, giriş noktası `worker` (`infra/docker/worker.sh`). Her `JOB_TICK_MINUTES` (15) dakikada **yeni bir süreç** olarak `career-os jobs run` çalıştırıyor. Süreç işi bitince kapanıyor ve belleğin tamamı sunucuya dönüyor. `mem_limit: 640m`, sağlık kontrolü yok (HTTP sunucusu çalıştırmıyor), API sağlıklı olduktan sonra başlıyor (migration'lar önce).
+- **API'de zamanlayıcı kapalı:** compose'da API için `JOB_SYNC_INTERVAL_HOURS: "0"` sabit. Site yalnız istekleri karşılıyor. Yerel geliştirmede bu değer verilirse API eskisi gibi turu kendi içinde (thread) çalıştırıyor.
+- **Yeni CLI komutları** (`careeros/jobs/cli.py`):
+  - `career-os jobs tick`: 15 dakikalık kısa tur.
+  - `career-os jobs cycle`: tam tur.
+  - `career-os jobs run`: vadesi gelen hangisiyse onu çalıştırır; worker'ın komutu bu.
+- **Senkron kilidi** (advisory lock), elle başlatılan `jobs sync` ile turların çakışmasını engellemeye devam ediyor.
+
+### Bellekte duran sayaçlar veritabanına taşındı (`careeros/jobs/scheduler.py`)
+- Posta kontrolünün saatte bir (`_last_mail`) ve piyasa haberlerinin günde bir (`_last_market_news`) yapılmasını tutan sayaçlar süreç belleğindeydi; ayrı süreçlerde her turda sıfırlanırdı. Artık `job_board_runs` tablosunda `task:mail`, `task:market_news`, `task:cycle` satırları olarak tutuluyorlar (aynı tablo `feed:` satırları için zaten böyle kullanılıyordu).
+- `run_auto()` tam turun vadesini bu satırdan okuyor. Yeniden başlatma ya da yeni deploy tam turu tekrarlatmıyor.
+- `freshness.lag()` pano sayısına `task:` ve `feed:` satırlarını katmıyor.
+
+### Bellek ayarı ve tepe noktası
+- **`MALLOC_ARENA_MAX=2`** artık imajda (`ENV`) ve compose'da (API ve worker için ortak). Coolify'da elle eklenen değişkene bağımlı değil.
+- **Puanlama (`run_scan`):** aday ilanlar artık açıklama metinleri olmadan yükleniyor (talep, maaş referansı ve neyin değiştiği bunlara ihtiyaç duymuyor). Metinler yalnız gerçekten puanlanacak ilanlar için ikinci bir sorguyla alınıyor. Atılabilir DB'de (333 aday): sonuçlar birebir aynı; tipik turda (her şey değişmemiş) Python yığın tepesi 16,1 → 13,2 MB (%18). Canlıda aday ve metin sayısı daha büyük olduğu için fark orantılı olarak artar.
+
+### Ölçüm
+- Worker komutu atılabilir DB'ye karşı ayrı süreç olarak: iki ardışık süreç. 1. çalıştırma tam tur yaptı (528 sn; tüm panolar ve feed'ler okundu: 18.138 ilan, 9.393 yeni). 2. çalıştırma veritabanındaki sayacı görüp kısa tura geçti (5 sn, vadesi gelen pano yok). Sayaçlar süreçler arasında korunuyor (`task:cycle`, `task:mail`, `task:market_news` satırları yazıldı). **Bellek tepesi yerelde ölçülemedi:** Windows'ta venv'in python.exe'si gerçek yorumlayıcıyı alt süreç olarak başlatan bir başlatıcı; ölçülen o oldu. Gerçek tepe deploy sonrası sunucuda ölçülecek (`docker stats`: API'nin 90–150 MB'ta kalması, worker'ın tur sırasında yükselip tur bitince kapanması beklenir).
+
+### Dikkat
+- Otomatik turların ilerlemesi artık sitede görünmüyor. "Rescore now" ile elle başlatılan taramalar eskisi gibi API'de çalışıyor ve görünüyor.
+- Coolify'da `JOB_SYNC_INTERVAL_HOURS` ya da `JOB_TICK_MINUTES` değiştirilirse yalnız worker'ı etkiler.
+
+### Doğrulama
+- 827 test (yeni: `run_auto` yalnız vadesi gelince tam tur yapıyor; sayaçlar veritabanı satırından geri okunuyor; posta kontrolü yapıldığı veritabanına yazılıyor; `jobs run` ve `jobs tick` komutları), ruff temiz. `docker compose config`: API'de 0, worker'da 6 saat ve 15 dakika, ikisinde de `MALLOC_ARENA_MAX=2`, worker'ın sağlık kontrolü kapalı.
 
 ---
 

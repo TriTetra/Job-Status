@@ -73,7 +73,8 @@ def lag(session: Session, days: int = 7, now: Optional[datetime] = None) -> dict
                     Job.discovered_at >= now - timedelta(days=days),
                     Job.posted_at >= now - timedelta(days=days)).all())
     hours = sorted(max(0.0, (_aware(d) - _aware(p)).total_seconds() / 3600) for p, d in rows if p and d)
-    runs = session.query(func.count(JobBoardRun.company_key), func.max(JobBoardRun.last_run_at)).one()
+    runs = (session.query(func.count(JobBoardRun.company_key), func.max(JobBoardRun.last_run_at))
+            .filter(~JobBoardRun.company_key.like("task:%"), ~JobBoardRun.company_key.like("feed:%")).one())
     out = {"days": days, "postings": len(hours), "boards": runs[0] or 0,
            "last_read": _aware(runs[1]).isoformat() if runs[1] else None}
     if len(hours) >= 5:

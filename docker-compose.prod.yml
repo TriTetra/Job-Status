@@ -1,8 +1,12 @@
 # Production stack for Coolify ("Docker Compose" build pack → compose file: /docker-compose.prod.yml).
 #
-#   web  — the only public service; give it the domain in Coolify (https://your-domain:3000).
-#          Serves the app and forwards /api/* to the API over the internal network.
-#   api  — FastAPI; runs migrations + reference-data seed on every start. Not exposed.
+#   web    — the only public service; give it the domain in Coolify (https://your-domain:3000).
+#            Serves the app and forwards /api/* to the API over the internal network.
+#   api    — FastAPI; runs migrations + reference-data seed on every start. Not exposed.
+#            It serves requests only: the scheduled job runs happen in the worker.
+#   worker — the same image; every JOB_TICK_MINUTES it runs `career-os jobs run` as a new
+#            process (due boards, new matches, mailboxes; the full refresh every
+#            JOB_SYNC_INTERVAL_HOURS). Each run ends, so its memory goes back to the server.
 #
 # The database is NOT in this file: it is a separate Coolify PostgreSQL resource (own
 # lifecycle, scheduled backups). Turn on "Connect to Predefined Network" for this app and
@@ -20,42 +24,64 @@ x-logging: &logging
     max-size: "10m"
     max-file: "3"
 
+x-api-build: &api-build
+  context: .
+  dockerfile: infra/docker/api.Dockerfile
+
+# Environment shared by the API and the worker
+x-api-env: &api-env
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the Coolify PostgreSQL internal URL}
+  TOKEN_ENCRYPTION_KEY: ${SERVICE_PASSWORD_64_TOKENKEY}
+  WEB_APP_URL: ${WEB_APP_URL:?set WEB_APP_URL, e.g. https://career.example.com}
+  SESSION_COOKIE_SECURE: "true"
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}                      # set → Claude directly (preferred)
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}                    # used only without an Anthropic key
+  LLM_PROVIDER: ${LLM_PROVIDER:-}                                # empty = whichever key is set
+  DEFAULT_MODEL: ${DEFAULT_MODEL:-}                              # empty = claude-opus-5-5 (Anthropic)
+  LLM_FAST_MODEL: ${LLM_FAST_MODEL:-}
+  LLM_TASK_MODELS: ${LLM_TASK_MODELS:-}
+  LLM_DAILY_BUDGET_USD: ${LLM_DAILY_BUDGET_USD:-2.0}            # all users together, per UTC day
+  LLM_USER_DAILY_BUDGET_USD: ${LLM_USER_DAILY_BUDGET_USD:-0.5}
+  LLM_DATA_COLLECTION: ${LLM_DATA_COLLECTION:-deny}           # providers that don't keep prompts
+  GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+  GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+  GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}                  # empty = ${WEB_APP_URL}/api/oauth/github/callback
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}                    # @BotFather token; empty = Telegram off
+  CAREER_OS_EMAIL: ${CAREER_OS_EMAIL:-}                          # CLI default account (jobs scan / eval)
+  ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}                              # developer.adzuna.com; empty = Adzuna off
+  ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
+  ADZUNA_MAX_CALLS: ${ADZUNA_MAX_CALLS:-40}                       # requests per read (~2 reads a day)
+  COMPANIES_HOUSE_API_KEY: ${COMPANIES_HOUSE_API_KEY:-}            # UK register; empty = not read
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  MALLOC_ARENA_MAX: ${MALLOC_ARENA_MAX:-2}                       # glibc arenas: keeps Python processes small
+
 services:
   api:
-    build:
-      context: .
-      dockerfile: infra/docker/api.Dockerfile
+    build: *api-build
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the Coolify PostgreSQL internal URL}
-      TOKEN_ENCRYPTION_KEY: ${SERVICE_PASSWORD_64_TOKENKEY}
-      WEB_APP_URL: ${WEB_APP_URL:?set WEB_APP_URL, e.g. https://career.example.com}
-      SESSION_COOKIE_SECURE: "true"
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}                      # set → Claude directly (preferred)
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}                    # used only without an Anthropic key
-      LLM_PROVIDER: ${LLM_PROVIDER:-}                                # empty = whichever key is set
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-}                              # empty = claude-opus-5-5 (Anthropic)
-      LLM_FAST_MODEL: ${LLM_FAST_MODEL:-}
-      LLM_TASK_MODELS: ${LLM_TASK_MODELS:-}
-      LLM_DAILY_BUDGET_USD: ${LLM_DAILY_BUDGET_USD:-2.0}            # all users together, per UTC day
-      LLM_USER_DAILY_BUDGET_USD: ${LLM_USER_DAILY_BUDGET_USD:-0.5}
-      LLM_DATA_COLLECTION: ${LLM_DATA_COLLECTION:-deny}           # providers that don't keep prompts
-      JOB_SYNC_INTERVAL_HOURS: ${JOB_SYNC_INTERVAL_HOURS:-6}        # full refresh (every board, kits, report)
-      JOB_TICK_MINUTES: ${JOB_TICK_MINUTES:-15}                     # due boards + new matches in between
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
-      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-}                  # empty = ${WEB_APP_URL}/api/oauth/github/callback
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}                    # @BotFather token; empty = Telegram off
-      CAREER_OS_EMAIL: ${CAREER_OS_EMAIL:-}                          # CLI default account (jobs scan / eval)
-      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}                              # developer.adzuna.com; empty = Adzuna off
-      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
-      ADZUNA_MAX_CALLS: ${ADZUNA_MAX_CALLS:-40}                       # requests per read (~2 reads a day)
-      COMPANIES_HOUSE_API_KEY: ${COMPANIES_HOUSE_API_KEY:-}            # UK register; empty = not read
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      <<: *api-env
+      JOB_SYNC_INTERVAL_HOURS: "0"                                 # no job runs in the API: the worker does them
     volumes:
       - uploads:/app/personal                                        # uploaded CVs
     mem_limit: 768m
+    logging: *logging
+
+  worker:
+    build: *api-build
+    entrypoint: ["worker"]
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy                                   # migrations applied first
+    environment:
+      <<: *api-env
+      JOB_SYNC_INTERVAL_HOURS: ${JOB_SYNC_INTERVAL_HOURS:-6}          # full refresh (every board, kits, report)
+      JOB_TICK_MINUTES: ${JOB_TICK_MINUTES:-15}                       # due boards + new matches in between
+    healthcheck:
+      disable: true                                                  # no HTTP server here
+    mem_limit: 640m                                                  # a run peaks at ~460 MB, then exits
     logging: *logging
 
   web:
